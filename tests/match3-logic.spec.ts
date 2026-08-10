@@ -33,8 +33,8 @@ describe('match3 (消消乐) logic', () => {
 
   it('doubles the level target each level', () => {
     expect(levelTarget(1)).toBe(800)
-    expect(levelTarget(2)).toBe(1600)
-    expect(levelTarget(3)).toBe(3200)
+    expect(levelTarget(2)).toBe(1200)
+    expect(levelTarget(3)).toBe(1600)
   })
 
   it('finds the 4-connected same-color group, excluding diagonals', () => {
@@ -127,7 +127,7 @@ describe('match3 (消消乐) logic', () => {
     state.score = 500
     advanceLevel(state)
     expect(state.level).toBe(2)
-    expect(state.target).toBe(1600)
+    expect(state.target).toBe(1200)
     expect(state.score).toBe(0)
     expect(state.result).toBe('none')
     expect(state.grid.flat().every(cell => cell >= 1)).toBe(true)

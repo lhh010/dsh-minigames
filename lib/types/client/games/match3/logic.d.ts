@@ -32,9 +32,9 @@ export declare const DEFAULT_KINDS = 5;
 /** Score for removing a 4-connected group of `size` — super-linear (quadratic),
  * so one big pop vastly outweighs many small ones. */
 export declare function scoreForGroup(size: number): number;
-/** The target score a level requires; doubles each level. A greedy solver
- * clears ~1700 points on a typical board, so level 1-2 are reachable and the
- * later levels become the natural end of the run. */
+/** The target score a level requires; each level adds 400 (800, 1200, 1600,
+ * ...). A greedy solver clears ~1700 points on a typical board, so the early
+ * levels are comfortably reachable and later ones become the natural end. */
 export declare function levelTarget(level: number): number;
 /** Fill the board with random gems (groups are fine — they are what you click). */
 export declare function shuffle(state: Match3State): void;

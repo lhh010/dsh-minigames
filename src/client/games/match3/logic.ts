@@ -36,11 +36,11 @@ export function scoreForGroup(size: number): number {
   return 10 * size * size
 }
 
-/** The target score a level requires; doubles each level. A greedy solver
- * clears ~1700 points on a typical board, so level 1-2 are reachable and the
- * later levels become the natural end of the run. */
+/** The target score a level requires; each level adds 400 (800, 1200, 1600,
+ * ...). A greedy solver clears ~1700 points on a typical board, so the early
+ * levels are comfortably reachable and later ones become the natural end. */
 export function levelTarget(level: number): number {
-  return 800 * 2 ** (level - 1)
+  return 800 + (level - 1) * 400
 }
 
 function randomKind(state: Match3State): number {
