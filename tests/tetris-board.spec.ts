@@ -18,7 +18,7 @@ describe('tetris board', () => {
   it('spawns a centered piece without collision', () => {
     const state = createTetrisState(lcg(1))
     expect(state.current).not.toBeNull()
-    expect(state.next).not.toBeNull()
+    expect(state.nextQueue.length).toBeGreaterThanOrEqual(5)
     expect(collides(state.grid, state.current!)).toBe(false)
     expect(state.current!.x).toBeGreaterThanOrEqual(0)
     expect(state.current!.x + state.current!.shape[0]!.length).toBeLessThanOrEqual(COLS)

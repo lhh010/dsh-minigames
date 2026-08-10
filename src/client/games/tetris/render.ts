@@ -4,17 +4,17 @@
  * shell.
  */
 import {
-  COLS, ROWS, ghostY, type TetrisState,
+  COLS, ROWS, PREVIEW_COUNT, ghostY, type TetrisState, type Piece,
 } from './board.ts'
 
 const CELL = 22
+const MINI = 14
 export const BOARD_W = COLS * CELL
 export const BOARD_H = ROWS * CELL
 /** Full logical canvas width: the board plus the preview column. */
 export const LOGICAL_W = BOARD_W + 16 + 4 * CELL + 8
 const PREVIEW_X = BOARD_W + 16
 const PREVIEW_W = 4 * CELL
-const PREVIEW_H = 4 * CELL
 
 /** Kind id -> fill color. */
 const COLORS = [
@@ -47,20 +47,55 @@ function drawShape(ctx: CanvasRenderingContext2D, shape: number[][], px: number,
   }
 }
 
-function drawPreview(ctx: CanvasRenderingContext2D, label: string, piece: TetrisState['next'], y: number): void {
+/** Draw a mini piece preview (used for the next queue). */
+function drawMiniPiece(ctx: CanvasRenderingContext2D, piece: Piece | null, x: number, y: number, w: number): void {
+  if (piece === null) return
+  const shape = piece.shape
+  const shapeW = shape[0]!.length * MINI
+  const shapeH = shape.length * MINI
+  const ox = x + Math.floor((w - shapeW) / 2)
+  const oy = y + Math.floor((3 * MINI - shapeH) / 2)
+  ctx.fillStyle = COLORS[piece.kind]!
+  for (let r = 0; r < shape.length; r += 1) {
+    for (let c = 0; c < shape[r]!.length; c += 1) {
+      if (shape[r]![c] === 0) continue
+      ctx.fillRect(ox + c * MINI, oy + r * MINI, MINI - 1, MINI - 1)
+    }
+  }
+}
+
+/** Draw a full-size piece preview (hold). */
+function drawHold(ctx: CanvasRenderingContext2D, piece: Piece | null, y: number): void {
   ctx.fillStyle = TEXT
   ctx.font = '11px ui-monospace, monospace'
   ctx.textAlign = 'left'
-  ctx.fillText(label, PREVIEW_X, y)
+  ctx.fillText('暂存 C', PREVIEW_X, y)
   ctx.fillStyle = BOARD_BG
-  ctx.fillRect(PREVIEW_X, y + 6, PREVIEW_W, PREVIEW_H)
+  ctx.fillRect(PREVIEW_X, y + 6, PREVIEW_W, 3 * CELL)
   ctx.strokeStyle = GRID_LINE
-  ctx.strokeRect(PREVIEW_X + 0.5, y + 6.5, PREVIEW_W, PREVIEW_H)
+  ctx.strokeRect(PREVIEW_X + 0.5, y + 6.5, PREVIEW_W, 3 * CELL)
   if (piece === null) return
   const shape = piece.shape
   const ox = PREVIEW_X + Math.floor((PREVIEW_W - shape[0]!.length * CELL) / 2)
-  const oy = y + 6 + Math.floor((PREVIEW_H - shape.length * CELL) / 2)
+  const oy = y + 6 + Math.floor((3 * CELL - shape.length * CELL) / 2)
   drawShape(ctx, shape, ox, oy, piece.kind)
+}
+
+/** Draw the next-queue previews (up to PREVIEW_COUNT mini pieces). */
+function drawNextQueue(ctx: CanvasRenderingContext2D, state: TetrisState): void {
+  ctx.fillStyle = TEXT
+  ctx.font = '11px ui-monospace, monospace'
+  ctx.textAlign = 'left'
+  ctx.fillText('下一个', PREVIEW_X, 6)
+  const itemH = 3 * MINI + 6
+  for (let i = 0; i < Math.min(PREVIEW_COUNT, state.nextQueue.length); i += 1) {
+    const y = 12 + i * itemH
+    ctx.fillStyle = BOARD_BG
+    ctx.fillRect(PREVIEW_X, y, PREVIEW_W, 3 * MINI)
+    ctx.strokeStyle = GRID_LINE
+    ctx.strokeRect(PREVIEW_X + 0.5, y + 0.5, PREVIEW_W, 3 * MINI)
+    drawMiniPiece(ctx, state.nextQueue[i]!, PREVIEW_X, y, PREVIEW_W)
+  }
 }
 
 /** Draw one frame of the game. */
@@ -105,9 +140,11 @@ export function renderTetris(ctx: CanvasRenderingContext2D, state: TetrisState):
     drawShape(ctx, piece.shape, piece.x * CELL, piece.y * CELL, piece.kind)
   }
 
-  // Next + hold previews.
-  drawPreview(ctx, '下一个', state.next, 6)
-  drawPreview(ctx, '暂存 C', state.hold, 6 + PREVIEW_H + 18)
+  // Next queue (5 mini previews) + hold preview.
+  drawNextQueue(ctx, state)
+  // Hold sits below the 5-piece queue.
+  const queueBottom = 12 + PREVIEW_COUNT * (3 * MINI + 6)
+  drawHold(ctx, state.hold, queueBottom + 8)
 
   if (state.over) {
     ctx.fillStyle = TEXT

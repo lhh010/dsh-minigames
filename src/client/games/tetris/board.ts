@@ -24,7 +24,8 @@ export interface TetrisState {
   /** ROWS x COLS; 0 empty, 1..7 filled with that kind's color. */
   grid: number[][]
   current: Piece | null
-  next: Piece | null
+  /** Upcoming pieces queue (always PREVIEW_COUNT entries). */
+  nextQueue: Piece[]
   /** Held piece (or null when the hold slot is empty). */
   hold: Piece | null
   /** One hold per piece: reset when the current piece locks. */
@@ -35,6 +36,9 @@ export interface TetrisState {
   over: boolean
   rng: () => number
 }
+
+/** Number of upcoming pieces shown in the preview column. */
+export const PREVIEW_COUNT = 5
 
 const SHAPES: Record<number, Shape> = {
   1: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]], // I
@@ -57,7 +61,7 @@ export function createTetrisState(rng: () => number = Math.random): TetrisState 
   const state: TetrisState = {
     grid,
     current: null,
-    next: null,
+    nextQueue: [],
     hold: null,
     canHold: true,
     score: 0,
@@ -66,7 +70,7 @@ export function createTetrisState(rng: () => number = Math.random): TetrisState 
     over: false,
     rng,
   }
-  state.next = randomPiece(rng)
+  for (let i = 0; i < PREVIEW_COUNT + 1; i += 1) state.nextQueue.push(randomPiece(rng))
   spawn(state)
   return state
 }
@@ -103,10 +107,10 @@ export function collides(grid: number[][], piece: Piece): boolean {
 
 /** Promote the next piece to current (used at start and after each lock). */
 export function spawn(state: TetrisState): void {
-  state.current = state.next
+  state.current = state.nextQueue.shift()!
   center(state.current!)
   state.canHold = true
-  state.next = randomPiece(state.rng)
+  state.nextQueue.push(randomPiece(state.rng))
   if (collides(state.grid, state.current!)) state.over = true
 }
 
@@ -196,7 +200,9 @@ export function holdPiece(state: TetrisState): void {
   state.hold = state.current
   state.canHold = false
   if (held === null) {
-    state.next = randomPiece(state.rng)
+    // The hold slot was empty: the current piece takes it, and the next piece
+    // from the queue becomes current (queue refilled in spawn).
+    state.nextQueue.push(randomPiece(state.rng))
     spawn(state)
     // spawn() resets the hold allowance; the swap above already consumed it.
     state.canHold = false

@@ -20,7 +20,8 @@ export interface TetrisState {
     /** ROWS x COLS; 0 empty, 1..7 filled with that kind's color. */
     grid: number[][];
     current: Piece | null;
-    next: Piece | null;
+    /** Upcoming pieces queue (always PREVIEW_COUNT entries). */
+    nextQueue: Piece[];
     /** Held piece (or null when the hold slot is empty). */
     hold: Piece | null;
     /** One hold per piece: reset when the current piece locks. */
@@ -31,6 +32,8 @@ export interface TetrisState {
     over: boolean;
     rng: () => number;
 }
+/** Number of upcoming pieces shown in the preview column. */
+export declare const PREVIEW_COUNT = 5;
 /** Empty grid, fresh state, and the first two pieces spawned. */
 export declare function createTetrisState(rng?: () => number): TetrisState;
 /** Whether the piece overlaps the walls, the floor, or filled cells. */
