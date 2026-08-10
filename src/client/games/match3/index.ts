@@ -14,7 +14,7 @@ import {
   scoreForGroup, updateResult,
   type Match3State, type Position, type RemovalPlan,
 } from './logic.ts'
-import { renderMatch3, LOGICAL_W, LOGICAL_H, CELL, type Match3View } from './render.ts'
+import { renderMatch3, LOGICAL_W, LOGICAL_H, HUD_H, CELL, type Match3View } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 
@@ -57,7 +57,9 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
     const x = ((event.clientX - rect.left) * LOGICAL_W) / rect.width
     const y = ((event.clientY - rect.top) * LOGICAL_H) / rect.height
     const c = Math.floor(x / CELL)
-    const r = Math.floor(y / CELL)
+    // The board sits below the HUD strip — the click must be mapped into the
+    // board's own rows, or clicks land one row off from the gem the player saw.
+    const r = Math.floor((y - HUD_H) / CELL)
     if (r < 0 || r >= state.rows || c < 0 || c >= state.cols) return null
     return { r, c }
   }
