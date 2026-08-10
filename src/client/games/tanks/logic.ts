@@ -92,7 +92,7 @@ export const ENEMIES_PER_WAVE = 5
 export const MAX_ALIVE = 3
 /** Tank collision inset in px: the effective body is TILE - 2*INSET, letting
  * tanks fit and turn in lanes a hair tighter than a full tile. */
-const TANK_INSET = 2
+const TANK_INSET = 3
 /** Perpendicular-axis snap range after a turn (px) — keeps the tank on-grid. */
 const LANE_SNAP = 4
 const SPAWN_INTERVAL = 1.6
