@@ -1,0 +1,7 @@
+# The dsh-minigames bundle adds the right-side mini-game panel to a DSH Web
+# profile. Installed as one profile layer: a minimal node half (the loader
+# row client-modules scans for the dshClient declaration) plus the client
+# bundle that mounts the panel in the browser.
+- insert:
+    - id: dsh-minigames
+      name: '@dsh-external/dsh-minigames'

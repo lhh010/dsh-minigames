@@ -1,0 +1,216 @@
+/* dsh-minigames panel styles. All classes are dmg- prefixed to stay
+ * collision-free in the host page; the stylesheet is injected by the client
+ * bundle as one <style data-plugin> tag. Palette matches the DSH dark shell. */
+
+.dmg-rail {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2147482900;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 36px;
+  padding: 10px 0;
+  background: #1b1b22;
+  border: 1px solid #3a3a45;
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.35);
+  color: #d8d8e0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dmg-rail:hover {
+  background: #23232c;
+}
+
+.dmg-rail-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.dmg-rail-text {
+  writing-mode: vertical-rl;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #9a9aa5;
+}
+
+.dmg-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2147482900;
+  display: flex;
+  flex-direction: column;
+  min-width: 360px;
+  background: #15151b;
+  color: #d8d8e0;
+  border-left: 1px solid #3a3a45;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.35);
+  font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.dmg-resize {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: ew-resize;
+  z-index: 1;
+}
+
+.dmg-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #1b1b22;
+  border-bottom: 1px solid #26262e;
+  flex: 0 0 auto;
+}
+
+.dmg-title {
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.dmg-score {
+  margin-left: auto;
+  font-size: 12px;
+  color: #9a9aa5;
+  white-space: nowrap;
+}
+
+.dmg-header-actions {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.dmg-icon-btn {
+  background: none;
+  border: 1px solid #3a3a45;
+  color: #d8d8e0;
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.dmg-icon-btn:hover {
+  background: #23232c;
+}
+
+.dmg-body {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  min-height: 0;
+}
+
+.dmg-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.dmg-card {
+  background: #1b1b22;
+  border: 1px solid #3a3a45;
+  border-radius: 10px;
+  padding: 14px 10px;
+  cursor: pointer;
+  text-align: center;
+  color: inherit;
+  font-family: inherit;
+}
+
+.dmg-card:hover {
+  border-color: #5a5a6a;
+  background: #23232c;
+}
+
+.dmg-card-icon {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.dmg-card-title {
+  font-weight: 600;
+  margin: 8px 0 4px;
+  font-size: 13px;
+}
+
+.dmg-card-desc {
+  font-size: 11px;
+  color: #9a9aa5;
+  line-height: 1.45;
+  min-height: 48px;
+}
+
+.dmg-card-best {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #7a7a8a;
+}
+
+.dmg-game-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+}
+
+.dmg-game-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  flex: 0 0 auto;
+}
+
+.dmg-game-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dmg-game-toolbar .dmg-icon-btn {
+  margin-left: auto;
+}
+
+.dmg-game-host {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  outline: none;
+}
+
+.dmg-game-canvas {
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  background: #15151b;
+  border-radius: 6px;
+  border: 1px solid #26262e;
+}
+
+.dmg-game-hint {
+  font-size: 11px;
+  color: #7a7a8a;
+  text-align: center;
+  flex: 0 0 auto;
+}

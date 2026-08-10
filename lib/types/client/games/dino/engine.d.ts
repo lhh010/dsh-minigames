@@ -1,0 +1,72 @@
+/**
+ * Dino runner pure logic: physics, spawning, and collision as deterministic
+ * functions over a plain state object. No DOM, no timers — the game instance
+ * in index.ts drives this with requestAnimationFrame, and the unit tests
+ * drive it with fixed dt and a seeded rng.
+ */
+/** Logical viewport width in px (height is GROUND_Y + a small margin). */
+export declare const VIEW_W = 600;
+/** Ground line y (canvas coordinates). */
+export declare const GROUND_Y = 150;
+/** Dino's fixed horizontal position (left edge). */
+export declare const DINO_X = 60;
+/** Standing dino hitbox. */
+export declare const DINO_W = 46;
+export declare const DINO_H = 50;
+/** Ducking dino hitbox (only while on the ground). */
+export declare const DUCK_H = 26;
+export interface DinoRect {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}
+export interface Obstacle {
+    kind: 'cactus' | 'bird';
+    x: number;
+    w: number;
+    h: number;
+    /** Top edge (canvas coordinates); bird floats, cactus sits on the ground. */
+    y: number;
+}
+export interface DinoInput {
+    /** Jump is edge-triggered: the caller sets it for the frame the key/click lands. */
+    jump: boolean;
+    /** Duck is level-triggered: held while the key is down. */
+    duck: boolean;
+}
+export interface DinoState {
+    /** Elapsed run time in seconds (frozen once over). */
+    t: number;
+    /** Current horizontal scroll speed in px/s. */
+    speed: number;
+    dino: {
+        x: number;
+        /** Top edge. */
+        y: number;
+        vy: number;
+        onGround: boolean;
+        ducking: boolean;
+    };
+    obstacles: Obstacle[];
+    /** Seconds until the next obstacle spawns. */
+    nextSpawnIn: number;
+    /** Obstacles passed (each exit increments). */
+    score: number;
+    over: boolean;
+    /** Seeded rng for deterministic tests. */
+    rng: () => number;
+}
+/** A new run at the starting line. */
+export declare function createDinoState(rng?: () => number): DinoState;
+/** The dino's current collision rect (ducking shrinks the height). */
+export declare function dinoRect(state: DinoState): DinoRect;
+/** Shrunk AABB overlap test — the forgiving hitbox the runner actually uses. */
+export declare function collides(a: DinoRect, b: DinoRect): boolean;
+/**
+ * Advance the run by dt seconds.
+ * @param state - the run state (mutated in place).
+ * @param dt - elapsed seconds (clamp to <=1/30 upstream).
+ * @param input - this frame's input.
+ */
+export declare function step(state: DinoState, dt: number, input: DinoInput): void;
