@@ -19,6 +19,8 @@ interface Palette {
   cloud: string
   text: string
   eye: string
+  fog: string
+  rain: string
 }
 
 const DAY: Palette = {
@@ -34,6 +36,8 @@ const DAY: Palette = {
   cloud: '#d9d5c9',
   text: '#4a4a55',
   eye: '#ffffff',
+  fog: '#c8d2da',
+  rain: '#6f86a0',
 }
 
 const NIGHT: Palette = {
@@ -49,6 +53,8 @@ const NIGHT: Palette = {
   cloud: '#2e2e38',
   text: '#d8d8e0',
   eye: '#ffffff',
+  fog: '#8b96b5',
+  rain: '#9fb8d8',
 }
 
 /** Draw one frame of the run. */
@@ -61,12 +67,53 @@ export function renderDino(ctx: CanvasRenderingContext2D, state: DinoState): voi
   drawGround(ctx, state, p)
   for (const obstacle of state.obstacles) drawObstacle(ctx, obstacle, state.t, p)
   drawDino(ctx, state, p)
+  if (state.raining) {
+    drawFog(ctx, state, p)
+    drawRain(ctx, state, p)
+  }
   // Score, classic top-right (distance-based now).
   ctx.fillStyle = p.text
   ctx.font = '13px ui-monospace, monospace'
   ctx.textAlign = 'right'
   ctx.fillText(String(Math.floor(state.score)).padStart(5, '0'), VIEW_W - 12, 22)
   if (state.over) drawGameOver(ctx, state, p)
+}
+
+/** Drifting fog: a translucent wash plus soft blobs that obscure the view. */
+function drawFog(ctx: CanvasRenderingContext2D, state: DinoState, p: Palette): void {
+  ctx.globalAlpha = 0.1
+  ctx.fillStyle = p.fog
+  ctx.fillRect(0, 0, VIEW_W, GROUND_Y + 20)
+  ctx.globalAlpha = 1
+  for (let i = 0; i < 5; i += 1) {
+    const drift = (state.t * 26 + i * 173) % (VIEW_W + 340)
+    const x = drift - 170
+    const y = 34 + ((i * 41) % 120)
+    ctx.globalAlpha = 0.14
+    ctx.fillStyle = p.fog
+    ctx.beginPath()
+    ctx.ellipse(x, y, 74 + (i % 3) * 14, 26 + (i % 2) * 10, 0, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  ctx.globalAlpha = 1
+}
+
+/** Drifting slanted rain streaks. */
+function drawRain(ctx: CanvasRenderingContext2D, state: DinoState, p: Palette): void {
+  ctx.strokeStyle = p.rain
+  ctx.lineWidth = 1.5
+  const height = GROUND_Y + 20
+  for (let i = 0; i < 26; i += 1) {
+    const fall = (state.t * 780 + i * 43) % (height + 60)
+    const y = fall - 30
+    const x = ((i * 61) % VIEW_W) - 20 + (i % 4) * 6
+    ctx.globalAlpha = 0.4
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    ctx.lineTo(x - 11, y + 26)
+    ctx.stroke()
+  }
+  ctx.globalAlpha = 1
 }
 
 /** Slow-drifting background clouds for depth. */

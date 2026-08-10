@@ -18,7 +18,11 @@ export declare const DUCK_H = 26;
 /** Horizontal scroll px per score point (score = distance / this). */
 export declare const SCORE_PER_POINT = 10;
 /** Score interval between day/night toggles. */
-export declare const THEME_INTERVAL = 200;
+export declare const THEME_INTERVAL = 800;
+/** Every this many points, a rain window starts (1000, 2000, ...). */
+export declare const RAIN_START = 1000;
+/** Rain window length in points: [mark, mark + RAIN_LENGTH). */
+export declare const RAIN_LENGTH = 300;
 export interface DinoRect {
     x: number;
     y: number;
@@ -50,6 +54,8 @@ export interface DinoState {
     score: number;
     /** Day/night theme, toggled every THEME_INTERVAL points. */
     night: boolean;
+    /** Rain window: drifting rain + fog for RAIN_LENGTH points every RAIN_START. */
+    raining: boolean;
     dino: {
         x: number;
         /** Top edge. */

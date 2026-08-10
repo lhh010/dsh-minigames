@@ -26,7 +26,11 @@ export const SCORE_PER_POINT = 10
 /** Speed gain per score point (speed = BASE + score * this, capped at MAX). */
 const SPEED_PER_SCORE = 0.15
 /** Score interval between day/night toggles. */
-export const THEME_INTERVAL = 200
+export const THEME_INTERVAL = 800
+/** Every this many points, a rain window starts (1000, 2000, ...). */
+export const RAIN_START = 1000
+/** Rain window length in points: [mark, mark + RAIN_LENGTH). */
+export const RAIN_LENGTH = 300
 const SPAWN_MIN = 1.1
 const SPAWN_MAX = 2.4
 /** Forgiving hitbox shrink on both axes, in px. */
@@ -61,6 +65,8 @@ export interface DinoState {
   score: number
   /** Day/night theme, toggled every THEME_INTERVAL points. */
   night: boolean
+  /** Rain window: drifting rain + fog for RAIN_LENGTH points every RAIN_START. */
+  raining: boolean
   dino: {
     x: number
     /** Top edge. */
@@ -85,6 +91,7 @@ export function createDinoState(rng: () => number = Math.random): DinoState {
     distance: 0,
     score: 0,
     night: false,
+    raining: false,
     dino: { x: DINO_X, y: GROUND_Y - DINO_H, vy: 0, onGround: true, ducking: false },
     obstacles: [],
     nextSpawnIn: 1.5,
@@ -162,6 +169,8 @@ export function step(state: DinoState, dt: number, input: DinoInput): void {
   state.distance += state.speed * dt
   state.score = Math.floor(state.distance / SCORE_PER_POINT)
   state.night = Math.floor(state.score / THEME_INTERVAL) % 2 === 1
+  // Rain windows: for RAIN_LENGTH points starting at every RAIN_START mark.
+  state.raining = state.score >= RAIN_START && state.score % RAIN_START < RAIN_LENGTH
   state.speed = Math.min(MAX_SPEED, BASE_SPEED + state.score * SPEED_PER_SCORE)
 
   // Dino vertical physics.

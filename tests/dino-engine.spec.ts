@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   collides, createDinoState, dinoRect, step,
   DINO_H, DUCK_H, GROUND_Y, VIEW_W, SCORE_PER_POINT, THEME_INTERVAL,
+  RAIN_START, RAIN_LENGTH,
 } from '../src/client/games/dino/engine.ts'
 
 /** Deterministic LCG so obstacle spawns are reproducible. */
@@ -142,6 +143,27 @@ describe('dino engine', () => {
     state.distance = THEME_INTERVAL * SCORE_PER_POINT * 2
     step(state, 0, idle)
     expect(state.night).toBe(false)
+  })
+
+  it('rains for a window of points at every thousand-mark', () => {
+    const state = createDinoState(lcg(1))
+    expect(state.raining).toBe(false)
+    state.distance = (RAIN_START - 1) * SCORE_PER_POINT
+    step(state, 0, idle)
+    expect(state.raining).toBe(false)
+    state.distance = RAIN_START * SCORE_PER_POINT
+    step(state, 0, idle)
+    expect(state.score).toBe(RAIN_START)
+    expect(state.raining).toBe(true)
+    state.distance = (RAIN_START + RAIN_LENGTH - 1) * SCORE_PER_POINT
+    step(state, 0, idle)
+    expect(state.raining).toBe(true)
+    state.distance = (RAIN_START + RAIN_LENGTH) * SCORE_PER_POINT
+    step(state, 0, idle)
+    expect(state.raining).toBe(false)
+    state.distance = (RAIN_START * 2) * SCORE_PER_POINT
+    step(state, 0, idle)
+    expect(state.raining).toBe(true)
   })
 
   it('a ground bird hits the standing dino', () => {
