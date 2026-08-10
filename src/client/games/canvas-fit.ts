@@ -28,7 +28,7 @@ export function fitCanvas(
   canvas: HTMLCanvasElement,
   logicalW: number,
   logicalH: number,
-  maxWidth = 640,
+  maxWidth = 960,
 ): FitCanvasResult | null {
   const ctx = canvas.getContext('2d')
   if (ctx === null) return null
