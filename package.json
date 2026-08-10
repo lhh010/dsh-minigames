@@ -1,6 +1,6 @@
 {
   "name": "@dsh-external/dsh-minigames",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "DSH Web UI 右侧小游戏面板：恐龙跳一跳 / 俄罗斯方块 / 坦克大战(AI)，可扩展游戏注册表。等待模型回复或修 bug 时的摸鱼神器。",
