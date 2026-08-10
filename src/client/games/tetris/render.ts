@@ -86,10 +86,11 @@ function drawNextQueue(ctx: CanvasRenderingContext2D, state: TetrisState): void 
   ctx.fillStyle = TEXT
   ctx.font = '11px ui-monospace, monospace'
   ctx.textAlign = 'left'
-  ctx.fillText('下一个', PREVIEW_X, 6)
-  const itemH = 3 * MINI + 6
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillText('下一个', PREVIEW_X, 12)
+  const itemH = 3 * MINI + 8
   for (let i = 0; i < Math.min(PREVIEW_COUNT, state.nextQueue.length); i += 1) {
-    const y = 12 + i * itemH
+    const y = 18 + i * itemH
     ctx.fillStyle = BOARD_BG
     ctx.fillRect(PREVIEW_X, y, PREVIEW_W, 3 * MINI)
     ctx.strokeStyle = GRID_LINE
@@ -143,7 +144,7 @@ export function renderTetris(ctx: CanvasRenderingContext2D, state: TetrisState):
   // Next queue (5 mini previews) + hold preview.
   drawNextQueue(ctx, state)
   // Hold sits below the 5-piece queue.
-  const queueBottom = 12 + PREVIEW_COUNT * (3 * MINI + 6)
+  const queueBottom = 18 + PREVIEW_COUNT * (3 * MINI + 8)
   drawHold(ctx, state.hold, queueBottom + 8)
 
   if (state.over) {
