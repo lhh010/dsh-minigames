@@ -144,13 +144,14 @@ export function rotate(state: TetrisState, dir: 1 | -1): boolean {
   return false
 }
 
-/** Drop the current piece to the floor and lock it. Returns the cells dropped. */
+/** Drop the current piece to the floor. Returns the cells dropped. */
 export function hardDrop(state: TetrisState): number {
   const piece = state.current
   if (piece === null || state.over) return 0
   let dropped = 0
+  // move() locks on its own when gravity fails (dy === 1) — never lock again
+  // here or the freshly spawned piece gets merged at the top instantly.
   while (move(state, 0, 1)) dropped += 1
-  lock(state)
   return dropped
 }
 

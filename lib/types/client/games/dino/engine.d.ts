@@ -59,7 +59,7 @@ export interface DinoState {
 }
 /** A new run at the starting line. */
 export declare function createDinoState(rng?: () => number): DinoState;
-/** The dino's current collision rect (ducking shrinks the height). */
+/** The dino's current collision rect: follows the jump, ducking shrinks it. */
 export declare function dinoRect(state: DinoState): DinoRect;
 /** Shrunk AABB overlap test — the forgiving hitbox the runner actually uses. */
 export declare function collides(a: DinoRect, b: DinoRect): boolean;

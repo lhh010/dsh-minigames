@@ -44,11 +44,21 @@ export interface PlayerInput {
     fire: boolean;
 }
 export type GameResult = 'none' | 'win' | 'lose';
+/** Transient visual effect (explosion) — pure model state, decayed in step. */
+export interface Effect {
+    x: number;
+    y: number;
+    /** Elapsed seconds. */
+    t: number;
+    /** Total lifetime in seconds. */
+    life: number;
+}
 export interface WorldState {
     grid: Tile[][];
     player: Tank;
     enemies: Tank[];
     bullets: Bullet[];
+    effects: Effect[];
     score: number;
     wave: number;
     /** Enemies still to spawn this wave. */

@@ -54,6 +54,29 @@ describe('dino engine', () => {
     expect(state.over).toBe(true)
   })
 
+  it('a jump clears a ground-level obstacle without dying', () => {
+    const state = createDinoState(lcg(1))
+    // Obstacle ahead; delay the jump so it passes under the dino at the arc
+    // peak rather than clipping the feet on the way down.
+    state.obstacles.push({ kind: 'cactus', x: 200, w: 26, h: 44, y: GROUND_Y - 44 })
+    for (let i = 0; i < 12; i += 1) step(state, 1 / 60, idle)
+    step(state, 1 / 60, { jump: true, duck: false })
+    for (let i = 0; i < 60; i += 1) step(state, 1 / 60, idle)
+    expect(state.over).toBe(false)
+    expect(state.obstacles).toHaveLength(0)
+    expect(state.score).toBe(1)
+  })
+
+  it('landing back onto an obstacle collides', () => {
+    const state = createDinoState(lcg(1))
+    // A tall cactus parked exactly under where the dino lands.
+    state.obstacles.push({ kind: 'cactus', x: 60, w: 26, h: 60, y: GROUND_Y - 60 })
+    step(state, 1 / 60, { jump: true, duck: false })
+    // Wait out the full jump arc.
+    for (let i = 0; i < 240; i += 1) step(state, 1 / 60, idle)
+    expect(state.over).toBe(true)
+  })
+
   it('an obstacle that passes the dino scores and leaves the field', () => {
     const state = createDinoState(lcg(1))
     state.obstacles.push({ kind: 'cactus', x: 10, w: 30, h: 40, y: GROUND_Y - 40 })

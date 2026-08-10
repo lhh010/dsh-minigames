@@ -21,12 +21,18 @@ const COLORS = [
 
 const GRID_LINE = '#26262e'
 const BOARD_BG = '#15151b'
+const BOARD_BORDER = '#3a3a45'
 const TEXT = '#d8d8e0'
 
 function drawCell(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, alpha = 1): void {
   ctx.globalAlpha = alpha
   ctx.fillStyle = color
   ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2)
+  // Inner top-left highlight + darker seam for a beveled block look.
+  ctx.fillStyle = 'rgba(255,255,255,0.25)'
+  ctx.fillRect(x + 2, y + 2, CELL - 4, 2)
+  ctx.fillStyle = 'rgba(0,0,0,0.25)'
+  ctx.fillRect(x + 2, y + CELL - 4, CELL - 4, 2)
   ctx.globalAlpha = 1
 }
 
@@ -60,9 +66,12 @@ export function renderTetris(ctx: CanvasRenderingContext2D, state: TetrisState):
   const width = BOARD_W + 16 + PREVIEW_W + 8
   ctx.clearRect(0, 0, width, BOARD_H + 8)
 
-  // Board background + grid.
+  // Board background + grid + border.
   ctx.fillStyle = BOARD_BG
   ctx.fillRect(0, 0, BOARD_W, BOARD_H)
+  ctx.strokeStyle = BOARD_BORDER
+  ctx.lineWidth = 2
+  ctx.strokeRect(1, 1, BOARD_W - 2, BOARD_H - 2)
   ctx.strokeStyle = GRID_LINE
   ctx.lineWidth = 1
   for (let c = 1; c < COLS; c += 1) {

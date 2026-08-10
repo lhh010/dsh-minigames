@@ -41,7 +41,7 @@ export declare function spawn(state: TetrisState): void;
 export declare function move(state: TetrisState, dx: number, dy: number): boolean;
 /** Rotate the current piece CW (dir 1) or CCW (dir -1) with simple wall kicks. */
 export declare function rotate(state: TetrisState, dir: 1 | -1): boolean;
-/** Drop the current piece to the floor and lock it. Returns the cells dropped. */
+/** Drop the current piece to the floor. Returns the cells dropped. */
 export declare function hardDrop(state: TetrisState): number;
 /** Remove full rows (returning how many) and compact the grid above. */
 export declare function clearFullRows(grid: number[][]): number;

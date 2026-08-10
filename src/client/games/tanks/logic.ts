@@ -52,11 +52,22 @@ export interface PlayerInput {
 
 export type GameResult = 'none' | 'win' | 'lose'
 
+/** Transient visual effect (explosion) — pure model state, decayed in step. */
+export interface Effect {
+  x: number
+  y: number
+  /** Elapsed seconds. */
+  t: number
+  /** Total lifetime in seconds. */
+  life: number
+}
+
 export interface WorldState {
   grid: Tile[][]
   player: Tank
   enemies: Tank[]
   bullets: Bullet[]
+  effects: Effect[]
   score: number
   wave: number
   /** Enemies still to spawn this wave. */
@@ -73,8 +84,10 @@ export const WAVES = 3
 export const ENEMIES_PER_WAVE = 5
 export const MAX_ALIVE = 3
 const SPAWN_INTERVAL = 1.6
-const PLAYER_SPEED = 110
-const ENEMY_SPEED = 80
+const PLAYER_SPEED = 120
+const ENEMY_SPEED = 82
+/** Seconds of invulnerability a freshly spawned enemy gets (spawn flash). */
+const ENEMY_SPAWN_INVULN = 0.7
 const PLAYER_FIRE_CD = 0.4
 const ENEMY_FIRE_CD_MIN = 1.2
 const ENEMY_FIRE_CD_MAX = 2.6
@@ -126,6 +139,7 @@ export function createWorld(rng: () => number = Math.random): WorldState {
     },
     enemies: [],
     bullets: [],
+    effects: [],
     score: 0,
     wave: 1,
     spawnQueue: ENEMIES_PER_WAVE,
@@ -294,7 +308,7 @@ function spawnEnemy(state: WorldState): void {
       hp: 1,
       cooldown: 0.5 + state.rng(),
       alive: true,
-      invuln: 0,
+      invuln: ENEMY_SPAWN_INVULN,
     })
     state.spawnQueue -= 1
     return
@@ -302,8 +316,10 @@ function spawnEnemy(state: WorldState): void {
 }
 
 function killEnemy(state: WorldState, index: number): void {
+  const enemy = state.enemies[index]!
   state.enemies.splice(index, 1)
   state.score += 100
+  state.effects.push({ x: enemy.x + TILE / 2, y: enemy.y + TILE / 2, t: 0, life: 0.45 })
 }
 
 /**
@@ -340,6 +356,7 @@ export function stepWorld(state: WorldState, dt: number, input: PlayerInput): vo
     if (decide) decideEnemy(state, enemy)
     tryMove(state, enemy, enemy.dir, ENEMY_SPEED * dt)
     enemy.cooldown = Math.max(0, enemy.cooldown - dt)
+    enemy.invuln = Math.max(0, enemy.invuln - dt)
   }
 
   // Spawning.
@@ -364,8 +381,10 @@ export function stepWorld(state: WorldState, dt: number, input: PlayerInput): vo
     const tile = tileAt(state.grid, tx, ty)
     if (tile === 1) {
       state.grid[ty]![tx] = 0
+      state.effects.push({ x: bullet.x, y: bullet.y, t: 0, life: 0.3 })
       dead = true
     } else if (tile === 2 || (tx < 0 || tx >= GRID_W || ty < 0 || ty >= GRID_H)) {
+      state.effects.push({ x: bullet.x, y: bullet.y, t: 0, life: 0.25 })
       dead = true
     }
     // Tank collisions: player bullets hit enemies; enemy bullets hit the player.
@@ -382,6 +401,7 @@ export function stepWorld(state: WorldState, dt: number, input: PlayerInput): vo
       if (bulletHitsTank(bullet, player) && player.invuln <= 0) {
         player.hp -= 1
         player.invuln = PLAYER_INVULN
+        state.effects.push({ x: bullet.x, y: bullet.y, t: 0, life: 0.35 })
         dead = true
         if (player.hp <= 0) player.alive = false
       }
@@ -389,6 +409,12 @@ export function stepWorld(state: WorldState, dt: number, input: PlayerInput): vo
     if (!dead) aliveBullets.push(bullet)
   }
   state.bullets = aliveBullets
+
+  // Decay visual effects.
+  if (state.effects.length > 0) {
+    for (const effect of state.effects) effect.t += dt
+    state.effects = state.effects.filter(effect => effect.t < effect.life)
+  }
 
   // Wave/result progression.
   if (!player.alive) {

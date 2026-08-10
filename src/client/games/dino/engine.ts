@@ -17,8 +17,8 @@ export const DINO_H = 50
 /** Ducking dino hitbox (only while on the ground). */
 export const DUCK_H = 26
 
-const GRAVITY = 2400
-const JUMP_V = -720
+const GRAVITY = 2600
+const JUMP_V = -600
 const BASE_SPEED = 320
 const MAX_SPEED = 760
 const SPEED_ACCEL = 6
@@ -82,10 +82,13 @@ export function createDinoState(rng: () => number = Math.random): DinoState {
   }
 }
 
-/** The dino's current collision rect (ducking shrinks the height). */
+/** The dino's current collision rect: follows the jump, ducking shrinks it. */
 export function dinoRect(state: DinoState): DinoRect {
-  const h = state.dino.ducking ? DUCK_H : DINO_H
-  return { x: state.dino.x, y: GROUND_Y - h, w: DINO_W, h }
+  const dino = state.dino
+  if (dino.ducking && dino.onGround) {
+    return { x: dino.x, y: GROUND_Y - DUCK_H, w: DINO_W, h: DUCK_H }
+  }
+  return { x: dino.x, y: dino.y, w: DINO_W, h: DINO_H }
 }
 
 /** Shrunk AABB overlap test — the forgiving hitbox the runner actually uses. */

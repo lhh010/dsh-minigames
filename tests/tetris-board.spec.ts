@@ -106,6 +106,19 @@ describe('tetris board', () => {
     expect(state.current).toBe(second)
   })
 
+  it('hard drop locks exactly one piece', () => {
+    // Regression: hardDrop must not lock the freshly spawned piece at the top
+    // (a double-lock merged each new piece instantly, piling the board).
+    const state = createTetrisState(lcg(5))
+    const cellsInPiece = state.current!.shape.flat().filter(Boolean).length
+    hardDrop(state)
+    const filled = state.grid.flat().filter(cell => cell !== 0).length
+    expect(filled).toBe(cellsInPiece)
+    // The current piece is still a live, un-merged piece.
+    expect(state.current).not.toBeNull()
+    expect(collides(state.grid, state.current!)).toBe(false)
+  })
+
   it('game over when the spawn point is blocked', () => {
     const state = createTetrisState(lcg(1))
     for (let r = 0; r < 2; r += 1) state.grid[r] = Array<number>(COLS).fill(1)
