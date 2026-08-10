@@ -47,5 +47,5 @@
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   },
-  "license": "MIT"
+  "license": "BSD-3-Clause"
 }
