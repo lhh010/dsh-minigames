@@ -52,6 +52,22 @@ describe('tank battle logic', () => {
     expect(world.player.x).toBe(before)
   })
 
+  it('turning waits for grid alignment instead of wedging between lanes', () => {
+    // Regression: a tank mid-lane (x not a tile multiple) pressing up must
+    // first finish aligning (keep driving right) before it turns up; the old
+    // free-turn model wedged tanks against walls at such positions.
+    const world = createWorld(lcg(1))
+    world.player.x = 372 // 372 % 32 = 20 -> not aligned
+    world.player.y = 256 // lane through tiles (11,8)+(12,8); (12,7) is open
+    world.player.dir = 1
+    world.player.targetDir = 1
+    for (let i = 0; i < 12; i += 1) {
+      stepWorld(world, 1 / 60, { ...idle, up: true })
+    }
+    expect(world.player.x).toBe(384) // aligned first (372 + 2*6 = 384)
+    expect(world.player.y).toBeLessThan(256) // then drove up
+  })
+
   it('a player bullet destroys brick and dies on steel', () => {
     const world = createWorld(lcg(1))
     // Clear a column above the player, put one brick tile directly above.
@@ -94,7 +110,7 @@ describe('tank battle logic', () => {
     world.enemies.push({
       id: 1, kind: 'enemy',
       x: world.player.x, y: world.player.y - TILE,
-      dir: 2, hp: 1, cooldown: 99, alive: true, invuln: 0,
+      dir: 2, targetDir: 2, hp: 1, cooldown: 99, alive: true, invuln: 0,
     })
     world.player.dir = 0
     world.player.cooldown = 0

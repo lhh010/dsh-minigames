@@ -12,16 +12,16 @@ import {
   createWorld, stepWorld, type PlayerInput, type WorldState,
 } from './logic.ts'
 import { renderTanks, TANK_W, TANK_H } from './render.ts'
+import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 
 function createTanksGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
-  canvas.width = TANK_W
-  canvas.height = TANK_H
   canvas.className = 'dmg-game-canvas'
   host.replaceChildren(canvas)
-  const ctx = canvas.getContext('2d')
-  if (ctx === null) throw new Error('dsh-minigames: tanks needs a 2d canvas context')
+  const fit = fitCanvas(host, canvas, TANK_W, TANK_H)
+  if (fit === null) throw new Error('dsh-minigames: tanks needs a 2d canvas context')
+  const ctx = fit.ctx
 
   let world: WorldState = createWorld()
   let running = false
@@ -153,6 +153,7 @@ function createTanksGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     destroy: () => {
       running = false
       stopLoop()
+      fit.dispose()
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
     },

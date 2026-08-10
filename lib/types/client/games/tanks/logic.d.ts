@@ -21,7 +21,14 @@ export interface Tank {
     /** Top-left pixel position. */
     x: number;
     y: number;
+    /** Actual heading (also the fire direction). */
     dir: Dir;
+    /**
+     * Desired heading: the tank only turns onto it once aligned with the tile
+     * grid in the perpendicular axis (classic grid-locked turning), so it never
+     * wedges itself straddling two lanes.
+     */
+    targetDir: Dir;
     hp: number;
     /** Seconds until the tank may fire again. */
     cooldown: number;

@@ -7,8 +7,8 @@
 
 /** Logical viewport width in px (height is GROUND_Y + a small margin). */
 export const VIEW_W = 600
-/** Ground line y (canvas coordinates). */
-export const GROUND_Y = 150
+/** Ground line y (canvas coordinates); low enough for a full jump arc. */
+export const GROUND_Y = 165
 /** Dino's fixed horizontal position (left edge). */
 export const DINO_X = 60
 /** Standing dino hitbox. */
@@ -17,8 +17,8 @@ export const DINO_H = 50
 /** Ducking dino hitbox (only while on the ground). */
 export const DUCK_H = 26
 
-const GRAVITY = 2600
-const JUMP_V = -600
+const GRAVITY = 2100
+const JUMP_V = -640
 const BASE_SPEED = 320
 const MAX_SPEED = 760
 const SPEED_ACCEL = 6
@@ -30,11 +30,11 @@ const HITBOX_SHRINK = 4
 export interface DinoRect { x: number; y: number; w: number; h: number }
 
 export interface Obstacle {
-  kind: 'cactus' | 'bird'
+  kind: 'cactus' | 'cactus-double' | 'bird'
   x: number
   w: number
   h: number
-  /** Top edge (canvas coordinates); bird floats, cactus sits on the ground. */
+  /** Top edge (canvas coordinates); birds float, cacti sit on the ground. */
   y: number
 }
 
@@ -107,11 +107,19 @@ export function collides(a: DinoRect, b: DinoRect): boolean {
 /** Roll one obstacle at the right edge of the viewport. */
 function spawnObstacle(state: DinoState): void {
   const rng = state.rng
-  if (rng() < 0.75) {
+  const roll = rng()
+  if (roll < 0.5) {
+    // Single cactus with size variance.
     const w = 22 + rng() * 8
     const h = 40 + rng() * 12
     state.obstacles.push({ kind: 'cactus', x: VIEW_W, w, h, y: GROUND_Y - h })
+  } else if (roll < 0.75) {
+    // Double cactus: two trunks side by side, one wider hitbox.
+    const w = 46 + rng() * 10
+    const h = 40 + rng() * 12
+    state.obstacles.push({ kind: 'cactus-double', x: VIEW_W, w, h, y: GROUND_Y - h })
   } else {
+    // Bird, high or low.
     const w = 46
     const h = 30
     const high = rng() < 0.5

@@ -25,7 +25,14 @@ export interface Tank {
   /** Top-left pixel position. */
   x: number
   y: number
+  /** Actual heading (also the fire direction). */
   dir: Dir
+  /**
+   * Desired heading: the tank only turns onto it once aligned with the tile
+   * grid in the perpendicular axis (classic grid-locked turning), so it never
+   * wedges itself straddling two lanes.
+   */
+  targetDir: Dir
   hp: number
   /** Seconds until the tank may fire again. */
   cooldown: number
@@ -135,6 +142,7 @@ export function createWorld(rng: () => number = Math.random): WorldState {
       x: PLAYER_START[0] * TILE,
       y: PLAYER_START[1] * TILE,
       dir: 0,
+      targetDir: 0,
       hp: PLAYER_HP,
       cooldown: 0,
       alive: true,
@@ -201,12 +209,28 @@ export function tryMove(state: WorldState, tank: Tank, dir: Dir, dist: number): 
   tank.x = nx
   tank.y = ny
   tank.dir = dir
+  // Snap to the tile boundary just crossed, so the perpendicular axis always
+  // lands exactly on the grid (non-integer per-frame steps would otherwise
+  // overshoot the alignment point and wedge the tank mid-lane).
+  if (dir === 1) {
+    const boundary = Math.floor(tank.x / TILE) * TILE
+    if (tank.x - boundary < dist) tank.x = boundary
+  } else if (dir === 3) {
+    const boundary = Math.ceil(tank.x / TILE) * TILE
+    if (boundary - tank.x < dist) tank.x = boundary
+  } else if (dir === 2) {
+    const boundary = Math.floor(tank.y / TILE) * TILE
+    if (tank.y - boundary < dist) tank.y = boundary
+  } else {
+    const boundary = Math.ceil(tank.y / TILE) * TILE
+    if (boundary - tank.y < dist) tank.y = boundary
+  }
   return true
 }
 
-/** Whether the tank can advance a small step in dir (walls + tanks clear). */
+/** Whether the tank can advance nearly a full tile in dir (walls + tanks clear). */
 function canAdvance(state: WorldState, tank: Tank, dir: Dir): boolean {
-  const step = 4
+  const step = TILE * 0.95
   const nx = tank.x + DIR_DX[dir]! * step
   const ny = tank.y + DIR_DY[dir]! * step
   if (!rectWalkable(state.grid, nx, ny)) return false
@@ -216,6 +240,32 @@ function canAdvance(state: WorldState, tank: Tank, dir: Dir): boolean {
     if (tanksOverlap(probe, other)) return false
   }
   return true
+}
+
+/**
+ * Move a tank toward its desired heading with classic grid-locked turning: a
+ * turn only happens once the tank is aligned with the tile grid in the
+ * perpendicular axis (x % TILE == 0 for vertical lanes, y % TILE == 0 for
+ * horizontal lanes). Until then it keeps driving straight, so it never
+ * straddles two lanes and wedges itself against a wall.
+ * @param state - the world.
+ * @param tank - the tank to move.
+ * @param targetDir - the desired heading this frame.
+ * @param dist - movement distance in px.
+ * @returns whether the tank actually moved.
+ */
+function moveTank(state: WorldState, tank: Tank, targetDir: Dir, dist: number): boolean {
+  if (targetDir !== tank.dir) {
+    const perpendicular = tank.x % TILE
+    const lateral = tank.y % TILE
+    const vertical = targetDir === 0 || targetDir === 2
+    const offset = vertical ? perpendicular : lateral
+    if (!(offset < 0.5 || offset > TILE - 0.5)) {
+      // Not aligned for the turn yet: keep driving straight.
+      return tryMove(state, tank, tank.dir, dist)
+    }
+  }
+  return tryMove(state, tank, targetDir, dist)
 }
 
 /** Spawn a bullet just outside the tank's front face in its facing direction. */
@@ -264,14 +314,17 @@ function losClear(state: WorldState, a: Tank, b: Tank): boolean {
 function decideEnemy(state: WorldState, enemy: Tank): void {
   const player = state.player
   if (losClear(state, enemy, player)) {
-    // Face the player and fire down the clear lane.
+    // Face the player and fire down the clear lane: set the heading (and the
+    // desired heading) so the bullet leaves toward the player immediately.
     const ex = enemy.x + TILE / 2
     const ey = enemy.y + TILE / 2
     const px = player.x + TILE / 2
     const py = player.y + TILE / 2
-    enemy.dir = Math.abs(ex - px) < Math.abs(ey - py)
+    const facing: Dir = Math.abs(ex - px) < Math.abs(ey - py)
       ? (py < ey ? 0 : 2)
       : (px > ex ? 1 : 3)
+    enemy.dir = facing
+    enemy.targetDir = facing
     if (enemy.cooldown <= 0) fire(state, enemy, BULLET_SPEED_ENEMY)
     return
   }
@@ -289,7 +342,7 @@ function decideEnemy(state: WorldState, enemy: Tank): void {
     : [dy > 0 ? 2 : 0, dx > 0 ? 1 : 3, dy > 0 ? 0 : 2, dx > 0 ? 3 : 1]
   for (const dir of candidates) {
     if (canAdvance(state, enemy, dir)) {
-      enemy.dir = dir
+      enemy.targetDir = dir
       return
     }
   }
@@ -308,6 +361,7 @@ function spawnEnemy(state: WorldState): void {
       x,
       y,
       dir: 2,
+      targetDir: 2,
       hp: 1,
       cooldown: 0.5 + state.rng(),
       alive: true,
@@ -335,7 +389,7 @@ export function stepWorld(state: WorldState, dt: number, input: PlayerInput): vo
   if (state.result !== 'none') return
   state.t += dt
 
-  // Player movement: pick one direction from the held keys.
+  // Player movement: pick one direction from the held keys; grid-aligned turns.
   const player = state.player
   if (player.alive) {
     let dir: Dir | null = null
@@ -343,7 +397,12 @@ export function stepWorld(state: WorldState, dt: number, input: PlayerInput): vo
     else if (input.down) dir = 2
     else if (input.left) dir = 3
     else if (input.right) dir = 1
-    if (dir !== null) tryMove(state, player, dir, PLAYER_SPEED * dt)
+    if (dir !== null) {
+      player.targetDir = dir
+      moveTank(state, player, player.targetDir, PLAYER_SPEED * dt)
+    } else {
+      player.targetDir = player.dir
+    }
     if (input.fire) {
       player.cooldown = Math.max(0, player.cooldown - dt)
       if (player.cooldown <= 0) fire(state, player, BULLET_SPEED_PLAYER)
@@ -357,7 +416,7 @@ export function stepWorld(state: WorldState, dt: number, input: PlayerInput): vo
   if (decide) state.aiTimer = 0
   for (const enemy of state.enemies) {
     if (decide) decideEnemy(state, enemy)
-    tryMove(state, enemy, enemy.dir, ENEMY_SPEED * dt)
+    moveTank(state, enemy, enemy.targetDir, ENEMY_SPEED * dt)
     enemy.cooldown = Math.max(0, enemy.cooldown - dt)
     enemy.invuln = Math.max(0, enemy.invuln - dt)
   }

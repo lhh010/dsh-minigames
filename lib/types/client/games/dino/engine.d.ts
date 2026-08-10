@@ -6,8 +6,8 @@
  */
 /** Logical viewport width in px (height is GROUND_Y + a small margin). */
 export declare const VIEW_W = 600;
-/** Ground line y (canvas coordinates). */
-export declare const GROUND_Y = 150;
+/** Ground line y (canvas coordinates); low enough for a full jump arc. */
+export declare const GROUND_Y = 165;
 /** Dino's fixed horizontal position (left edge). */
 export declare const DINO_X = 60;
 /** Standing dino hitbox. */
@@ -22,11 +22,11 @@ export interface DinoRect {
     h: number;
 }
 export interface Obstacle {
-    kind: 'cactus' | 'bird';
+    kind: 'cactus' | 'cactus-double' | 'bird';
     x: number;
     w: number;
     h: number;
-    /** Top edge (canvas coordinates); bird floats, cactus sits on the ground. */
+    /** Top edge (canvas coordinates); birds float, cacti sit on the ground. */
     y: number;
 }
 export interface DinoInput {

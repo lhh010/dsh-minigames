@@ -13,17 +13,17 @@ import {
   createTetrisState, gravityInterval, hardDrop, holdPiece, move, rotate,
   type TetrisState,
 } from './board.ts'
-import { renderTetris, BOARD_W, BOARD_H } from './render.ts'
+import { renderTetris, BOARD_W, BOARD_H, LOGICAL_W } from './render.ts'
+import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 
 function createTetrisGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
-  canvas.width = BOARD_W + 16 + 4 * 22 + 8
-  canvas.height = BOARD_H + 8
   canvas.className = 'dmg-game-canvas'
   host.replaceChildren(canvas)
-  const ctx = canvas.getContext('2d')
-  if (ctx === null) throw new Error('dsh-minigames: tetris needs a 2d canvas context')
+  const fit = fitCanvas(host, canvas, LOGICAL_W, BOARD_H + 8)
+  if (fit === null) throw new Error('dsh-minigames: tetris needs a 2d canvas context')
+  const ctx = fit.ctx
 
   let state: TetrisState = createTetrisState()
   let running = false
@@ -151,6 +151,7 @@ function createTetrisGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     destroy: () => {
       running = false
       stopLoop()
+      fit.dispose()
       window.removeEventListener('keydown', onKeyDown)
     },
   }

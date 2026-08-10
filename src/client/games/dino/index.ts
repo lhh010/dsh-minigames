@@ -10,6 +10,7 @@ import type {
 } from '../types.ts'
 import { createDinoState, step, VIEW_W, GROUND_Y, type DinoState } from './engine.ts'
 import { renderDino } from './render.ts'
+import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 
 /** How long the game over screen waits before accepting a restart. */
@@ -17,12 +18,11 @@ const RESTART_DELAY = 400
 
 function createDinoGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
-  canvas.width = VIEW_W
-  canvas.height = GROUND_Y + 20
   canvas.className = 'dmg-game-canvas'
   host.replaceChildren(canvas)
-  const ctx = canvas.getContext('2d')
-  if (ctx === null) throw new Error('dsh-minigames: dino needs a 2d canvas context')
+  const fit = fitCanvas(host, canvas, VIEW_W, GROUND_Y + 20)
+  if (fit === null) throw new Error('dsh-minigames: dino needs a 2d canvas context')
+  const ctx = fit.ctx
 
   let state: DinoState = createDinoState()
   let running = false
@@ -133,6 +133,7 @@ function createDinoGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     destroy: () => {
       running = false
       stopLoop()
+      fit.dispose()
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
       canvas.removeEventListener('click', onClick)

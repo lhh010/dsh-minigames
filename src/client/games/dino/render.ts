@@ -62,25 +62,16 @@ function drawGround(ctx: CanvasRenderingContext2D, state: DinoState): void {
 }
 
 function drawObstacle(ctx: CanvasRenderingContext2D, obstacle: Obstacle, t: number): void {
-  if (obstacle.kind === 'cactus') {
-    // Two-tone trunk with a highlight edge.
-    ctx.fillStyle = CACTUS
-    ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h)
-    ctx.fillStyle = CACTUS_DARK
-    ctx.fillRect(obstacle.x + obstacle.w - 5, obstacle.y, 5, obstacle.h)
-    // Arms.
-    const arm = Math.max(5, obstacle.w * 0.34)
-    const leftY = obstacle.y + obstacle.h * 0.22
-    const rightY = obstacle.y + obstacle.h * 0.45
-    ctx.fillStyle = CACTUS
-    ctx.fillRect(obstacle.x - arm, leftY, arm, 3)
-    ctx.fillRect(obstacle.x - 3, leftY - 5, 3, 5)
-    ctx.fillRect(obstacle.x + obstacle.w, rightY, arm, 3)
-    ctx.fillRect(obstacle.x + obstacle.w, rightY - 5, 3, 5)
-    // 1px outline for readability on dark.
-    ctx.strokeStyle = CACTUS_DARK
-    ctx.lineWidth = 1
-    ctx.strokeRect(obstacle.x + 0.5, obstacle.y + 0.5, obstacle.w - 1, obstacle.h - 1)
+  if (obstacle.kind === 'cactus' || obstacle.kind === 'cactus-double') {
+    if (obstacle.kind === 'cactus-double') {
+      // Two trunks with a small gap inside one hitbox.
+      const trunk = Math.max(14, Math.floor((obstacle.w - 6) / 2))
+      const gap = obstacle.w - trunk * 2
+      drawCactus(ctx, obstacle.x, obstacle.y, trunk, obstacle.h)
+      drawCactus(ctx, obstacle.x + trunk + gap, obstacle.y, trunk, obstacle.h)
+      return
+    }
+    drawCactus(ctx, obstacle.x, obstacle.y, obstacle.w, obstacle.h)
   } else {
     // Bird: body, wing, beak, eye.
     ctx.fillStyle = BIRD
@@ -93,6 +84,25 @@ function drawObstacle(ctx: CanvasRenderingContext2D, obstacle: Obstacle, t: numb
     ctx.fillStyle = '#24242c'
     ctx.fillRect(obstacle.x + obstacle.w - 14, obstacle.y + 11, 4, 4)
   }
+}
+
+/** One cactus trunk: two-tone body, arms, outline. */
+function drawCactus(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  ctx.fillStyle = CACTUS
+  ctx.fillRect(x, y, w, h)
+  ctx.fillStyle = CACTUS_DARK
+  ctx.fillRect(x + w - 5, y, 5, h)
+  const arm = Math.max(5, w * 0.34)
+  const leftY = y + h * 0.22
+  const rightY = y + h * 0.45
+  ctx.fillStyle = CACTUS
+  ctx.fillRect(x - arm, leftY, arm, 3)
+  ctx.fillRect(x - 3, leftY - 5, 3, 5)
+  ctx.fillRect(x + w, rightY, arm, 3)
+  ctx.fillRect(x + w, rightY - 5, 3, 5)
+  ctx.strokeStyle = CACTUS_DARK
+  ctx.lineWidth = 1
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1)
 }
 
 function drawDino(ctx: CanvasRenderingContext2D, state: DinoState): void {

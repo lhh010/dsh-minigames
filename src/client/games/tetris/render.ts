@@ -10,6 +10,8 @@ import {
 const CELL = 22
 export const BOARD_W = COLS * CELL
 export const BOARD_H = ROWS * CELL
+/** Full logical canvas width: the board plus the preview column. */
+export const LOGICAL_W = BOARD_W + 16 + 4 * CELL + 8
 const PREVIEW_X = BOARD_W + 16
 const PREVIEW_W = 4 * CELL
 const PREVIEW_H = 4 * CELL
@@ -63,7 +65,7 @@ function drawPreview(ctx: CanvasRenderingContext2D, label: string, piece: Tetris
 
 /** Draw one frame of the game. */
 export function renderTetris(ctx: CanvasRenderingContext2D, state: TetrisState): void {
-  const width = BOARD_W + 16 + PREVIEW_W + 8
+  const width = LOGICAL_W
   ctx.clearRect(0, 0, width, BOARD_H + 8)
 
   // Board background + grid + border.
