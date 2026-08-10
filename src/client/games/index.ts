@@ -8,6 +8,7 @@ import { registerGame, getGame } from './registry.ts'
 import { dinoGame } from './dino/index.ts'
 import { tetrisGame } from './tetris/index.ts'
 import { tanksGame } from './tanks/index.ts'
+import { match3Game } from './match3/index.ts'
 
 export { getGames, getGame } from './registry.ts'
 export { registerGame } from './registry.ts'
@@ -20,7 +21,7 @@ export type {
 export function registerBuiltinGames(): void {
   // Idempotent: the bundle factory re-executes on client-plugin HMR reloads,
   // so a second pass must not trip the registry's duplicate guard.
-  for (const game of [dinoGame, tetrisGame, tanksGame]) {
+  for (const game of [dinoGame, tetrisGame, tanksGame, match3Game]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
 }
