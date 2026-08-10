@@ -71,6 +71,28 @@ describe('tetris board', () => {
     expect(filled).toBeGreaterThan(0)
   })
 
+  it('rotates L/S pieces in a square box without truncating cells', () => {
+    // Regression: 2x3 piece matrices were rotated as 2x2, silently dropping
+    // the third column — the "truncated rotation" bug.
+    for (const [kind, shape] of [
+      [6, [[1, 0, 0], [1, 1, 1], [0, 0, 0]]] as const, // J
+      [7, [[0, 0, 1], [1, 1, 1], [0, 0, 0]]] as const, // L
+      [4, [[0, 1, 1], [1, 1, 0], [0, 0, 0]]] as const, // S
+      [5, [[1, 1, 0], [0, 1, 1], [0, 0, 0]]] as const, // Z
+      [3, [[0, 1, 0], [1, 1, 1], [0, 0, 0]]] as const, // T
+    ]) {
+      const state = createTetrisState(lcg(1))
+      state.current = { kind, shape: shape.map(row => [...row]), x: 3, y: 0 }
+      const filled = (): number => state.current!.shape.flat().filter(Boolean).length
+      const original = state.current!.shape.map(row => [...row])
+      for (let i = 0; i < 4; i += 1) {
+        expect(rotate(state, 1)).toBe(true)
+        expect(filled()).toBe(4) // four cells survive every rotation
+      }
+      expect(state.current!.shape).toEqual(original) // full cycle returns home
+    }
+  })
+
   it('clears full rows and scores by line count', () => {
     const grid = Array.from({ length: ROWS }, () => Array<number>(COLS).fill(0))
     grid[ROWS - 1] = Array<number>(COLS).fill(3)

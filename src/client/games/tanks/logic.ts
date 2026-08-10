@@ -90,6 +90,9 @@ export interface WorldState {
 export const WAVES = 3
 export const ENEMIES_PER_WAVE = 5
 export const MAX_ALIVE = 3
+/** Tank collision inset in px: the effective body is TILE - 2*INSET, letting
+ * tanks fit and turn in lanes a hair tighter than a full tile. */
+const TANK_INSET = 2
 const SPAWN_INTERVAL = 1.6
 const PLAYER_SPEED = 120
 const ENEMY_SPEED = 82
@@ -168,19 +171,23 @@ export function tileAt(grid: Tile[][], tx: number, ty: number): Tile {
   return grid[ty]![tx]!
 }
 
-/** The tile columns/rows a TILE-size rect at (x, y) overlaps. */
-function overlapTiles(x: number, y: number): { tx0: number; tx1: number; ty0: number; ty1: number } {
+/**
+ * Tile span of a tank's effective collision body: the full tile inset by
+ * {@link TANK_INSET} on every side, so the tank fits lanes that are a hair
+ * tighter than a full tile and can still turn there.
+ */
+function insetTiles(x: number, y: number): { tx0: number; tx1: number; ty0: number; ty1: number } {
   return {
-    tx0: Math.floor(x / TILE),
-    tx1: Math.floor((x + TILE - 1) / TILE),
-    ty0: Math.floor(y / TILE),
-    ty1: Math.floor((y + TILE - 1) / TILE),
+    tx0: Math.floor((x + TANK_INSET) / TILE),
+    tx1: Math.floor((x + TILE - 1 - TANK_INSET) / TILE),
+    ty0: Math.floor((y + TANK_INSET) / TILE),
+    ty1: Math.floor((y + TILE - 1 - TANK_INSET) / TILE),
   }
 }
 
-/** Whether every tile a rect at (x, y) overlaps is walkable. */
+/** Whether every tile the tank's (inset) body overlaps is walkable. */
 function rectWalkable(grid: Tile[][], x: number, y: number): boolean {
-  const { tx0, tx1, ty0, ty1 } = overlapTiles(x, y)
+  const { tx0, tx1, ty0, ty1 } = insetTiles(x, y)
   for (let ty = ty0; ty <= ty1; ty += 1) {
     for (let tx = tx0; tx <= tx1; tx += 1) {
       if (tileAt(grid, tx, ty) !== 0) return false
@@ -189,9 +196,9 @@ function rectWalkable(grid: Tile[][], x: number, y: number): boolean {
   return true
 }
 
-/** AABB overlap between two tanks (slightly shrunk so neighbours can pass). */
+/** AABB overlap between two tanks (shrunk so neighbours can pass). */
 function tanksOverlap(a: Tank, b: Tank): boolean {
-  const pad = 2
+  const pad = TANK_INSET
   return a.x + pad < b.x + TILE - pad && a.x + TILE - pad > b.x + pad
     && a.y + pad < b.y + TILE - pad && a.y + TILE - pad > b.y + pad
 }
@@ -200,7 +207,12 @@ function tanksOverlap(a: Tank, b: Tank): boolean {
 export function tryMove(state: WorldState, tank: Tank, dir: Dir, dist: number): boolean {
   const nx = tank.x + DIR_DX[dir]! * dist
   const ny = tank.y + DIR_DY[dir]! * dist
-  if (!rectWalkable(state.grid, nx, ny)) return false
+  if (!rectWalkable(state.grid, nx, ny)) {
+    // Wall-blocked: pull the tank back to the tile boundary it last crossed so
+    // it never parks at a half-tile offset where a turn is impossible.
+    snapBackToBoundary(tank, dir, dist)
+    return false
+  }
   for (const other of [state.player, ...state.enemies]) {
     if (other === tank || !other.alive) continue
     const probe: Tank = { ...tank, x: nx, y: ny }
@@ -212,6 +224,12 @@ export function tryMove(state: WorldState, tank: Tank, dir: Dir, dist: number): 
   // Snap to the tile boundary just crossed, so the perpendicular axis always
   // lands exactly on the grid (non-integer per-frame steps would otherwise
   // overshoot the alignment point and wedge the tank mid-lane).
+  snapCrossedBoundary(tank, dir, dist)
+  return true
+}
+
+/** Snap the tank to a boundary only when this step actually crossed it. */
+function snapCrossedBoundary(tank: Tank, dir: Dir, dist: number): void {
   if (dir === 1) {
     const boundary = Math.floor(tank.x / TILE) * TILE
     if (tank.x - boundary < dist) tank.x = boundary
@@ -225,7 +243,28 @@ export function tryMove(state: WorldState, tank: Tank, dir: Dir, dist: number): 
     const boundary = Math.ceil(tank.y / TILE) * TILE
     if (boundary - tank.y < dist) tank.y = boundary
   }
-  return true
+}
+
+/**
+ * Wall-stop snap-back: pull the tank to the tile boundary it is within
+ * `dist + TANK_INSET` px of, so a wall stop never leaves it at a half-tile
+ * offset that blocks the next turn.
+ */
+function snapBackToBoundary(tank: Tank, dir: Dir, dist: number): void {
+  const threshold = dist + TANK_INSET
+  if (dir === 1) {
+    const boundary = Math.floor(tank.x / TILE) * TILE
+    if (tank.x - boundary <= threshold) tank.x = boundary
+  } else if (dir === 3) {
+    const boundary = Math.ceil(tank.x / TILE) * TILE
+    if (boundary - tank.x <= threshold) tank.x = boundary
+  } else if (dir === 2) {
+    const boundary = Math.floor(tank.y / TILE) * TILE
+    if (tank.y - boundary <= threshold) tank.y = boundary
+  } else {
+    const boundary = Math.ceil(tank.y / TILE) * TILE
+    if (boundary - tank.y <= threshold) tank.y = boundary
+  }
 }
 
 /** Whether the tank can advance nearly a full tile in dir (walls + tanks clear). */

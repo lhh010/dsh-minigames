@@ -39,11 +39,13 @@ export interface TetrisState {
 const SHAPES: Record<number, Shape> = {
   1: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]], // I
   2: [[1, 1], [1, 1]], // O
-  3: [[0, 1, 0], [1, 1, 1]], // T
-  4: [[0, 1, 1], [1, 1, 0]], // S
-  5: [[1, 1, 0], [0, 1, 1]], // Z
-  6: [[1, 0, 0], [1, 1, 1]], // J
-  7: [[0, 0, 1], [1, 1, 1]], // L
+  // The rest are SQUARE bounding boxes (3x3) — rotation is a square-matrix
+  // turn; a 2x3 matrix would silently drop its third column when rotated.
+  3: [[0, 1, 0], [1, 1, 1], [0, 0, 0]], // T
+  4: [[0, 1, 1], [1, 1, 0], [0, 0, 0]], // S
+  5: [[1, 1, 0], [0, 1, 1], [0, 0, 0]], // Z
+  6: [[1, 0, 0], [1, 1, 1], [0, 0, 0]], // J
+  7: [[0, 0, 1], [1, 1, 1], [0, 0, 0]], // L
 }
 
 /** Line-clear score table indexed by cleared rows in one lock. */

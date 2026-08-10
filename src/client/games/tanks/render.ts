@@ -73,23 +73,24 @@ function drawTank(ctx: CanvasRenderingContext2D, tank: Tank, t: number): void {
   const cx = x + TILE / 2
   const cy = y + TILE / 2
 
-  // Treads: dark side strips with animated tick marks.
+  // Treads: dark side strips with animated tick marks (2px inset, matching
+  // the tank's slightly smaller collision body).
   ctx.fillStyle = TREAD
-  ctx.fillRect(x, y, TILE, TILE)
+  ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4)
   const tick = Math.floor((t * 90 + (isPlayer ? 0 : 40)) % TILE)
   ctx.fillStyle = dark
   for (let i = 0; i < 3; i += 1) {
     const off = (tick + i * 12) % TILE
-    ctx.fillRect(x + 3, y + off, 4, 5)
-    ctx.fillRect(x + TILE - 7, y + off, 4, 5)
+    ctx.fillRect(x + 5, y + 2 + off, 4, 5)
+    ctx.fillRect(x + TILE - 9, y + 2 + off, 4, 5)
   }
 
   // Body with a dark outline.
   ctx.fillStyle = body
-  ctx.fillRect(x + 5, y + 5, TILE - 10, TILE - 10)
+  ctx.fillRect(x + 7, y + 7, TILE - 14, TILE - 14)
   ctx.strokeStyle = dark
   ctx.lineWidth = 1
-  ctx.strokeRect(x + 5.5, y + 5.5, TILE - 11, TILE - 11)
+  ctx.strokeRect(x + 7.5, y + 7.5, TILE - 15, TILE - 15)
 
   // Turret + barrel in the facing direction.
   ctx.fillStyle = dark
