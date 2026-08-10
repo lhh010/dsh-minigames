@@ -96,7 +96,10 @@ const BULLET_SPEED_ENEMY = 170
 const AI_TICK = 0.7
 const PLAYER_HP = 3
 const PLAYER_INVULN = 1.5
+/** Primary spawn tiles (enemies appear on these). */
 const SPAWN_POINTS: readonly [number, number][] = [[0, 0], [14, 0], [7, 0]]
+/** 2-wide pockets so a spawned tank can actually drive out of the border. */
+const SPAWN_POCKETS: readonly [number, number][] = [[0, 0], [1, 0], [14, 0], [13, 0], [7, 0], [8, 0]]
 const PLAYER_START: [number, number] = [7, 11]
 
 /** Symmetric field; the three spawn tiles and the player start are cleared below. */
@@ -118,7 +121,7 @@ const BASE_MAP: number[][] = [
 
 function buildGrid(): Tile[][] {
   const grid = BASE_MAP.map(row => [...row]) as Tile[][]
-  for (const [tx, ty] of SPAWN_POINTS) grid[ty]![tx] = 0
+  for (const [tx, ty] of SPAWN_POCKETS) grid[ty]![tx] = 0
   return grid
 }
 

@@ -164,5 +164,6 @@ export const tanksGame: MiniGameDefinition = {
   title: '坦克大战',
   icon: '🛡️',
   description: '2D 坦克对战（带 AI）：WASD/方向键移动，空格开火，消灭三波敌军。',
+  controls: ['WASD / 方向键：移动', '空格：开火', 'P：暂停', 'R：重开'],
   create: createTanksGame,
 }

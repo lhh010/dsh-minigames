@@ -126,10 +126,11 @@ function drawDino(ctx: CanvasRenderingContext2D, state: DinoState): void {
   ctx.fillRect(x + 33, y + 13, 5, 5)
   ctx.fillStyle = '#202028'
   ctx.fillRect(x + 35, y + 14, 2, 3)
-  // Legs alternate on a fixed cycle while on the ground.
+  // Legs hang from the body (y + 42 = body bottom), so they lift with the jump
+  // and alternate on a fixed cycle while on the ground.
   ctx.fillStyle = DINO_SHADE
-  ctx.fillRect(x + 8, GROUND_Y - 8, 8, phase === 0 ? 8 : 5)
-  ctx.fillRect(x + 21, GROUND_Y - 8, 8, phase === 0 ? 5 : 8)
+  ctx.fillRect(x + 8, y + 42, 8, phase === 0 ? 8 : 5)
+  ctx.fillRect(x + 21, y + 42, 8, phase === 0 ? 5 : 8)
 }
 
 function drawGameOver(ctx: CanvasRenderingContext2D, state: DinoState): void {

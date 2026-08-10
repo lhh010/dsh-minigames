@@ -208,9 +208,26 @@
   border: 1px solid #26262e;
 }
 
-.dmg-game-hint {
-  font-size: 11px;
-  color: #7a7a8a;
-  text-align: center;
+.dmg-game-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
   flex: 0 0 auto;
+  max-width: 100%;
+}
+
+.dmg-control-tag {
+  font-size: 11px;
+  color: #9a9aa5;
+  background: #1b1b22;
+  border: 1px solid #2e2e38;
+  border-radius: 4px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.dmg-control-muted {
+  color: #7a7a8a;
+  border-style: dashed;
 }

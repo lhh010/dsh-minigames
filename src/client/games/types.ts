@@ -37,6 +37,8 @@ export interface MiniGameDefinition {
   icon: string
   /** One-line description for the picker card. */
   description: string
+  /** Short key hints shown under the canvas (one entry per line/tag). */
+  controls: string[]
   /**
    * Mount the game into the host element (a sized <div>; the game creates
    * its own <canvas>). Called once per activation; the returned instance is

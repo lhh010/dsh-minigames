@@ -7,6 +7,7 @@ const dummy: MiniGameDefinition = {
   title: '测试游戏',
   icon: '🧪',
   description: '单元测试用',
+  controls: ['任意键：无操作'],
   create: () => ({
     start: () => {},
     pause: () => {},

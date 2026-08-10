@@ -244,7 +244,12 @@ function GameArea({ game, onScore }: GameAreaProps): ReactNode {
         </button>
       </div>
       <div ref={hostRef} className="dmg-game-host" tabIndex={0} data-dmg-host />
-      <div className="dmg-game-hint">点击游戏区域获取键盘焦点 · P 也可暂停</div>
+      <div className="dmg-game-controls">
+        {game.controls.map(control => (
+          <span key={control} className="dmg-control-tag">{control}</span>
+        ))}
+        <span className="dmg-control-tag dmg-control-muted">点击游戏区域获取键盘焦点</span>
+      </div>
     </div>
   )
 }

@@ -76,6 +76,14 @@ describe('tank battle logic', () => {
     expect(world.spawnQueue).toBeLessThan(ENEMIES_PER_WAVE)
   })
 
+  it('spawned enemies drive out of their spawn pocket (not stuck)', () => {
+    // Regression: 1-tile spawn openings boxed enemies into the top border.
+    const world = createWorld(lcg(3))
+    for (let i = 0; i < 300; i += 1) stepWorld(world, 1 / 60, idle)
+    expect(world.enemies.length).toBeGreaterThan(0)
+    expect(world.enemies.some(enemy => enemy.y > 0)).toBe(true)
+  })
+
   it('a player bullet kills an enemy and scores', () => {
     const world = createWorld(lcg(1))
     // Clear the tile directly above the player (brick in the base map), then

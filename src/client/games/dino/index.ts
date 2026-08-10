@@ -145,5 +145,6 @@ export const dinoGame: MiniGameDefinition = {
   title: '恐龙跳一跳',
   icon: '🦖',
   description: 'Chrome 经典小恐龙：空格/点击跳跃，↓ 蹲下躲鸟，速度越来越快。',
+  controls: ['空格 / ↑ / 点击：跳跃', '↓：蹲下躲鸟', 'P：暂停'],
   create: createDinoGame,
 }

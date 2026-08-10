@@ -161,5 +161,6 @@ export const tetrisGame: MiniGameDefinition = {
   title: '俄罗斯方块',
   icon: '🧱',
   description: '经典下落消除：←→ 移动，↑/X 旋转，空格硬降，C 暂存，P 暂停。',
+  controls: ['← →：左右移动', '↑ / X：旋转', '空格：硬降', 'C：暂存', 'P：暂停'],
   create: createTetrisGame,
 }
