@@ -54,6 +54,34 @@ describe('dino engine', () => {
     expect(state.over).toBe(true)
   })
 
+  it('a low bird hits the standing dino', () => {
+    // The low bird hovers where the standing dino's hitbox overlaps it.
+    const state = createDinoState(lcg(1))
+    state.obstacles.push({ kind: 'bird', x: 60, w: 46, h: 30, y: GROUND_Y - 60 })
+    step(state, 1 / 60, idle)
+    expect(state.over).toBe(true)
+  })
+
+  it('ducking dodges the low bird', () => {
+    const state = createDinoState(lcg(1))
+    state.obstacles.push({ kind: 'bird', x: 60, w: 46, h: 30, y: GROUND_Y - 60 })
+    // 1s: the bird flies past while the first natural spawn (1.5s) is pending.
+    for (let i = 0; i < 60; i += 1) step(state, 1 / 60, { jump: false, duck: true })
+    expect(state.over).toBe(false)
+    expect(state.obstacles).toHaveLength(0) // the bird flew past
+  })
+
+  it('jumping to the apex dodges the low bird', () => {
+    const state = createDinoState(lcg(1))
+    // Delay the jump so the bird passes under at the top of the arc.
+    state.obstacles.push({ kind: 'bird', x: 200, w: 46, h: 30, y: GROUND_Y - 60 })
+    for (let i = 0; i < 12; i += 1) step(state, 1 / 60, idle)
+    step(state, 1 / 60, { jump: true, duck: false })
+    for (let i = 0; i < 60; i += 1) step(state, 1 / 60, idle)
+    expect(state.over).toBe(false)
+    expect(state.obstacles).toHaveLength(0)
+  })
+
   it('a jump clears a ground-level obstacle without dying', () => {
     const state = createDinoState(lcg(1))
     // Obstacle ahead; delay the jump so it passes under the dino at the arc

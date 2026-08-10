@@ -119,11 +119,14 @@ function spawnObstacle(state: DinoState): void {
     const h = 40 + rng() * 12
     state.obstacles.push({ kind: 'cactus-double', x: VIEW_W, w, h, y: GROUND_Y - h })
   } else {
-    // Bird, high or low.
+    // Bird. The LOW bird hovers where the standing dino gets hit but the
+    // ducked dino clears (and a jump at the apex clears it): dodged by
+    // ducking OR by jumping to the top of the arc. High birds pass over the
+    // standing dino and punish jumps.
     const w = 46
     const h = 30
-    const high = rng() < 0.5
-    state.obstacles.push({ kind: 'bird', x: VIEW_W, w, h, y: high ? GROUND_Y - 118 : GROUND_Y - 74 })
+    const high = rng() < 0.4
+    state.obstacles.push({ kind: 'bird', x: VIEW_W, w, h, y: high ? GROUND_Y - 118 : GROUND_Y - 60 })
   }
 }
 
