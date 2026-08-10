@@ -67,6 +67,10 @@ export interface DinoState {
   night: boolean
   /** Rain window: drifting rain + fog for RAIN_LENGTH points every RAIN_START. */
   raining: boolean
+  /** Lightning flash intensity 0..1 during rain (decays over ~0.14s). */
+  lightning: number
+  /** Seconds until the next lightning strike (counts down while raining). */
+  nextStrikeIn: number
   dino: {
     x: number
     /** Top edge. */
@@ -92,6 +96,8 @@ export function createDinoState(rng: () => number = Math.random): DinoState {
     score: 0,
     night: false,
     raining: false,
+    lightning: 0,
+    nextStrikeIn: 4,
     dino: { x: DINO_X, y: GROUND_Y - DINO_H, vy: 0, onGround: true, ducking: false },
     obstacles: [],
     nextSpawnIn: 1.5,
@@ -169,8 +175,21 @@ export function step(state: DinoState, dt: number, input: DinoInput): void {
   state.distance += state.speed * dt
   state.score = Math.floor(state.distance / SCORE_PER_POINT)
   state.night = Math.floor(state.score / THEME_INTERVAL) % 2 === 1
-  // Rain windows: for RAIN_LENGTH points starting at every RAIN_START mark.
+  // Rain windows: for RAIN_LENGTH points starting at every RAIN_START mark,
+  // with random lightning strikes while it rains.
   state.raining = state.score >= RAIN_START && state.score % RAIN_START < RAIN_LENGTH
+  if (state.raining) {
+    state.lightning = Math.max(0, state.lightning - dt * 7)
+    if (state.lightning === 0) {
+      state.nextStrikeIn -= dt
+      if (state.nextStrikeIn <= 0) {
+        state.lightning = 1
+        state.nextStrikeIn = 3 + state.rng() * 5
+      }
+    }
+  } else {
+    state.lightning = 0
+  }
   state.speed = Math.min(MAX_SPEED, BASE_SPEED + state.score * SPEED_PER_SCORE)
 
   // Dino vertical physics.

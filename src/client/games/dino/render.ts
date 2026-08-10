@@ -77,22 +77,27 @@ export function renderDino(ctx: CanvasRenderingContext2D, state: DinoState): voi
   ctx.textAlign = 'right'
   ctx.fillText(String(Math.floor(state.score)).padStart(5, '0'), VIEW_W - 12, 22)
   if (state.over) drawGameOver(ctx, state, p)
+  // Lightning: the whole screen flashes white for an instant, over everything.
+  if (state.lightning > 0) {
+    ctx.fillStyle = `rgba(255,255,255,${Math.min(0.95, state.lightning).toFixed(3)})`
+    ctx.fillRect(0, 0, VIEW_W, GROUND_Y + 20)
+  }
 }
 
 /** Drifting fog: a translucent wash plus soft blobs that obscure the view. */
 function drawFog(ctx: CanvasRenderingContext2D, state: DinoState, p: Palette): void {
-  ctx.globalAlpha = 0.1
+  ctx.globalAlpha = 0.26
   ctx.fillStyle = p.fog
   ctx.fillRect(0, 0, VIEW_W, GROUND_Y + 20)
   ctx.globalAlpha = 1
-  for (let i = 0; i < 5; i += 1) {
+  for (let i = 0; i < 6; i += 1) {
     const drift = (state.t * 26 + i * 173) % (VIEW_W + 340)
     const x = drift - 170
     const y = 34 + ((i * 41) % 120)
-    ctx.globalAlpha = 0.14
+    ctx.globalAlpha = 0.24
     ctx.fillStyle = p.fog
     ctx.beginPath()
-    ctx.ellipse(x, y, 74 + (i % 3) * 14, 26 + (i % 2) * 10, 0, 0, Math.PI * 2)
+    ctx.ellipse(x, y, 84 + (i % 3) * 18, 30 + (i % 2) * 12, 0, 0, Math.PI * 2)
     ctx.fill()
   }
   ctx.globalAlpha = 1

@@ -56,6 +56,10 @@ export interface DinoState {
     night: boolean;
     /** Rain window: drifting rain + fog for RAIN_LENGTH points every RAIN_START. */
     raining: boolean;
+    /** Lightning flash intensity 0..1 during rain (decays over ~0.14s). */
+    lightning: number;
+    /** Seconds until the next lightning strike (counts down while raining). */
+    nextStrikeIn: number;
     dino: {
         x: number;
         /** Top edge. */

@@ -166,6 +166,27 @@ describe('dino engine', () => {
     expect(state.raining).toBe(true)
   })
 
+  it('flashes lightning during rain and decays it', () => {
+    const state = createDinoState(lcg(1))
+    state.distance = RAIN_START * SCORE_PER_POINT // score 1000 -> raining
+    step(state, 0, idle)
+    expect(state.raining).toBe(true)
+    expect(state.lightning).toBe(0)
+    state.nextStrikeIn = 0.1
+    for (let i = 0; i < 10; i += 1) step(state, 1 / 60, idle)
+    expect(state.lightning).toBeGreaterThan(0) // struck
+    for (let i = 0; i < 30; i += 1) step(state, 1 / 60, idle)
+    expect(state.lightning).toBe(0) // decayed back to clear
+  })
+
+  it('never flashes lightning outside rain', () => {
+    const state = createDinoState(lcg(1))
+    state.nextStrikeIn = 0.05
+    for (let i = 0; i < 300; i += 1) step(state, 1 / 60, idle)
+    expect(state.raining).toBe(false) // score stays below RAIN_START here
+    expect(state.lightning).toBe(0)
+  })
+
   it('a ground bird hits the standing dino', () => {
     const state = createDinoState(lcg(1))
     state.obstacles.push({ kind: 'bird-ground', x: 60, w: 46, h: 30, y: GROUND_Y - 30 })
