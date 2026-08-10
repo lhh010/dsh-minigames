@@ -93,6 +93,8 @@ export const MAX_ALIVE = 3
 /** Tank collision inset in px: the effective body is TILE - 2*INSET, letting
  * tanks fit and turn in lanes a hair tighter than a full tile. */
 const TANK_INSET = 2
+/** Perpendicular-axis snap range after a turn (px) — keeps the tank on-grid. */
+const LANE_SNAP = 4
 const SPAWN_INTERVAL = 1.6
 const PLAYER_SPEED = 120
 const ENEMY_SPEED = 82
@@ -208,62 +210,47 @@ export function tryMove(state: WorldState, tank: Tank, dir: Dir, dist: number): 
   const nx = tank.x + DIR_DX[dir]! * dist
   const ny = tank.y + DIR_DY[dir]! * dist
   if (!rectWalkable(state.grid, nx, ny)) {
-    // Wall-blocked: pull the tank back to the tile boundary it last crossed so
+    // Wall-blocked: pull the tank to the tile boundary it was approaching so
     // it never parks at a half-tile offset where a turn is impossible.
-    snapBackToBoundary(tank, dir, dist)
+    snapToNextBoundary(tank, dir, dist + TANK_INSET)
     return false
   }
   for (const other of [state.player, ...state.enemies]) {
     if (other === tank || !other.alive) continue
     const probe: Tank = { ...tank, x: nx, y: ny }
-    if (tanksOverlap(probe, other)) return false
+    if (tanksOverlap(probe, other)) {
+      // Tank-blocked: same snap as a wall stop, so a tank parked right
+      // behind another one is never stuck at a half-tile offset.
+      snapToNextBoundary(tank, dir, dist + TANK_INSET)
+      return false
+    }
   }
   tank.x = nx
   tank.y = ny
   tank.dir = dir
-  // Snap to the tile boundary just crossed, so the perpendicular axis always
-  // lands exactly on the grid (non-integer per-frame steps would otherwise
-  // overshoot the alignment point and wedge the tank mid-lane).
-  snapCrossedBoundary(tank, dir, dist)
+  // Snap to the next boundary in the driving direction, so the tank arrives
+  // exactly on-grid (non-integer per-frame steps would otherwise overshoot
+  // the alignment point and wedge the tank mid-lane).
+  snapToNextBoundary(tank, dir, dist)
   return true
 }
 
-/** Snap the tank to a boundary only when this step actually crossed it. */
-function snapCrossedBoundary(tank: Tank, dir: Dir, dist: number): void {
-  if (dir === 1) {
+/** Snap the tank to the next boundary in its driving direction when within
+ * `range` px of it (the "boundary ahead"): the tank arrives exactly on-grid
+ * instead of overshooting or parking at a half-tile offset. */
+function snapToNextBoundary(tank: Tank, dir: Dir, range: number): void {
+  if (dir === 1) { // right: next boundary is the right edge of the current tile
+    const boundary = Math.floor(tank.x / TILE) * TILE + TILE
+    if (boundary - tank.x <= range) tank.x = boundary
+  } else if (dir === 3) { // left: next boundary is the left edge
     const boundary = Math.floor(tank.x / TILE) * TILE
-    if (tank.x - boundary < dist) tank.x = boundary
-  } else if (dir === 3) {
-    const boundary = Math.ceil(tank.x / TILE) * TILE
-    if (boundary - tank.x < dist) tank.x = boundary
-  } else if (dir === 2) {
+    if (tank.x - boundary <= range) tank.x = boundary
+  } else if (dir === 2) { // down: next boundary is the bottom edge
+    const boundary = Math.floor(tank.y / TILE) * TILE + TILE
+    if (boundary - tank.y <= range) tank.y = boundary
+  } else { // up: next boundary is the top edge
     const boundary = Math.floor(tank.y / TILE) * TILE
-    if (tank.y - boundary < dist) tank.y = boundary
-  } else {
-    const boundary = Math.ceil(tank.y / TILE) * TILE
-    if (boundary - tank.y < dist) tank.y = boundary
-  }
-}
-
-/**
- * Wall-stop snap-back: pull the tank to the tile boundary it is within
- * `dist + TANK_INSET` px of, so a wall stop never leaves it at a half-tile
- * offset that blocks the next turn.
- */
-function snapBackToBoundary(tank: Tank, dir: Dir, dist: number): void {
-  const threshold = dist + TANK_INSET
-  if (dir === 1) {
-    const boundary = Math.floor(tank.x / TILE) * TILE
-    if (tank.x - boundary <= threshold) tank.x = boundary
-  } else if (dir === 3) {
-    const boundary = Math.ceil(tank.x / TILE) * TILE
-    if (boundary - tank.x <= threshold) tank.x = boundary
-  } else if (dir === 2) {
-    const boundary = Math.floor(tank.y / TILE) * TILE
-    if (tank.y - boundary <= threshold) tank.y = boundary
-  } else {
-    const boundary = Math.ceil(tank.y / TILE) * TILE
-    if (boundary - tank.y <= threshold) tank.y = boundary
+    if (tank.y - boundary <= range) tank.y = boundary
   }
 }
 
@@ -282,11 +269,12 @@ function canAdvance(state: WorldState, tank: Tank, dir: Dir): boolean {
 }
 
 /**
- * Move a tank toward its desired heading with classic grid-locked turning: a
- * turn only happens once the tank is aligned with the tile grid in the
- * perpendicular axis (x % TILE == 0 for vertical lanes, y % TILE == 0 for
- * horizontal lanes). Until then it keeps driving straight, so it never
- * straddles two lanes and wedges itself against a wall.
+ * Move a tank toward its desired heading. Turning is free: the tank turns the
+ * moment its (inset) body fits the new lane — no waiting for grid alignment.
+ * When it turns near a tile boundary it is snapped onto the grid, so the tank
+ * stays visually lane-aligned whenever it is close; driving straight still
+ * snaps at every boundary crossing. The collision body is TILE - 2*INSET, so
+ * a mid-lane turn is only blocked when the body genuinely pokes into a wall.
  * @param state - the world.
  * @param tank - the tank to move.
  * @param targetDir - the desired heading this frame.
@@ -294,17 +282,21 @@ function canAdvance(state: WorldState, tank: Tank, dir: Dir): boolean {
  * @returns whether the tank actually moved.
  */
 function moveTank(state: WorldState, tank: Tank, targetDir: Dir, dist: number): boolean {
-  if (targetDir !== tank.dir) {
-    const perpendicular = tank.x % TILE
-    const lateral = tank.y % TILE
-    const vertical = targetDir === 0 || targetDir === 2
-    const offset = vertical ? perpendicular : lateral
-    if (!(offset < 0.5 || offset > TILE - 0.5)) {
-      // Not aligned for the turn yet: keep driving straight.
-      return tryMove(state, tank, tank.dir, dist)
-    }
+  const turning = targetDir !== tank.dir
+  const moved = tryMove(state, tank, targetDir, dist)
+  if (turning && moved) snapPerpendicularIfClose(tank, targetDir)
+  return moved
+}
+
+/** Snap a just-turned tank's perpendicular axis onto the nearest grid line. */
+function snapPerpendicularIfClose(tank: Tank, newDir: Dir): void {
+  const vertical = newDir === 0 || newDir === 2
+  const value = vertical ? tank.x : tank.y
+  const boundary = Math.round(value / TILE) * TILE
+  if (Math.abs(value - boundary) <= LANE_SNAP) {
+    if (vertical) tank.x = boundary
+    else tank.y = boundary
   }
-  return tryMove(state, tank, targetDir, dist)
 }
 
 /** Spawn a bullet just outside the tank's front face in its facing direction. */

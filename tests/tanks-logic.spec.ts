@@ -52,20 +52,39 @@ describe('tank battle logic', () => {
     expect(world.player.x).toBe(before)
   })
 
-  it('turning waits for grid alignment instead of wedging between lanes', () => {
-    // Regression: a tank mid-lane (x not a tile multiple) pressing up must
-    // first finish aligning (keep driving right) before it turns up; the old
-    // free-turn model wedged tanks against walls at such positions.
+  it('a tank turns into a clear lane immediately, even mid-lane', () => {
+    // Free turning: a tank at a fractional offset (x = 340, 20px off-grid)
+    // pressing up turns at once when its (inset) body fits the lane — the
+    // grid-locked model made it drive straight first, feeling unresponsive.
     const world = createWorld(lcg(1))
-    world.player.x = 372 // 372 % 32 = 20 -> not aligned
-    world.player.y = 256 // lane through tiles (11,8)+(12,8); (12,7) is open
+    world.player.x = 340
+    world.player.y = 352 // bottom corridor (row 11), cols 10-11 above are open
+    world.grid[10]![10] = 0
+    world.grid[10]![11] = 0
     world.player.dir = 1
     world.player.targetDir = 1
     for (let i = 0; i < 12; i += 1) {
       stepWorld(world, 1 / 60, { ...idle, up: true })
     }
-    expect(world.player.x).toBe(384) // aligned first (372 + 2*6 = 384)
-    expect(world.player.y).toBeLessThan(256) // then drove up
+    expect(world.player.y).toBeLessThan(340) // climbed immediately
+  })
+
+  it('a tank cannot enter a lane its body overlaps (no wedging)', () => {
+    // The inset body spans both lanes at x = 340; a wall in either lane must
+    // block the climb — free turning must not teleport the tank into a wall.
+    const world = createWorld(lcg(1))
+    world.player.x = 340
+    world.player.y = 352
+    world.grid[10]![10] = 1 // wall in lane 10 at the row above
+    world.grid[10]![11] = 0 // lane 11 is open — but the body overlaps lane 10
+    world.player.dir = 1
+    world.player.targetDir = 1
+    for (let i = 0; i < 60; i += 1) {
+      stepWorld(world, 1 / 60, { ...idle, up: true })
+    }
+    // Climbed a little, then stopped at the wall instead of passing through.
+    expect(world.player.y).toBeGreaterThan(288)
+    expect(world.player.y).toBeLessThan(352)
   })
 
   it('a player bullet destroys brick and dies on steel', () => {

@@ -131,6 +131,21 @@ export function renderTanks(ctx: CanvasRenderingContext2D, state: WorldState): v
       if (tile !== 0) drawTile(ctx, tx, ty, tile)
     }
   }
+  // Faint tile grid so the movement lanes (and tank alignment) are visible.
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)'
+  ctx.lineWidth = 1
+  for (let tx = 1; tx < GRID_W; tx += 1) {
+    ctx.beginPath()
+    ctx.moveTo(tx * TILE + 0.5, 0)
+    ctx.lineTo(tx * TILE + 0.5, TANK_H)
+    ctx.stroke()
+  }
+  for (let ty = 1; ty < GRID_H; ty += 1) {
+    ctx.beginPath()
+    ctx.moveTo(0, ty * TILE + 0.5)
+    ctx.lineTo(TANK_W, ty * TILE + 0.5)
+    ctx.stroke()
+  }
   drawEffects(ctx, state)
   for (const bullet of state.bullets) drawBullet(ctx, bullet)
   for (const enemy of state.enemies) drawTank(ctx, enemy, state.t)
