@@ -86,7 +86,7 @@ export function renderDino(ctx: CanvasRenderingContext2D, state: DinoState): voi
 
 /** Drifting fog: a translucent wash plus soft blobs that obscure the view. */
 function drawFog(ctx: CanvasRenderingContext2D, state: DinoState, p: Palette): void {
-  ctx.globalAlpha = 0.26
+  ctx.globalAlpha = 0.2
   ctx.fillStyle = p.fog
   ctx.fillRect(0, 0, VIEW_W, GROUND_Y + 20)
   ctx.globalAlpha = 1
@@ -94,7 +94,7 @@ function drawFog(ctx: CanvasRenderingContext2D, state: DinoState, p: Palette): v
     const drift = (state.t * 26 + i * 173) % (VIEW_W + 340)
     const x = drift - 170
     const y = 34 + ((i * 41) % 120)
-    ctx.globalAlpha = 0.24
+    ctx.globalAlpha = 0.17
     ctx.fillStyle = p.fog
     ctx.beginPath()
     ctx.ellipse(x, y, 84 + (i % 3) * 18, 30 + (i % 2) * 12, 0, 0, Math.PI * 2)

@@ -33,6 +33,9 @@ export const RAIN_START = 1000
 export const RAIN_LENGTH = 300
 const SPAWN_MIN = 1.1
 const SPAWN_MAX = 2.4
+/** Spawn interval shrinks with score — denser obstacle fields in the late game. */
+const SPAWN_SCALE = 0.0004
+const SPAWN_FLOOR = 0.5
 /** Forgiving hitbox shrink on both axes, in px. */
 const HITBOX_SHRINK = 4
 
@@ -219,11 +222,15 @@ export function step(state: DinoState, dt: number, input: DinoInput): void {
   }
   state.obstacles = remaining
 
-  // Spawn the next obstacle.
+  // Spawn the next obstacle; the interval shrinks as the score climbs, so the
+  // late game throws obstacles more densely (on top of the rising speed).
   state.nextSpawnIn -= dt
   if (state.nextSpawnIn <= 0) {
     spawnObstacle(state)
-    state.nextSpawnIn = SPAWN_MIN + state.rng() * (SPAWN_MAX - SPAWN_MIN)
+    const shrink = state.score * SPAWN_SCALE
+    const min = Math.max(SPAWN_FLOOR, SPAWN_MIN - shrink)
+    const max = Math.max(min + 0.3, SPAWN_MAX - shrink)
+    state.nextSpawnIn = min + state.rng() * (max - min)
   }
 
   // Collision ends the run.

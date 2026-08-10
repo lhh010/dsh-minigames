@@ -26,6 +26,19 @@ describe('dino engine', () => {
     expect(state.over).toBe(false)
   })
 
+  it('spawns obstacles more frequently as the score rises', () => {
+    const state = createDinoState(lcg(1))
+    // High score -> short next-spawn interval (denser late game).
+    state.distance = 30_000 // score 3000
+    state.nextSpawnIn = 0
+    step(state, 1 / 60, idle)
+    expect(state.obstacles.length).toBeGreaterThan(0)
+    const lateInterval = state.nextSpawnIn
+    expect(lateInterval).toBeGreaterThan(0)
+    expect(lateInterval).toBeLessThan(2.4) // well under the early-game max
+    expect(lateInterval).toBeLessThanOrEqual(1.3) // ~0.5-1.2s at score 3000
+  })
+
   it('jump leaves the ground and lands back', () => {
     const state = createDinoState(lcg(1))
     step(state, 1 / 60, { jump: true, duck: false })
