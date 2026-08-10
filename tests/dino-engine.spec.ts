@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   collides, createDinoState, dinoRect, step,
-  DINO_H, DUCK_H, GROUND_Y, VIEW_W,
+  DINO_H, DUCK_H, GROUND_Y, VIEW_W, SCORE_PER_POINT, THEME_INTERVAL,
 } from '../src/client/games/dino/engine.ts'
 
 /** Deterministic LCG so obstacle spawns are reproducible. */
@@ -92,7 +92,7 @@ describe('dino engine', () => {
     for (let i = 0; i < 60; i += 1) step(state, 1 / 60, idle)
     expect(state.over).toBe(false)
     expect(state.obstacles).toHaveLength(0)
-    expect(state.score).toBe(1)
+    expect(state.score).toBeGreaterThan(0) // distance accrued along the way
   })
 
   it('landing back onto an obstacle collides', () => {
@@ -105,14 +105,67 @@ describe('dino engine', () => {
     expect(state.over).toBe(true)
   })
 
-  it('an obstacle that passes the dino scores and leaves the field', () => {
+  it('an obstacle that passes the dino leaves the field while distance accrues', () => {
     const state = createDinoState(lcg(1))
     state.obstacles.push({ kind: 'cactus', x: 10, w: 30, h: 40, y: GROUND_Y - 40 })
     const before = state.score
     // 0.27s scrolls the obstacle (x=10, w=30) out the left edge; the first
     // natural spawn (1.5s) has not happened yet.
     for (let i = 0; i < 8; i += 1) step(state, 1 / 30, idle)
-    expect(state.score).toBe(before + 1)
+    expect(state.obstacles).toHaveLength(0)
+    expect(state.score).toBeGreaterThan(before)
+    expect(state.score).toBe(Math.floor(state.distance / SCORE_PER_POINT))
+  })
+
+  it('score derives from distance and speed rises with it until the cap', () => {
+    const state = createDinoState(lcg(1))
+    state.distance = 10_000
+    step(state, 0, idle)
+    expect(state.score).toBe(1000)
+    expect(state.speed).toBe(320 + 1000 * 0.15)
+    state.distance = 50_000
+    step(state, 0, idle)
+    expect(state.score).toBe(5000)
+    expect(state.speed).toBe(760) // MAX_SPEED cap
+  })
+
+  it('toggles day/night every theme interval of points', () => {
+    const state = createDinoState(lcg(1))
+    expect(state.night).toBe(false)
+    state.distance = THEME_INTERVAL * SCORE_PER_POINT - 1
+    step(state, 0, idle)
+    expect(state.night).toBe(false)
+    state.distance = THEME_INTERVAL * SCORE_PER_POINT
+    step(state, 0, idle)
+    expect(state.score).toBe(THEME_INTERVAL)
+    expect(state.night).toBe(true)
+    state.distance = THEME_INTERVAL * SCORE_PER_POINT * 2
+    step(state, 0, idle)
+    expect(state.night).toBe(false)
+  })
+
+  it('a ground bird hits the standing dino', () => {
+    const state = createDinoState(lcg(1))
+    state.obstacles.push({ kind: 'bird-ground', x: 60, w: 46, h: 30, y: GROUND_Y - 30 })
+    step(state, 1 / 60, idle)
+    expect(state.over).toBe(true)
+  })
+
+  it('ducking does NOT dodge the ground bird', () => {
+    // The ground bird hugs the ground: only a jump clears it.
+    const state = createDinoState(lcg(1))
+    state.obstacles.push({ kind: 'bird-ground', x: 60, w: 46, h: 30, y: GROUND_Y - 30 })
+    for (let i = 0; i < 8; i += 1) step(state, 1 / 60, { jump: false, duck: true })
+    expect(state.over).toBe(true)
+  })
+
+  it('jumping dodges the ground bird', () => {
+    const state = createDinoState(lcg(1))
+    state.obstacles.push({ kind: 'bird-ground', x: 200, w: 46, h: 30, y: GROUND_Y - 30 })
+    for (let i = 0; i < 12; i += 1) step(state, 1 / 60, idle)
+    step(state, 1 / 60, { jump: true, duck: false })
+    for (let i = 0; i < 60; i += 1) step(state, 1 / 60, idle)
+    expect(state.over).toBe(false)
     expect(state.obstacles).toHaveLength(0)
   })
 

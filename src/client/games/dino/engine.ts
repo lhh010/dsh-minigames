@@ -21,7 +21,12 @@ const GRAVITY = 2100
 const JUMP_V = -640
 const BASE_SPEED = 320
 const MAX_SPEED = 760
-const SPEED_ACCEL = 6
+/** Horizontal scroll px per score point (score = distance / this). */
+export const SCORE_PER_POINT = 10
+/** Speed gain per score point (speed = BASE + score * this, capped at MAX). */
+const SPEED_PER_SCORE = 0.15
+/** Score interval between day/night toggles. */
+export const THEME_INTERVAL = 200
 const SPAWN_MIN = 1.1
 const SPAWN_MAX = 2.4
 /** Forgiving hitbox shrink on both axes, in px. */
@@ -30,7 +35,7 @@ const HITBOX_SHRINK = 4
 export interface DinoRect { x: number; y: number; w: number; h: number }
 
 export interface Obstacle {
-  kind: 'cactus' | 'cactus-double' | 'bird'
+  kind: 'cactus' | 'cactus-double' | 'bird' | 'bird-ground'
   x: number
   w: number
   h: number
@@ -48,8 +53,14 @@ export interface DinoInput {
 export interface DinoState {
   /** Elapsed run time in seconds (frozen once over). */
   t: number
-  /** Current horizontal scroll speed in px/s. */
+  /** Current horizontal scroll speed in px/s (grows with score, capped). */
   speed: number
+  /** Total scrolled distance in px; the score derives from it. */
+  distance: number
+  /** Score = floor(distance / SCORE_PER_POINT). */
+  score: number
+  /** Day/night theme, toggled every THEME_INTERVAL points. */
+  night: boolean
   dino: {
     x: number
     /** Top edge. */
@@ -61,8 +72,6 @@ export interface DinoState {
   obstacles: Obstacle[]
   /** Seconds until the next obstacle spawns. */
   nextSpawnIn: number
-  /** Obstacles passed (each exit increments). */
-  score: number
   over: boolean
   /** Seeded rng for deterministic tests. */
   rng: () => number
@@ -73,10 +82,12 @@ export function createDinoState(rng: () => number = Math.random): DinoState {
   return {
     t: 0,
     speed: BASE_SPEED,
+    distance: 0,
+    score: 0,
+    night: false,
     dino: { x: DINO_X, y: GROUND_Y - DINO_H, vy: 0, onGround: true, ducking: false },
     obstacles: [],
     nextSpawnIn: 1.5,
-    score: 0,
     over: false,
     rng,
   }
@@ -108,25 +119,31 @@ export function collides(a: DinoRect, b: DinoRect): boolean {
 function spawnObstacle(state: DinoState): void {
   const rng = state.rng
   const roll = rng()
-  if (roll < 0.5) {
+  if (roll < 0.4) {
     // Single cactus with size variance.
     const w = 22 + rng() * 8
     const h = 40 + rng() * 12
     state.obstacles.push({ kind: 'cactus', x: VIEW_W, w, h, y: GROUND_Y - h })
-  } else if (roll < 0.75) {
+  } else if (roll < 0.65) {
     // Double cactus: two trunks side by side, one wider hitbox.
     const w = 46 + rng() * 10
     const h = 40 + rng() * 12
     state.obstacles.push({ kind: 'cactus-double', x: VIEW_W, w, h, y: GROUND_Y - h })
   } else {
-    // Bird. The LOW bird hovers where the standing dino gets hit but the
-    // ducked dino clears (and a jump at the apex clears it): dodged by
-    // ducking OR by jumping to the top of the arc. High birds pass over the
-    // standing dino and punish jumps.
+    // Birds at three heights:
+    //  - high (passes over the standing dino, punishes jumps),
+    //  - low (dodged by ducking OR by jumping to the apex),
+    //  - ground (hugs the ground — only a jump clears it; ducking does not).
     const w = 46
     const h = 30
-    const high = rng() < 0.4
-    state.obstacles.push({ kind: 'bird', x: VIEW_W, w, h, y: high ? GROUND_Y - 118 : GROUND_Y - 60 })
+    const kindRoll = rng()
+    if (kindRoll < 0.3) {
+      state.obstacles.push({ kind: 'bird', x: VIEW_W, w, h, y: GROUND_Y - 118 })
+    } else if (kindRoll < 0.75) {
+      state.obstacles.push({ kind: 'bird', x: VIEW_W, w, h, y: GROUND_Y - 60 })
+    } else {
+      state.obstacles.push({ kind: 'bird-ground', x: VIEW_W, w, h, y: GROUND_Y - 30 })
+    }
   }
 }
 
@@ -139,7 +156,13 @@ function spawnObstacle(state: DinoState): void {
 export function step(state: DinoState, dt: number, input: DinoInput): void {
   if (state.over) return
   state.t += dt
-  state.speed = Math.min(MAX_SPEED, BASE_SPEED + state.t * SPEED_ACCEL)
+  // The score is distance-based: scroll accumulates, and the speed rises with
+  // the score (faster runs as you survive) until the cap. Day/night flips
+  // every THEME_INTERVAL points.
+  state.distance += state.speed * dt
+  state.score = Math.floor(state.distance / SCORE_PER_POINT)
+  state.night = Math.floor(state.score / THEME_INTERVAL) % 2 === 1
+  state.speed = Math.min(MAX_SPEED, BASE_SPEED + state.score * SPEED_PER_SCORE)
 
   // Dino vertical physics.
   const dino = state.dino
@@ -159,16 +182,12 @@ export function step(state: DinoState, dt: number, input: DinoInput): void {
   }
   dino.ducking = input.duck && dino.onGround
 
-  // Scroll obstacles; each one that exits the left edge scores.
+  // Scroll obstacles.
   const speed = state.speed
   const remaining: Obstacle[] = []
   for (const obstacle of state.obstacles) {
     obstacle.x -= speed * dt
-    if (obstacle.x + obstacle.w < 0) {
-      state.score += 1
-    } else {
-      remaining.push(obstacle)
-    }
+    if (obstacle.x + obstacle.w >= 0) remaining.push(obstacle)
   }
   state.obstacles = remaining
 

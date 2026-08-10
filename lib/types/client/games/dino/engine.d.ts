@@ -15,6 +15,10 @@ export declare const DINO_W = 46;
 export declare const DINO_H = 50;
 /** Ducking dino hitbox (only while on the ground). */
 export declare const DUCK_H = 26;
+/** Horizontal scroll px per score point (score = distance / this). */
+export declare const SCORE_PER_POINT = 10;
+/** Score interval between day/night toggles. */
+export declare const THEME_INTERVAL = 200;
 export interface DinoRect {
     x: number;
     y: number;
@@ -22,7 +26,7 @@ export interface DinoRect {
     h: number;
 }
 export interface Obstacle {
-    kind: 'cactus' | 'cactus-double' | 'bird';
+    kind: 'cactus' | 'cactus-double' | 'bird' | 'bird-ground';
     x: number;
     w: number;
     h: number;
@@ -38,8 +42,14 @@ export interface DinoInput {
 export interface DinoState {
     /** Elapsed run time in seconds (frozen once over). */
     t: number;
-    /** Current horizontal scroll speed in px/s. */
+    /** Current horizontal scroll speed in px/s (grows with score, capped). */
     speed: number;
+    /** Total scrolled distance in px; the score derives from it. */
+    distance: number;
+    /** Score = floor(distance / SCORE_PER_POINT). */
+    score: number;
+    /** Day/night theme, toggled every THEME_INTERVAL points. */
+    night: boolean;
     dino: {
         x: number;
         /** Top edge. */
@@ -51,8 +61,6 @@ export interface DinoState {
     obstacles: Obstacle[];
     /** Seconds until the next obstacle spawns. */
     nextSpawnIn: number;
-    /** Obstacles passed (each exit increments). */
-    score: number;
     over: boolean;
     /** Seeded rng for deterministic tests. */
     rng: () => number;

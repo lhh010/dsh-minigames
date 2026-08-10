@@ -35,6 +35,9 @@ function createDinoGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
 
   const reportScore = (): void => {
     const score = Math.floor(state.score)
+    // The score now accrues from distance (~50-150 points/s), so report in
+    // 10-point steps to keep the panel header and best-score writes cheap.
+    if (score < lastScore + 10 && !state.over) return
     if (score === lastScore) return
     lastScore = score
     options?.onScore?.(score)
