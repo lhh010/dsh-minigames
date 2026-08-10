@@ -111,6 +111,7 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
         event.preventDefault()
         if (phase === 'lose') {
           restart(state)
+          displayGrid = state.grid // restart also swaps in a fresh board
           reportScore()
           phase = 'idle'
           phaseT = 0
@@ -140,6 +141,9 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
       clearPlan = null
     } else if (phase === 'win' && phaseT >= WIN_MS) {
       advanceLevel(state)
+      // advanceLevel swaps in a brand-new grid array — repoint the display so
+      // the fresh level board shows immediately instead of after the next pop.
+      displayGrid = state.grid
       reportScore()
       phase = 'idle'
       phaseT = 0
