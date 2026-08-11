@@ -179,22 +179,41 @@ function drawRoad(ctx: CanvasRenderingContext2D, state: RacingState, p: Palette)
   }
   ctx.restore()
 
-  // Lane dividers: scrolling dashes between the lanes, reaching near the
-  // horizon so the markings run the full visible length of the road. The
-  // pattern advances TOWARD the camera (z decreases with distance); iterating
-  // one extra index keeps the far end filled, so the stream is seamless.
-  const dashCount = 50
-  const dashZMax = 350
-  const dashPeriod = dashZMax / dashCount
-  const phase = worldScroll(state.distance, dashPeriod) // grows with distance
-  const dividers = [
+  // Lane dividers. Near field: scrolling dashes (clear motion cue). Far field:
+  // perspective would shrink discrete dashes below a pixel long before the
+  // horizon, so a solid tapered divider line is drawn from the mid field all
+  // the way to the horizon — the markings read as continuous to the vanishing
+  // point. The dashed stream advances TOWARD the camera (z decreases).
+  const dividerXs = [
     (LANES[0]! + LANES[1]!) / 2,
     (LANES[1]! + LANES[2]!) / 2,
   ]
-  for (const dx of dividers) {
+  // Far solid lines: from z = 40 to well past the visible field.
+  for (const dx of dividerXs) {
+    const near = project(dx, 40)
+    const far = project(dx, 2000)
+    const w1 = 3.5 * near.s
+    const w2 = 0.6 * far.s
+    ctx.fillStyle = p.laneMark
+    ctx.globalAlpha = 0.85
+    ctx.beginPath()
+    ctx.moveTo(near.px - w1, near.py)
+    ctx.lineTo(near.px + w1, near.py)
+    ctx.lineTo(far.px + w2, far.py)
+    ctx.lineTo(far.px - w2, far.py)
+    ctx.closePath()
+    ctx.fill()
+    ctx.globalAlpha = 1
+  }
+  // Near dashes: z in (0, 90], longer dashes so they stay readable to the seam.
+  const dashCount = 18
+  const dashZMax = 90
+  const dashPeriod = dashZMax / dashCount
+  const phase = worldScroll(state.distance, dashPeriod) // grows with distance
+  for (const dx of dividerXs) {
     for (let i = 0; i <= dashCount; i += 1) {
       const z1 = i * dashPeriod - phase
-      const z2 = z1 + 3
+      const z2 = z1 + 5
       if (z1 < 0 || z2 > dashZMax) continue
       const a = project(dx, z1)
       const b = project(dx, z2)
@@ -272,7 +291,7 @@ function drawObstacleShape(
 ): void {
   switch (obs.type) {
     case 'cone': {
-      const h = 28 * s, w = 16 * s
+      const h = 40 * s, w = 24 * s
       ctx.fillStyle = '#e87020'
       ctx.beginPath(); ctx.moveTo(cx, by - h); ctx.lineTo(cx - w / 2, by); ctx.lineTo(cx + w / 2, by); ctx.closePath(); ctx.fill()
       ctx.fillStyle = '#fff'; ctx.fillRect(cx - w * 0.35, by - h * 0.55, w * 0.7, h * 0.12)

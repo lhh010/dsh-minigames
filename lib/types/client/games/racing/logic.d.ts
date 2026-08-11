@@ -14,8 +14,9 @@ export declare const VIEW_H = 320;
 export declare const ROAD_HALF_WIDTH = 1;
 /** The three lane centres on the road (-1 = left, 0 = center, 1 = right). */
 export declare const LANES: readonly [-0.6, 0, 0.6];
-/** Distance at which obstacles spawn; they approach the player as z → 0. */
-export declare const SPAWN_Z = 100;
+/** Distance at which obstacles spawn (near the horizon); they approach the
+ * player as z → 0. Spawning far ahead gives a long, readable reaction window. */
+export declare const SPAWN_Z = 220;
 /** Base top speed; the actual cap rises with score via maxSpeed. */
 export declare const MAX_SPEED = 45;
 /** Acceleration when the throttle is held (m/s²). */
