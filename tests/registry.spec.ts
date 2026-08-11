@@ -31,10 +31,10 @@ describe('game registry', () => {
     expect(() => registerGame({ ...dummy, id: 'dummy' })).toThrow(/already registered/)
   })
 
-  it('registers the five built-in games', () => {
+  it('registers the twelve built-in games', () => {
     registerBuiltinGames()
     const ids = getGames().map(game => game.id)
-    for (const id of ['dino', 'tanks', 'tetris', 'match3', 'huarong']) {
+    for (const id of ['dino', 'tanks', 'tetris', 'match3', 'huarong', 'snake', '2048', 'minesweeper', 'memory', 'gomoku', 'hop', 'breakout']) {
       expect(ids).toContain(id)
     }
   })
@@ -45,5 +45,12 @@ describe('game registry', () => {
     expect(getGame('tetris')?.title).toBe('俄罗斯方块')
     expect(getGame('match3')?.title).toBe('消消乐')
     expect(getGame('huarong')?.title).toBe('华容道')
+    expect(getGame('snake')?.title).toBe('贪吃蛇')
+    expect(getGame('2048')?.title).toBe('2048')
+    expect(getGame('minesweeper')?.title).toBe('扫雷')
+    expect(getGame('memory')?.title).toBe('记忆翻牌')
+    expect(getGame('gomoku')?.title).toBe('五子棋')
+    expect(getGame('hop')?.title).toBe('跳一跳')
+    expect(getGame('breakout')?.title).toBe('打砖块')
   })
 })
