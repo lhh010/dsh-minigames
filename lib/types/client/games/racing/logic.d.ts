@@ -35,7 +35,7 @@ export declare const COLLISION_SPEED_LOSS = 0.4;
 /** distance / this = score (distance is in px-equivalent units). */
 export declare const SCORE_PER_POINT = 10;
 /** Base z-units between obstacle spawns; shrinks slightly with score. */
-export declare const SPAWN_INTERVAL_BASE = 12;
+export declare const SPAWN_INTERVAL_BASE = 55;
 /** All obstacle archetypes. */
 export type ObstacleType = 'cone' | 'rock' | 'barrel' | 'car' | 'barrier';
 /** The lane an obstacle occupies: -1 left, 0 center, 1 right. */
@@ -77,6 +77,8 @@ export interface RacingState {
     shake: number;
     /** Collision flash remaining, 0..1 (a white overlay the renderer fades out). */
     flash: number;
+    /** Lane of the most recently spawned obstacle (spawns alternate lanes). */
+    lastSpawnLane: Lane | null;
     /** Whether the run has ended. */
     over: boolean;
     /** Seeded rng for deterministic tests. */
@@ -86,8 +88,12 @@ export interface RacingState {
 export declare function maxSpeed(score: number): number;
 /** A fresh run at the starting line. */
 export declare function createRacingState(rng?: () => number): RacingState;
-/** Roll one random obstacle at z = SPAWN_Z. */
-export declare function spawnObstacle(state: RacingState): Obstacle;
+/**
+ * Roll one random obstacle at z = SPAWN_Z. When `avoidLane` is given, the
+ * obstacle lands on a different lane so consecutive obstacles never stack in
+ * the same lane — the player always has a free lane to dodge into.
+ */
+export declare function spawnObstacle(state: RacingState, avoidLane?: Lane | null): Obstacle;
 /**
  * Whether the player car (at carX) overlaps an obstacle at the given lane when
  * the obstacle is within COLLISION_Z of the camera. Wide barriers also nudge

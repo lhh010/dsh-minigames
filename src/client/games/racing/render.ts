@@ -179,19 +179,23 @@ function drawRoad(ctx: CanvasRenderingContext2D, state: RacingState, p: Palette)
   }
   ctx.restore()
 
-  // Lane dividers: scrolling dashes between the lanes.
-  const dashPeriod = 4.5
-  const dashScroll = worldScroll(state.distance, dashPeriod) / dashPeriod
+  // Lane dividers: scrolling dashes between the lanes, reaching near the
+  // horizon so the markings run the full visible length of the road. The
+  // pattern advances TOWARD the camera (z decreases with distance); iterating
+  // one extra index keeps the far end filled, so the stream is seamless.
+  const dashCount = 50
+  const dashZMax = 350
+  const dashPeriod = dashZMax / dashCount
+  const phase = worldScroll(state.distance, dashPeriod) // grows with distance
   const dividers = [
     (LANES[0]! + LANES[1]!) / 2,
     (LANES[1]! + LANES[2]!) / 2,
   ]
   for (const dx of dividers) {
-    const dashes = 18
-    for (let i = 0; i < dashes; i += 1) {
-      const z1 = ((i + dashScroll) / dashes) * 90 + 1
-      const z2 = z1 + 2.2
-      if (z2 > 92) continue
+    for (let i = 0; i <= dashCount; i += 1) {
+      const z1 = i * dashPeriod - phase
+      const z2 = z1 + 3
+      if (z1 < 0 || z2 > dashZMax) continue
       const a = project(dx, z1)
       const b = project(dx, z2)
       const w = Math.max(1, 4 * a.s)

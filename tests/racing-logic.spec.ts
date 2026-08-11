@@ -119,6 +119,16 @@ describe('racing logic', () => {
     }
   })
 
+  it('spawns consecutive obstacles in different lanes', () => {
+    const state = createRacingState(lcg(1))
+    let prev = spawnObstacle(state, null)
+    for (let i = 0; i < 50; i += 1) {
+      const next = spawnObstacle(state, prev.lane)
+      expect(next.lane).not.toBe(prev.lane) // a free dodge lane always exists
+      prev = next
+    }
+  })
+
   it('obstacles spawn and approach the player (z decreases)', () => {
     const state = createRacingState(lcg(3))
     state.speed = 30

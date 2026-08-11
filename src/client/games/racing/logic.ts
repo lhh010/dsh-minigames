@@ -38,10 +38,10 @@ export const COLLISION_SPEED_LOSS = 0.4
 /** distance / this = score (distance is in px-equivalent units). */
 export const SCORE_PER_POINT = 10
 /** Base z-units between obstacle spawns; shrinks slightly with score. */
-export const SPAWN_INTERVAL_BASE = 12
+export const SPAWN_INTERVAL_BASE = 55
 
 /** Minimum z-units between spawns (floor for the score-based shrink). */
-const SPAWN_INTERVAL_FLOOR = 7
+const SPAWN_INTERVAL_FLOOR = 30
 /** How much the spawn interval shrinks per score point. */
 const SPAWN_INTERVAL_SHRINK = 0.0008
 /** z-range around the player car in which a same-lane obstacle collides. */
@@ -92,6 +92,8 @@ export interface RacingState {
   shake: number
   /** Collision flash remaining, 0..1 (a white overlay the renderer fades out). */
   flash: number
+  /** Lane of the most recently spawned obstacle (spawns alternate lanes). */
+  lastSpawnLane: Lane | null
   /** Whether the run has ended. */
   over: boolean
   /** Seeded rng for deterministic tests. */
@@ -114,13 +116,18 @@ export function createRacingState(rng: () => number = Math.random): RacingState 
     nextSpawnZ: SPAWN_INTERVAL_BASE,
     shake: 0,
     flash: 0,
+    lastSpawnLane: null,
     over: false,
     rng,
   }
 }
 
-/** Roll one random obstacle at z = SPAWN_Z. */
-export function spawnObstacle(state: RacingState): Obstacle {
+/**
+ * Roll one random obstacle at z = SPAWN_Z. When `avoidLane` is given, the
+ * obstacle lands on a different lane so consecutive obstacles never stack in
+ * the same lane — the player always has a free lane to dodge into.
+ */
+export function spawnObstacle(state: RacingState, avoidLane: Lane | null = null): Obstacle {
   const rng = state.rng
   const roll = rng()
   let type: ObstacleType
@@ -130,7 +137,13 @@ export function spawnObstacle(state: RacingState): Obstacle {
   else if (roll < 0.86) type = 'car'
   else type = 'barrier'
   const laneRoll = rng()
-  const lane: Lane = laneRoll < 1 / 3 ? -1 : laneRoll < 2 / 3 ? 0 : 1
+  let lane: Lane
+  if (avoidLane === null) {
+    lane = laneRoll < 1 / 3 ? -1 : laneRoll < 2 / 3 ? 0 : 1
+  } else {
+    const choices: Lane[] = avoidLane === -1 ? [0, 1] : avoidLane === 1 ? [-1, 0] : [-1, 1]
+    lane = choices[Math.floor(laneRoll * 2)]!
+  }
   // Cars drive forward (slower than the player); everything else is static.
   const speed = type === 'car' ? 12 + rng() * 10 : 0
   return { type, lane, z: SPAWN_Z, speed }
@@ -213,10 +226,13 @@ export function step(state: RacingState, dt: number, input: RacingInput): void {
   state.obstacles = remaining
 
   // Spawn the next obstacle once the distance counter runs out; the interval
-  // shrinks slightly with score for a denser late game.
+  // shrinks slightly with score for a denser late game, and consecutive
+  // obstacles alternate lanes so a dodge lane always exists.
   state.nextSpawnZ -= effectiveSpeed * dt
   if (state.nextSpawnZ <= 0) {
-    state.obstacles.push(spawnObstacle(state))
+    const obstacle = spawnObstacle(state, state.lastSpawnLane)
+    state.obstacles.push(obstacle)
+    state.lastSpawnLane = obstacle.lane
     const interval = Math.max(SPAWN_INTERVAL_FLOOR, SPAWN_INTERVAL_BASE - state.score * SPAWN_INTERVAL_SHRINK)
     state.nextSpawnZ = interval
   }
