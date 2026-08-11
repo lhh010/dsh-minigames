@@ -34,6 +34,8 @@ DSH Web UI 右侧小游戏面板：等待模型回复或修 bug 时的摸鱼神�
 
 兼容 DSH snapshot0810（`snapshots/20260810T155924Z`）：纯浏览器端 bundle（node half 仅 loader 占位），客户端元数据声明为嵌套 `dsh.client`——0810 的 ClientModuleHostService 只读该字段，顶层 `dshClient` 会被静默忽略（无日志无报错，插件不进 boot 图）。0810 实机验证通过。
 
+**npm 发版兼容**：兼容 DSH npm 基线 `0.0.1-20260810T155924Z`（snapshot0810 的 npm 发版）。实测：npm 基线安装后运行时加载、对基线构建产物 typecheck 与 `window.__DSH_BOOT__` 清单（0810 基线实机）均通过。注意：`peerDependencies.cordis` 为 `^4.0.0-rc.7`，与基线 vendored `cordis@0.0.1-20260810T155924Z` 不匹配——纯 `npm install` 需加 `--legacy-peer-deps`；经 `dsh plugin`/pnpm 安装自动处理（为插件嵌套公网 cordis），运行不受影响。
+
 ## 更新记录 / Changelog
 
 ### 2026-08-11 · v0.3.0 — 新增 6 款小游戏（共 18 款，后移除乒乓）
