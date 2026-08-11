@@ -20,33 +20,12 @@ const ROAD_BOTTOM_HALF = VIEW_W * 0.42
 const ROAD_TOP_HALF = VIEW_W * 0.01
 const PERSPECTIVE = 0.045
 
-interface Palette {
-  skyTop: string; skyBottom: string; sun: string; isNight: boolean
-  grass: string; grassDark: string
-  road: string; roadDark: string; roadEdge: string; laneMark: string
-}
+/** Speed zoom factor for the current frame (wider road = faster feel). */
+let zoom = 1
 
-const DAY: Palette = {
-  skyTop: '#4a90d8', skyBottom: '#c8e0f0', sun: '#fff4c2', isNight: false,
-  grass: '#4a8c3a', grassDark: '#3a7030',
-  road: '#424248', roadDark: '#36363e', roadEdge: '#e0e0e0', laneMark: '#f0f0f0',
-}
-const SUNSET: Palette = {
-  skyTop: '#3a2858', skyBottom: '#e89858', sun: '#ffd860', isNight: false,
-  grass: '#6a6438', grassDark: '#504828',
-  road: '#3e3a44', roadDark: '#33303a', roadEdge: '#d8c8a0', laneMark: '#f0e0c0',
-}
-const NIGHT: Palette = {
-  skyTop: '#080814', skyBottom: '#1e1e30', sun: '#e8e8f0', isNight: true,
-  grass: '#1a2418', grassDark: '#141e12',
-  road: '#23232e', roadDark: '#1d1d28', roadEdge: '#5a5a68', laneMark: '#a0a0a8',
-}
-
-function paletteFor(score: number): Palette {
-  const phase = Math.floor(score / 600) % 3
-  if (phase === 1) return SUNSET
-  if (phase === 2) return NIGHT
-  return DAY
+/** Road half-width at the bottom, including the speed zoom. */
+function roadBottomHalf(): number {
+  return ROAD_BOTTOM_HALF * zoom
 }
 
 /** Perspective scale at z (1 = at the camera, → 0 at the horizon). */
@@ -56,7 +35,7 @@ function scaleAtZ(z: number): number {
 
 /** Road half-width in screen px at depth z. */
 function roadHalfAtZ(z: number): number {
-  return ROAD_TOP_HALF + (ROAD_BOTTOM_HALF - ROAD_TOP_HALF) * scaleAtZ(z)
+  return ROAD_TOP_HALF + (roadBottomHalf() - ROAD_TOP_HALF) * scaleAtZ(z)
 }
 
 /** Project world (x ∈ [-1,1], z ≥ 0) to screen (px, py, scale). */
@@ -69,12 +48,42 @@ function project(x: number, z: number): { px: number; py: number; s: number } {
 
 /** The road trapezoid path (top edge on the horizon, bottom at the canvas foot). */
 function traceRoad(ctx: CanvasRenderingContext2D): void {
+  const bottom = roadBottomHalf()
   ctx.beginPath()
   ctx.moveTo(CENTER_X - ROAD_TOP_HALF, HORIZON_Y)
   ctx.lineTo(CENTER_X + ROAD_TOP_HALF, HORIZON_Y)
-  ctx.lineTo(CENTER_X + ROAD_BOTTOM_HALF, VIEW_H)
-  ctx.lineTo(CENTER_X - ROAD_BOTTOM_HALF, VIEW_H)
+  ctx.lineTo(CENTER_X + bottom, VIEW_H)
+  ctx.lineTo(CENTER_X - bottom, VIEW_H)
   ctx.closePath()
+}
+
+interface Palette {
+  skyTop: string; skyBottom: string; sun: string; isNight: boolean
+  grass: string; grassDark: string
+  road: string; roadDark: string; roadEdge: string; laneMark: string
+}
+
+const DAY: Palette = {
+  skyTop: '#4a90d8', skyBottom: '#c8e0f0', sun: '#fff4c2', isNight: false,
+  grass: '#4a8c3a', grassDark: '#3a7030',
+  road: '#424248', roadDark: '#2e2e36', roadEdge: '#e0e0e0', laneMark: '#f0f0f0',
+}
+const SUNSET: Palette = {
+  skyTop: '#3a2858', skyBottom: '#e89858', sun: '#ffd860', isNight: false,
+  grass: '#6a6438', grassDark: '#504828',
+  road: '#3e3a44', roadDark: '#29262e', roadEdge: '#d8c8a0', laneMark: '#f0e0c0',
+}
+const NIGHT: Palette = {
+  skyTop: '#080814', skyBottom: '#1e1e30', sun: '#e8e8f0', isNight: true,
+  grass: '#1a2418', grassDark: '#141e12',
+  road: '#23232e', roadDark: '#16161e', roadEdge: '#5a5a68', laneMark: '#a0a0a8',
+}
+
+function paletteFor(score: number): Palette {
+  const phase = Math.floor(score / 600) % 3
+  if (phase === 1) return SUNSET
+  if (phase === 2) return NIGHT
+  return DAY
 }
 
 /** The z-offset that scrolls the road texture at the same rate the world moves. */
@@ -85,6 +94,9 @@ function worldScroll(distance: number, period: number): number {
 /** Draw one frame. */
 export function renderRacing(ctx: CanvasRenderingContext2D, state: RacingState): void {
   const p = paletteFor(state.score)
+  // Speed zoom: the road flares wider as the car speeds up — a linear,
+  // speed-proportional motion cue.
+  zoom = 1 + 0.18 * Math.min(1, Math.abs(state.speed) / 80)
   ctx.clearRect(0, 0, VIEW_W, VIEW_H)
 
   const shakeAmp = state.shake * 6
@@ -181,22 +193,26 @@ function drawRoad(ctx: CanvasRenderingContext2D, state: RacingState, p: Palette)
   }
   ctx.restore()
 
-  // Lane dividers: scrolling dashes with clear gaps (60% on / 40% off), the
-  // dashed stream advancing TOWARD the camera (z decreases with distance).
+  // Lane dividers: dashes whose WORLD length grows with distance so their
+  // screen size stays constant — clear gaps and a line that runs all the way
+  // to the horizon. The stream advances toward the camera at world speed.
   const dividerXs = [
     (LANES[0]! + LANES[1]!) / 2,
     (LANES[1]! + LANES[2]!) / 2,
   ]
-  const dashZMax = 300
-  const dashCount = 24
-  const dashPeriod = dashZMax / dashCount
-  const dashLen = dashPeriod * 0.6
-  const phase = worldScroll(state.distance, dashPeriod) // grows with distance
+  const DASH_SCREEN_H = 12
+  const DASH_PERIOD = 6
+  const dashScroll = worldScroll(state.distance, DASH_PERIOD)
+  const pxPerScale = VIEW_H - HORIZON_Y
   for (const dx of dividerXs) {
-    for (let i = 0; i <= dashCount; i += 1) {
-      const z1 = i * dashPeriod - phase
-      const z2 = z1 + dashLen
-      if (z1 < 0 || z2 > dashZMax) continue
+    for (let i = 0; i < 120; i += 1) {
+      const z1 = i * DASH_PERIOD - dashScroll
+      if (z1 < 0) continue
+      const s1 = scaleAtZ(z1)
+      // Stop once the dash start is at/above the horizon (sub-pixel).
+      if (s1 <= DASH_SCREEN_H / pxPerScale + 0.003) break
+      const s2 = Math.max(0.004, s1 - DASH_SCREEN_H / pxPerScale)
+      const z2 = (1 / s2 - 1) / PERSPECTIVE
       const a = project(dx, z1)
       const b = project(dx, z2)
       const w = Math.max(1, 4 * a.s)
@@ -211,21 +227,21 @@ function drawRoad(ctx: CanvasRenderingContext2D, state: RacingState, p: Palette)
     }
   }
 
-  // Speed streaks: faint wind lines whipping past at 1.6x world speed — a pure
+  // Speed streaks: faint wind lines whipping past at 2x world speed — a pure
   // motion cue that makes higher speeds feel proportionally faster.
   const streakZMax = 60
-  const streakCount = 14
+  const streakCount = 20
   const streakPeriod = streakZMax / streakCount
-  const streakScroll = worldScroll(state.distance * 1.6, streakPeriod)
-  ctx.globalAlpha = 0.2
+  const streakScroll = worldScroll(state.distance * 2, streakPeriod)
+  ctx.globalAlpha = 0.3
   for (let i = 0; i <= streakCount; i += 1) {
     const z1 = i * streakPeriod - streakScroll
     if (z1 < 0) continue
-    const z2 = z1 + 3.5
+    const z2 = z1 + 4.5
     const x = (i % 3) - 1 + (((i * 3) % 5) - 2) * 0.12
     const a = project(x, z1)
     const b = project(x, z2)
-    const w = Math.max(0.6, 2.6 * a.s)
+    const w = Math.max(0.6, 2.8 * a.s)
     ctx.fillStyle = p.laneMark
     ctx.beginPath()
     ctx.moveTo(a.px - w, a.py)
@@ -257,22 +273,22 @@ function drawRoadside(ctx: CanvasRenderingContext2D, state: RacingState, p: Pale
     if (z < 1 || z > 90) continue
     for (const side of [-1, 1] as const) {
       const proj = project(side * 1.3, z)
-      const size = 42 * proj.s
+      const size = 62 * proj.s
       if (size < 2) continue
       const isTree = (i + (side > 0 ? 1 : 0)) % 2 === 0
       if (isTree) {
         ctx.fillStyle = '#5a3e26'
-        ctx.fillRect(proj.px - size * 0.04, proj.py - size * 0.2, size * 0.08, size * 0.2)
+        ctx.fillRect(proj.px - size * 0.05, proj.py - size * 0.24, size * 0.1, size * 0.24)
         ctx.fillStyle = p.grassDark
         ctx.beginPath()
-        ctx.arc(proj.px, proj.py - size * 0.32, size * 0.18, 0, Math.PI * 2)
+        ctx.arc(proj.px, proj.py - size * 0.38, size * 0.24, 0, Math.PI * 2)
         ctx.fill()
       } else {
         ctx.fillStyle = '#3a3a42'
-        ctx.fillRect(proj.px - size * 0.015, proj.py - size * 0.35, size * 0.03, size * 0.35)
+        ctx.fillRect(proj.px - size * 0.02, proj.py - size * 0.42, size * 0.04, size * 0.42)
         ctx.fillStyle = p.isNight ? '#ffd860' : '#6a6a72'
         ctx.beginPath()
-        ctx.arc(proj.px, proj.py - size * 0.36, size * 0.04, 0, Math.PI * 2)
+        ctx.arc(proj.px, proj.py - size * 0.44, size * 0.055, 0, Math.PI * 2)
         ctx.fill()
       }
     }
