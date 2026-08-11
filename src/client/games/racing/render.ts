@@ -194,26 +194,27 @@ function drawRoad(ctx: CanvasRenderingContext2D, state: RacingState, p: Palette)
   ctx.restore()
 
   // Lane dividers: dashes whose WORLD length grows with distance so their
-  // screen size stays constant — clear gaps and a line that runs all the way
-  // to the horizon. The stream advances toward the camera at world speed.
+  // screen size stays constant — and the gap after each dash is also sized in
+  // screen space, so the dashed pattern keeps clear gaps all the way to the
+  // horizon. The pattern is walked outward from the camera each frame.
   const dividerXs = [
     (LANES[0]! + LANES[1]!) / 2,
     (LANES[1]! + LANES[2]!) / 2,
   ]
   const DASH_SCREEN_H = 12
-  const DASH_PERIOD = 6
-  const dashScroll = worldScroll(state.distance, DASH_PERIOD)
+  const GAP_SCREEN_H = 9
   const pxPerScale = VIEW_H - HORIZON_Y
+  const dashScroll = worldScroll(state.distance, 3)
   for (const dx of dividerXs) {
-    for (let i = 0; i < 120; i += 1) {
-      const z1 = i * DASH_PERIOD - dashScroll
-      if (z1 < 0) continue
-      const s1 = scaleAtZ(z1)
-      // Stop once the dash start is at/above the horizon (sub-pixel).
-      if (s1 <= DASH_SCREEN_H / pxPerScale + 0.003) break
+    let z = -dashScroll
+    let guard = 60
+    while (guard > 0 && z < 400) {
+      guard -= 1
+      const s1 = scaleAtZ(Math.max(0, z))
+      if (s1 <= DASH_SCREEN_H / pxPerScale + 0.003) break // at/above the horizon
       const s2 = Math.max(0.004, s1 - DASH_SCREEN_H / pxPerScale)
       const z2 = (1 / s2 - 1) / PERSPECTIVE
-      const a = project(dx, z1)
+      const a = project(dx, Math.max(0, z))
       const b = project(dx, z2)
       const w = Math.max(1, 4 * a.s)
       ctx.fillStyle = p.laneMark
@@ -224,6 +225,10 @@ function drawRoad(ctx: CanvasRenderingContext2D, state: RacingState, p: Palette)
       ctx.lineTo(b.px - w * 0.6, b.py)
       ctx.closePath()
       ctx.fill()
+      // Advance by a screen-constant gap.
+      const sg1 = s2
+      const sg2 = Math.max(0.004, sg1 - GAP_SCREEN_H / pxPerScale)
+      z = (1 / sg2 - 1) / PERSPECTIVE
     }
   }
 
@@ -264,16 +269,16 @@ function drawRoad(ctx: CanvasRenderingContext2D, state: RacingState, p: Palette)
   }
 }
 
-/** Roadside trees and lamp posts at regular intervals. */
+/** Roadside trees and lamp posts at regular intervals, all the way to the horizon. */
 function drawRoadside(ctx: CanvasRenderingContext2D, state: RacingState, p: Palette): void {
   const spacing = 5
   const offset = worldScroll(state.distance, spacing * 2)
-  for (let i = 0; i < 16; i += 1) {
+  for (let i = 0; i < 60; i += 1) {
     const z = (i + 1) * spacing - offset
-    if (z < 1 || z > 90) continue
+    if (z < 1 || z > 250) continue
     for (const side of [-1, 1] as const) {
       const proj = project(side * 1.3, z)
-      const size = 62 * proj.s
+      const size = 80 * proj.s
       if (size < 2) continue
       const isTree = (i + (side > 0 ? 1 : 0)) % 2 === 0
       if (isTree) {
