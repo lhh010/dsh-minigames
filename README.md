@@ -27,7 +27,7 @@ DSH Web UI 右侧小游戏面板：等待模型回复或修 bug 时的摸鱼神�
 
 ## 版本兼容 / Version compatibility
 
-兼容 DSH snapshot0810（`snapshots/20260810T155924Z-8ec407cd64`）：纯浏览器端 bundle（node half 仅 loader 占位），客户端元数据声明为嵌套 `dsh.client`——0810 的 ClientModuleHostService 只读该字段，顶层 `dshClient` 会被静默忽略（无日志无报错，插件不进 boot 图）。0810 实机验证通过。
+兼容 DSH snapshot0810（`snapshots/20260810T155924Z`）：纯浏览器端 bundle（node half 仅 loader 占位），客户端元数据声明为嵌套 `dsh.client`——0810 的 ClientModuleHostService 只读该字段，顶层 `dshClient` 会被静默忽略（无日志无报错，插件不进 boot 图）。0810 实机验证通过。
 
 ## 更新记录 / Changelog
 
