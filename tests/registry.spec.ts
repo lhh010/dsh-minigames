@@ -31,10 +31,10 @@ describe('game registry', () => {
     expect(() => registerGame({ ...dummy, id: 'dummy' })).toThrow(/already registered/)
   })
 
-  it('registers the seventeen built-in games', () => {
+  it('registers the eighteen built-in games', () => {
     registerBuiltinGames()
     const ids = getGames().map(game => game.id)
-    for (const id of ['dino', 'tanks', 'tetris', 'match3', 'huarong', 'snake', '2048', 'minesweeper', 'memory', 'gomoku', 'hop', 'breakout', 'whack', 'othello', 'flappy', 'sudoku', 'pacman']) {
+    for (const id of ['dino', 'tanks', 'tetris', 'match3', 'huarong', 'snake', '2048', 'minesweeper', 'memory', 'gomoku', 'hop', 'breakout', 'whack', 'othello', 'flappy', 'sudoku', 'pacman', 'aimtrack']) {
       expect(ids).toContain(id)
     }
     expect(ids).not.toContain('pong')
@@ -58,5 +58,6 @@ describe('game registry', () => {
     expect(getGame('flappy')?.title).toBe('Flappy')
     expect(getGame('sudoku')?.title).toBe('数独')
     expect(getGame('pacman')?.title).toBe('吃豆人')
+    expect(getGame('aimtrack')?.title).toBe('跟枪练习')
   })
 })
