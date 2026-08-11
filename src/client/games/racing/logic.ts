@@ -132,10 +132,10 @@ export function spawnObstacle(state: RacingState, avoidLane: Lane | null = null)
   const rng = state.rng
   const roll = rng()
   let type: ObstacleType
-  if (roll < 0.3) type = 'cone'
-  else if (roll < 0.5) type = 'rock'
-  else if (roll < 0.68) type = 'barrel'
-  else if (roll < 0.86) type = 'car'
+  if (roll < 0.22) type = 'cone'
+  else if (roll < 0.38) type = 'rock'
+  else if (roll < 0.52) type = 'barrel'
+  else if (roll < 0.7) type = 'car'
   else type = 'barrier'
   const laneRoll = rng()
   let lane: Lane

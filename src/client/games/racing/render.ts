@@ -161,9 +161,11 @@ function drawRoad(ctx: CanvasRenderingContext2D, state: RacingState, p: Palette)
   traceRoad(ctx)
   ctx.fill()
 
-  // Scrolling rumble stripes, clipped to the road.
-  const bandCount = 26
-  const bandLen = 100 / bandCount
+  // Scrolling rumble stripes, clipped to the road (extend deep into the field
+  // so the whole road surface carries a linear motion cue).
+  const bandZMax = 220
+  const bandCount = 44
+  const bandLen = bandZMax / bandCount
   const scroll = worldScroll(state.distance, bandLen)
   ctx.save()
   traceRoad(ctx)
@@ -171,7 +173,7 @@ function drawRoad(ctx: CanvasRenderingContext2D, state: RacingState, p: Palette)
   for (let i = 0; i < bandCount; i += 1) {
     const z1 = i * bandLen - scroll
     const z2 = z1 + bandLen
-    if (z2 < 0) continue
+    if (z2 < 0 || z1 > bandZMax) continue
     const y1 = HORIZON_Y + (VIEW_H - HORIZON_Y) * scaleAtZ(Math.max(0, z1))
     const y2 = HORIZON_Y + (VIEW_H - HORIZON_Y) * scaleAtZ(z2)
     ctx.fillStyle = i % 2 === 0 ? p.road : p.roadDark
@@ -179,41 +181,21 @@ function drawRoad(ctx: CanvasRenderingContext2D, state: RacingState, p: Palette)
   }
   ctx.restore()
 
-  // Lane dividers. Near field: scrolling dashes (clear motion cue). Far field:
-  // perspective would shrink discrete dashes below a pixel long before the
-  // horizon, so a solid tapered divider line is drawn from the mid field all
-  // the way to the horizon — the markings read as continuous to the vanishing
-  // point. The dashed stream advances TOWARD the camera (z decreases).
+  // Lane dividers: scrolling dashes with clear gaps (60% on / 40% off), the
+  // dashed stream advancing TOWARD the camera (z decreases with distance).
   const dividerXs = [
     (LANES[0]! + LANES[1]!) / 2,
     (LANES[1]! + LANES[2]!) / 2,
   ]
-  // Far solid lines: from z = 40 to well past the visible field.
-  for (const dx of dividerXs) {
-    const near = project(dx, 40)
-    const far = project(dx, 2000)
-    const w1 = 3.5 * near.s
-    const w2 = 0.6 * far.s
-    ctx.fillStyle = p.laneMark
-    ctx.globalAlpha = 0.85
-    ctx.beginPath()
-    ctx.moveTo(near.px - w1, near.py)
-    ctx.lineTo(near.px + w1, near.py)
-    ctx.lineTo(far.px + w2, far.py)
-    ctx.lineTo(far.px - w2, far.py)
-    ctx.closePath()
-    ctx.fill()
-    ctx.globalAlpha = 1
-  }
-  // Near dashes: z in (0, 90], longer dashes so they stay readable to the seam.
-  const dashCount = 18
-  const dashZMax = 90
+  const dashZMax = 300
+  const dashCount = 24
   const dashPeriod = dashZMax / dashCount
+  const dashLen = dashPeriod * 0.6
   const phase = worldScroll(state.distance, dashPeriod) // grows with distance
   for (const dx of dividerXs) {
     for (let i = 0; i <= dashCount; i += 1) {
       const z1 = i * dashPeriod - phase
-      const z2 = z1 + 5
+      const z2 = z1 + dashLen
       if (z1 < 0 || z2 > dashZMax) continue
       const a = project(dx, z1)
       const b = project(dx, z2)
@@ -229,6 +211,32 @@ function drawRoad(ctx: CanvasRenderingContext2D, state: RacingState, p: Palette)
     }
   }
 
+  // Speed streaks: faint wind lines whipping past at 1.6x world speed — a pure
+  // motion cue that makes higher speeds feel proportionally faster.
+  const streakZMax = 60
+  const streakCount = 14
+  const streakPeriod = streakZMax / streakCount
+  const streakScroll = worldScroll(state.distance * 1.6, streakPeriod)
+  ctx.globalAlpha = 0.2
+  for (let i = 0; i <= streakCount; i += 1) {
+    const z1 = i * streakPeriod - streakScroll
+    if (z1 < 0) continue
+    const z2 = z1 + 3.5
+    const x = (i % 3) - 1 + (((i * 3) % 5) - 2) * 0.12
+    const a = project(x, z1)
+    const b = project(x, z2)
+    const w = Math.max(0.6, 2.6 * a.s)
+    ctx.fillStyle = p.laneMark
+    ctx.beginPath()
+    ctx.moveTo(a.px - w, a.py)
+    ctx.lineTo(a.px + w, a.py)
+    ctx.lineTo(b.px + w * 0.6, b.py)
+    ctx.lineTo(b.px - w * 0.6, b.py)
+    ctx.closePath()
+    ctx.fill()
+  }
+  ctx.globalAlpha = 1
+
   // Solid edge lines along both road borders.
   ctx.strokeStyle = p.roadEdge
   ctx.lineWidth = 2
@@ -242,7 +250,7 @@ function drawRoad(ctx: CanvasRenderingContext2D, state: RacingState, p: Palette)
 
 /** Roadside trees and lamp posts at regular intervals. */
 function drawRoadside(ctx: CanvasRenderingContext2D, state: RacingState, p: Palette): void {
-  const spacing = 8
+  const spacing = 5
   const offset = worldScroll(state.distance, spacing * 2)
   for (let i = 0; i < 16; i += 1) {
     const z = (i + 1) * spacing - offset
