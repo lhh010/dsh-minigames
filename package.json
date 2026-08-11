@@ -1,9 +1,9 @@
 {
   "name": "@dsh-external/dsh-minigames",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "DSH Web UI 右侧小游戏面板：12 款离线小游戏（恐龙/方块/坦克/消消乐/华容道/贪吃蛇/2048/扫雷/翻牌/五子棋/跳一跳/打砖块），可扩展游戏注册表。等待模型回复或修 bug 时的摸鱼神器。",
+  "description": "DSH Web UI 右侧小游戏面板：17 款离线小游戏，可扩展游戏注册表。等待模型回复或修 bug 时的摸鱼神器。",
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",

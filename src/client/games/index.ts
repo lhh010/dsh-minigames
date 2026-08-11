@@ -17,6 +17,11 @@ import { memoryGame } from './memory/index.ts'
 import { gomokuGame } from './gomoku/index.ts'
 import { hopGame } from './hop/index.ts'
 import { breakoutGame } from './breakout/index.ts'
+import { whackGame } from './whack/index.ts'
+import { othelloGame } from './othello/index.ts'
+import { flappyGame } from './flappy/index.ts'
+import { sudokuGame } from './sudoku/index.ts'
+import { pacmanGame } from './pacman/index.ts'
 
 export { getGames, getGame } from './registry.ts'
 export { registerGame } from './registry.ts'
@@ -32,6 +37,7 @@ export function registerBuiltinGames(): void {
   for (const game of [
     dinoGame, tetrisGame, tanksGame, match3Game, huarongGame, snakeGame,
     game2048, minesweeperGame, memoryGame, gomokuGame, hopGame, breakoutGame,
+    whackGame, othelloGame, flappyGame, sudokuGame, pacmanGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
