@@ -1,4 +1,4 @@
-window.__ModuleLoader__.load({
+﻿window.__ModuleLoader__.load({
 	id: "@dsh-external/dsh-minigames",
 	factory: (require) => {
 		var module = { exports: {} };
@@ -43,7 +43,7 @@ window.__ModuleLoader__.load({
 		const SPEED_PER_SCORE = .15;
 		const SPAWN_MIN = 1.1;
 		const SPAWN_MAX = 2.4;
-		/** Spawn interval shrinks with score — denser obstacle fields in the late game. */
+		/** Spawn interval shrinks with score 鈥?denser obstacle fields in the late game. */
 		const SPAWN_SCALE = 4e-4;
 		const SPAWN_FLOOR = .5;
 		/** Forgiving hitbox shrink on both axes, in px. */
@@ -88,7 +88,7 @@ window.__ModuleLoader__.load({
 				h: 50
 			};
 		}
-		/** Shrunk AABB overlap test — the forgiving hitbox the runner actually uses. */
+		/** Shrunk AABB overlap test 鈥?the forgiving hitbox the runner actually uses. */
 		function collides$1(a, b) {
 			const ax0 = a.x + HITBOX_SHRINK;
 			const ax1 = a.x + a.w - HITBOX_SHRINK;
@@ -230,7 +230,7 @@ window.__ModuleLoader__.load({
 			fog: "#c8d2da",
 			rain: "#6f86a0"
 		};
-		const NIGHT$1 = {
+		const NIGHT = {
 			bg: "#13131a",
 			dino: "#ececf2",
 			dinoShade: "#b9b9c6",
@@ -248,13 +248,13 @@ window.__ModuleLoader__.load({
 		};
 		/** Draw one frame of the run. */
 		function renderDino(ctx, state) {
-			const p = state.night ? NIGHT$1 : DAY$1;
+			const p = state.night ? NIGHT : DAY$1;
 			ctx.clearRect(0, 0, 600, 185);
 			ctx.fillStyle = p.bg;
 			ctx.fillRect(0, 0, 600, 185);
 			drawClouds(ctx, state, p);
-			drawGround$1(ctx, state, p);
-			for (const obstacle of state.obstacles) drawObstacle(ctx, obstacle, state.t, p);
+			drawGround(ctx, state, p);
+			for (const obstacle of state.obstacles) drawObstacle$1(ctx, obstacle, state.t, p);
 			drawDino(ctx, state, p);
 			if (state.raining) {
 				drawFog(ctx, state, p);
@@ -264,7 +264,7 @@ window.__ModuleLoader__.load({
 			ctx.font = "13px ui-monospace, monospace";
 			ctx.textAlign = "right";
 			ctx.fillText(String(Math.floor(state.score)).padStart(5, "0"), 588, 22);
-			if (state.over) drawGameOver(ctx, state, p);
+			if (state.over) drawGameOver$1(ctx, state, p);
 			if (state.lightning > 0) {
 				ctx.fillStyle = `rgba(255,255,255,${Math.min(.95, state.lightning).toFixed(3)})`;
 				ctx.fillRect(0, 0, 600, 185);
@@ -315,7 +315,7 @@ window.__ModuleLoader__.load({
 				ctx.fill();
 			}
 		}
-		function drawGround$1(ctx, state, p) {
+		function drawGround(ctx, state, p) {
 			ctx.fillStyle = p.ground;
 			ctx.fillRect(0, 165, 600, 2);
 			const gap = 34;
@@ -328,7 +328,7 @@ window.__ModuleLoader__.load({
 				ctx.globalAlpha = 1;
 			}
 		}
-		function drawObstacle(ctx, obstacle, t, p) {
+		function drawObstacle$1(ctx, obstacle, t, p) {
 			if (obstacle.kind === "cactus" || obstacle.kind === "cactus-double") {
 				if (obstacle.kind === "cactus-double") {
 					const trunk = Math.max(14, Math.floor((obstacle.w - 6) / 2));
@@ -399,13 +399,13 @@ window.__ModuleLoader__.load({
 			ctx.fillRect(x + 8, y + 42, 8, phase === 0 ? 8 : 5);
 			ctx.fillRect(x + 21, y + 42, 8, phase === 0 ? 5 : 8);
 		}
-		function drawGameOver(ctx, state, p) {
+		function drawGameOver$1(ctx, state, p) {
 			ctx.fillStyle = p.text;
 			ctx.font = "bold 20px ui-monospace, monospace";
 			ctx.textAlign = "center";
 			ctx.fillText("GAME OVER", 300, 73);
 			ctx.font = "12px ui-monospace, monospace";
-			ctx.fillText(`得分 ${Math.floor(state.score)} · 按空格或点击重新开始`, 300, 97);
+			ctx.fillText(`寰楀垎 ${Math.floor(state.score)} 路 鎸夌┖鏍兼垨鐐瑰嚮閲嶆柊寮€濮媊, 300, 97);
 		}
 		//#endregion
 		//#region src/client/games/canvas-fit.ts
@@ -597,13 +597,13 @@ window.__ModuleLoader__.load({
 		}
 		const dinoGame = {
 			id: "dino",
-			title: "恐龙跳一跳",
-			icon: "🦖",
-			description: "Chrome 经典小恐龙：空格/点击跳跃，↓ 蹲下躲鸟，速度越来越快。",
+			title: "鎭愰緳璺充竴璺?,
+			icon: "馃",
+			description: "Chrome 缁忓吀灏忔亹榫欙細绌烘牸/鐐瑰嚮璺宠穬锛屸啌 韫蹭笅韬查笩锛岄€熷害瓒婃潵瓒婂揩銆?,
 			controls: [
-				"空格 / ↑ / 点击：跳跃",
-				"↓：蹲下躲鸟",
-				"P：暂停"
+				"绌烘牸 / 鈫?/ 鐐瑰嚮锛氳烦璺?,
+				"鈫擄細韫蹭笅韬查笩",
+				"P锛氭殏鍋?
 			],
 			create: createDinoGame
 		};
@@ -963,7 +963,7 @@ window.__ModuleLoader__.load({
 			ctx.fillStyle = TEXT$3;
 			ctx.font = "11px ui-monospace, monospace";
 			ctx.textAlign = "left";
-			ctx.fillText("暂存 C", PREVIEW_X, y);
+			ctx.fillText("鏆傚瓨 C", PREVIEW_X, y);
 			ctx.fillStyle = BOARD_BG$1;
 			ctx.fillRect(PREVIEW_X, y + 6, PREVIEW_W, 66);
 			ctx.strokeStyle = GRID_LINE$1;
@@ -978,7 +978,7 @@ window.__ModuleLoader__.load({
 			ctx.font = "11px ui-monospace, monospace";
 			ctx.textAlign = "left";
 			ctx.textBaseline = "alphabetic";
-			ctx.fillText("下一个", PREVIEW_X, 12);
+			ctx.fillText("涓嬩竴涓?, PREVIEW_X, 12);
 			const itemH = 50;
 			for (let i = 0; i < Math.min(5, state.nextQueue.length); i += 1) {
 				const y = 18 + i * itemH;
@@ -1030,7 +1030,7 @@ window.__ModuleLoader__.load({
 				ctx.textAlign = "center";
 				ctx.fillText("GAME OVER", BOARD_W$2 / 2, BOARD_H$2 / 2 - 8);
 				ctx.font = "12px ui-monospace, monospace";
-				ctx.fillText(`得分 ${state.score} · R 重新开始`, BOARD_W$2 / 2, 238);
+				ctx.fillText(`寰楀垎 ${state.score} 路 R 閲嶆柊寮€濮媊, BOARD_W$2 / 2, 238);
 			}
 		}
 		//#endregion
@@ -1165,15 +1165,15 @@ window.__ModuleLoader__.load({
 		}
 		const tetrisGame = {
 			id: "tetris",
-			title: "俄罗斯方块",
-			icon: "🧱",
-			description: "经典下落消除：←→ 移动，↑/X 旋转，空格硬降，C 暂存，P 暂停。",
+			title: "淇勭綏鏂柟鍧?,
+			icon: "馃П",
+			description: "缁忓吀涓嬭惤娑堥櫎锛氣啇鈫?绉诲姩锛屸啈/X 鏃嬭浆锛岀┖鏍肩‖闄嶏紝C 鏆傚瓨锛孭 鏆傚仠銆?,
 			controls: [
-				"← →：左右移动",
-				"↑ / X：旋转",
-				"空格：硬降",
-				"C：暂存",
-				"P：暂停"
+				"鈫?鈫掞細宸﹀彸绉诲姩",
+				"鈫?/ X锛氭棆杞?,
+				"绌烘牸锛氱‖闄?,
+				"C锛氭殏瀛?,
+				"P锛氭殏鍋?
 			],
 			create: createTetrisGame
 		};
@@ -1192,7 +1192,7 @@ window.__ModuleLoader__.load({
 		/** Tank collision inset in px: the effective body is TILE - 2*INSET, letting
 		* tanks fit and turn in lanes a hair tighter than a full tile. */
 		const TANK_INSET = 3;
-		/** Perpendicular-axis snap range after a turn (px) — keeps the tank on-grid. */
+		/** Perpendicular-axis snap range after a turn (px) 鈥?keeps the tank on-grid. */
 		const LANE_SNAP = 4;
 		const SPAWN_INTERVAL = 1.6;
 		const PLAYER_SPEED = 120;
@@ -1570,7 +1570,7 @@ window.__ModuleLoader__.load({
 		}
 		/**
 		* Move a tank toward its desired heading. Turning is free: the tank turns the
-		* moment its (inset) body fits the new lane — no waiting for grid alignment.
+		* moment its (inset) body fits the new lane 鈥?no waiting for grid alignment.
 		* When it turns near a tile boundary it is snapped onto the grid, so the tank
 		* stays visually lane-aligned whenever it is close; driving straight still
 		* snaps at every boundary crossing. The collision body is TILE - 2*INSET, so
@@ -1949,16 +1949,16 @@ window.__ModuleLoader__.load({
 			ctx.fillStyle = TEXT$2;
 			ctx.font = "12px ui-monospace, monospace";
 			ctx.textAlign = "left";
-			ctx.fillText(`第 ${state.wave}/3 波`, 8, 16);
-			ctx.fillText(`剩余敌人 ${state.enemies.length + state.spawnQueue}`, 8, 32);
-			ctx.fillText(`生命 ${"♥".repeat(Math.max(0, state.player.hp))}`, 8, 48);
+			ctx.fillText(`绗?${state.wave}/3 娉, 8, 16);
+			ctx.fillText(`鍓╀綑鏁屼汉 ${state.enemies.length + state.spawnQueue}`, 8, 32);
+			ctx.fillText(`鐢熷懡 ${"鈾?.repeat(Math.max(0, state.player.hp))}`, 8, 48);
 			if (state.result !== "none") {
 				ctx.fillStyle = TEXT$2;
 				ctx.font = "bold 24px ui-monospace, monospace";
 				ctx.textAlign = "center";
-				ctx.fillText(state.result === "win" ? "胜 利 ！" : "G A M E  O V E R", TANK_W / 2, TANK_H / 2 - 10);
+				ctx.fillText(state.result === "win" ? "鑳?鍒?锛? : "G A M E  O V E R", TANK_W / 2, TANK_H / 2 - 10);
 				ctx.font = "13px ui-monospace, monospace";
-				ctx.fillText(`得分 ${state.score} · 按 R 重新开始`, TANK_W / 2, 228);
+				ctx.fillText(`寰楀垎 ${state.score} 路 鎸?R 閲嶆柊寮€濮媊, TANK_W / 2, 228);
 			}
 		}
 		//#endregion
@@ -2101,18 +2101,18 @@ window.__ModuleLoader__.load({
 		}
 		const tanksGame = {
 			id: "tanks",
-			title: "坦克大战",
-			icon: "🛡️",
-			description: "2D 坦克对战（带 AI）：WASD/方向键移动，空格开火，消灭三波敌军。",
+			title: "鍧﹀厠澶ф垬",
+			icon: "馃洝锔?,
+			description: "2D 鍧﹀厠瀵规垬锛堝甫 AI锛夛細WASD/鏂瑰悜閿Щ鍔紝绌烘牸寮€鐏紝娑堢伃涓夋尝鏁屽啗銆?,
 			controls: [
-				"WASD / 方向键：移动",
-				"空格：开火",
-				"P：暂停",
-				"R：重开"
+				"WASD / 鏂瑰悜閿細绉诲姩",
+				"绌烘牸锛氬紑鐏?,
+				"P锛氭殏鍋?,
+				"R锛氶噸寮€"
 			],
 			create: createTanksGame
 		};
-		/** Score for removing a 4-connected group of `size` — super-linear (quadratic),
+		/** Score for removing a 4-connected group of `size` 鈥?super-linear (quadratic),
 		* so one big pop vastly outweighs many small ones. */
 		function scoreForGroup(size) {
 			return 10 * size * size;
@@ -2126,7 +2126,7 @@ window.__ModuleLoader__.load({
 		function randomKind(state) {
 			return 1 + Math.floor(state.rng() * state.kinds);
 		}
-		/** Fill the board with random gems (groups are fine — they are what you click). */
+		/** Fill the board with random gems (groups are fine 鈥?they are what you click). */
 		function shuffle$1(state) {
 			const { rows, cols } = state;
 			state.grid = Array.from({ length: rows }, () => Array.from({ length: cols }, () => randomKind(state)));
@@ -2371,9 +2371,9 @@ window.__ModuleLoader__.load({
 			ctx.fillStyle = TEXT$1;
 			ctx.font = "13px ui-monospace, monospace";
 			ctx.textAlign = "left";
-			ctx.fillText(`第 ${state.level} 关`, 10, 16);
+			ctx.fillText(`绗?${state.level} 鍏砢, 10, 16);
 			ctx.textAlign = "right";
-			ctx.fillText(`得分 ${state.score} / ${state.target}`, 342, 16);
+			ctx.fillText(`寰楀垎 ${state.score} / ${state.target}`, 342, 16);
 			const progress = Math.min(1, state.score / state.target);
 			ctx.fillStyle = "#26262e";
 			ctx.fillRect(10, 24, 332, 6);
@@ -2382,7 +2382,7 @@ window.__ModuleLoader__.load({
 			ctx.fillStyle = MUTED$1;
 			ctx.font = "10px ui-monospace, monospace";
 			ctx.textAlign = "left";
-			ctx.fillText("点击同色四连通块消除", 10, 37);
+			ctx.fillText("鐐瑰嚮鍚岃壊鍥涜繛閫氬潡娑堥櫎", 10, 37);
 		}
 		/** Draw one frame. `grid` is the display grid (pre-removal during the clear phase). */
 		function renderMatch3(ctx, state, grid, view) {
@@ -2444,20 +2444,20 @@ window.__ModuleLoader__.load({
 				ctx.fillStyle = "#ffe08a";
 				ctx.font = "bold 26px ui-monospace, monospace";
 				ctx.textAlign = "center";
-				ctx.fillText("过 关 ！", 176, 210);
+				ctx.fillText("杩?鍏?锛?, 176, 210);
 				ctx.fillStyle = TEXT$1;
 				ctx.font = "13px ui-monospace, monospace";
-				ctx.fillText(`第 ${state.level} 关完成 · 目标 ${state.target}`, 176, 238);
+				ctx.fillText(`绗?${state.level} 鍏冲畬鎴?路 鐩爣 ${state.target}`, 176, 238);
 			} else if (view.result === "lose") {
 				ctx.fillStyle = "rgba(21,21,27,0.6)";
 				ctx.fillRect(0, 40, 352, 352);
 				ctx.fillStyle = "#e45756";
 				ctx.font = "bold 26px ui-monospace, monospace";
 				ctx.textAlign = "center";
-				ctx.fillText("游 戏 结 束", 176, 204);
+				ctx.fillText("娓?鎴?缁?鏉?, 176, 204);
 				ctx.fillStyle = TEXT$1;
 				ctx.font = "13px ui-monospace, monospace";
-				ctx.fillText(`得分 ${state.score} / 目标 ${state.target} · 按 R 重新开始`, 176, 232);
+				ctx.fillText(`寰楀垎 ${state.score} / 鐩爣 ${state.target} 路 鎸?R 閲嶆柊寮€濮媊, 176, 232);
 			}
 		}
 		//#endregion
@@ -2656,14 +2656,14 @@ window.__ModuleLoader__.load({
 		}
 		const match3Game = {
 			id: "match3",
-			title: "消消乐",
-			icon: "💎",
-			description: "点击同色四连通块消除，一次消得越多分越高；达到目标分过关，目标逐关翻倍。",
+			title: "娑堟秷涔?,
+			icon: "馃拵",
+			description: "鐐瑰嚮鍚岃壊鍥涜繛閫氬潡娑堥櫎锛屼竴娆℃秷寰楄秺澶氬垎瓒婇珮锛涜揪鍒扮洰鏍囧垎杩囧叧锛岀洰鏍囬€愬叧缈诲€嶃€?,
 			controls: [
-				"点击：消除同色四连通块",
-				"方向键 + 空格：键盘消除",
-				"R：重开",
-				"P：暂停"
+				"鐐瑰嚮锛氭秷闄ゅ悓鑹插洓杩為€氬潡",
+				"鏂瑰悜閿?+ 绌烘牸锛氶敭鐩樻秷闄?,
+				"R锛氶噸寮€",
+				"P锛氭殏鍋?
 			],
 			create: createMatch3Game
 		};
@@ -2688,7 +2688,7 @@ window.__ModuleLoader__.load({
 			return true;
 		}
 		/**
-		* Shuffle by performing random valid slides from the solved state — every
+		* Shuffle by performing random valid slides from the solved state 鈥?every
 		* shuffle produced this way is solvable (unlike swapping tiles at random).
 		* @param state - the board (mutated to a fresh shuffled state).
 		* @param steps - number of random slides.
@@ -2737,7 +2737,7 @@ window.__ModuleLoader__.load({
 			return state;
 		}
 		/**
-		* Slide the tile(s) between `(r, c)` and the empty toward the empty — the tile
+		* Slide the tile(s) between `(r, c)` and the empty toward the empty 鈥?the tile
 		* at `(r, c)` must share a row or column with the empty. Returns the slide
 		* animation entries (the board is already updated), or null when the move is
 		* invalid.
@@ -2861,14 +2861,14 @@ window.__ModuleLoader__.load({
 			ctx.fillStyle = TEXT;
 			ctx.font = "13px ui-monospace, monospace";
 			ctx.textAlign = "left";
-			ctx.fillText(`步数 ${state.moves}`, 10, 16);
+			ctx.fillText(`姝ユ暟 ${state.moves}`, 10, 16);
 			ctx.textAlign = "right";
 			const seconds = Math.floor(state.elapsed);
-			ctx.fillText(`用时 ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`, 278, 16);
+			ctx.fillText(`鐢ㄦ椂 ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`, 278, 16);
 			ctx.fillStyle = MUTED;
 			ctx.font = "10px ui-monospace, monospace";
 			ctx.textAlign = "left";
-			ctx.fillText("点击/方向键滑动方块，按 1..15 顺序排列", 10, 37);
+			ctx.fillText("鐐瑰嚮/鏂瑰悜閿粦鍔ㄦ柟鍧楋紝鎸?1..15 椤哄簭鎺掑垪", 10, 37);
 			ctx.fillStyle = EMPTY;
 			ctx.fillRect(0, 40, 288, 288);
 			ctx.strokeStyle = GRID;
@@ -2909,14 +2909,14 @@ window.__ModuleLoader__.load({
 				ctx.font = "bold 28px ui-monospace, monospace";
 				ctx.textAlign = "center";
 				ctx.textBaseline = "middle";
-				ctx.fillText("完 成 ！", 144, 170);
+				ctx.fillText("瀹?鎴?锛?, 144, 170);
 				ctx.fillStyle = TEXT;
 				ctx.font = "14px ui-monospace, monospace";
 				const seconds2 = Math.floor(state.elapsed);
-				ctx.fillText(`${state.moves} 步 · ${Math.floor(seconds2 / 60)}:${String(seconds2 % 60).padStart(2, "0")}`, 144, 202);
+				ctx.fillText(`${state.moves} 姝?路 ${Math.floor(seconds2 / 60)}:${String(seconds2 % 60).padStart(2, "0")}`, 144, 202);
 				ctx.fillStyle = MUTED;
 				ctx.font = "12px ui-monospace, monospace";
-				ctx.fillText("按 R 或点击 重新开始", 144, 226);
+				ctx.fillText("鎸?R 鎴栫偣鍑?閲嶆柊寮€濮?, 144, 226);
 			}
 			ctx.textBaseline = "alphabetic";
 		}
@@ -3082,13 +3082,13 @@ window.__ModuleLoader__.load({
 		}
 		const huarongGame = {
 			id: "huarong",
-			title: "华容道",
-			icon: "🔢",
-			description: "16 格数字华容道（15-puzzle）：滑动方块按 1..15 排列，用时越短分数越高。",
+			title: "鍗庡閬?,
+			icon: "馃敘",
+			description: "16 鏍兼暟瀛楀崕瀹归亾锛?5-puzzle锛夛細婊戝姩鏂瑰潡鎸?1..15 鎺掑垪锛岀敤鏃惰秺鐭垎鏁拌秺楂樸€?,
 			controls: [
-				"点击 / 方向键：滑动方块",
-				"R：重新打乱",
-				"P：暂停"
+				"鐐瑰嚮 / 鏂瑰悜閿細婊戝姩鏂瑰潡",
+				"R锛氶噸鏂版墦涔?,
+				"P锛氭殏鍋?
 			],
 			create: createHuarongGame
 		};
@@ -3222,335 +3222,264 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region src/client/games/racing/render.ts
-		const CENTER_X = 240;
-		const HORIZON_Y = Math.floor(121.6);
-		/** Road half-width at the bottom of the canvas (screen px). */
-		const ROAD_BOTTOM_HALF = 201.6;
-		/** Road half-width at the horizon (screen px) — the vanishing strip. */
-		const ROAD_TOP_HALF = 4.8;
-		const PERSPECTIVE = .045;
+		/** Horizon line: the vanishing point sits at this fraction of the height. */
+		const HORIZON_Y = 112;
+		/** Road width at the horizon (fraction of VIEW_W). */
+		const ROAD_TOP = 38.4;
+		/** Perspective falloff: scale = 1 / (1 + z * PERSPECTIVE). */
+		const PERSPECTIVE = .04;
+		/** Bright daytime sky. */
 		const DAY = {
-			skyTop: "#4a90d8",
-			skyBottom: "#c8e0f0",
+			top: "#3a8fdc",
+			bottom: "#bfe3f5",
 			sun: "#fff4c2",
-			isNight: false,
-			grass: "#4a8c3a",
-			grassDark: "#3a7030",
-			road: "#424248",
-			roadDark: "#36363e",
+			grass: "#5fae5a",
+			grassDark: "#4a8c46",
+			road: "#5a5a64",
 			roadEdge: "#e0e0e0",
-			laneMark: "#f0f0f0"
+			laneMark: "#f5f5f5"
 		};
+		/** Warm sunset palette. */
 		const SUNSET = {
-			skyTop: "#3a2858",
-			skyBottom: "#e89858",
-			sun: "#ffd860",
-			isNight: false,
-			grass: "#6a6438",
-			grassDark: "#504828",
-			road: "#3e3a44",
-			roadDark: "#33303a",
+			top: "#3a2a5a",
+			bottom: "#f0a060",
+			sun: "#ffe070",
+			grass: "#6a6a3a",
+			grassDark: "#50502e",
+			road: "#4a4a54",
 			roadEdge: "#d8c8a0",
 			laneMark: "#f0e0c0"
 		};
-		const NIGHT = {
-			skyTop: "#080814",
-			skyBottom: "#1e1e30",
-			sun: "#e8e8f0",
-			isNight: true,
-			grass: "#1a2418",
-			grassDark: "#141e12",
-			road: "#23232e",
-			roadDark: "#1d1d28",
-			roadEdge: "#5a5a68",
-			laneMark: "#a0a0a8"
-		};
+		/** Pick a sky palette: shifts toward sunset as the score climbs. */
 		function paletteFor(score) {
-			const phase = Math.floor(score / 600) % 3;
-			if (phase === 1) return SUNSET;
-			if (phase === 2) return NIGHT;
-			return DAY;
+			return score >= 1500 ? SUNSET : DAY;
 		}
-		/** Perspective scale at z (1 = at the camera, → 0 at the horizon). */
-		function scaleAtZ(z) {
-			return 1 / (1 + z * PERSPECTIVE);
-		}
-		/** Road half-width in screen px at depth z. */
-		function roadHalfAtZ(z) {
-			return ROAD_TOP_HALF + 196.79999999999998 * scaleAtZ(z);
-		}
-		/** Project world (x ∈ [-1,1], z ≥ 0) to screen (px, py, scale). */
-		function project(x, z) {
-			const s = scaleAtZ(z);
-			const py = HORIZON_Y + 199 * s;
+		/** Project a world point (worldX in [-1,1], z 鈮?0) to canvas coordinates. */
+		function project(worldX, z) {
+			const scale = 1 / (1 + z * PERSPECTIVE);
+			const y = HORIZON_Y + 208 * scale;
 			return {
-				px: CENTER_X + x * roadHalfAtZ(z),
-				py,
-				s
+				x: 240 + worldX * (ROAD_TOP + 393.6 * scale) * .5 * scale,
+				y,
+				scale
 			};
 		}
-		/** The road trapezoid path (top edge on the horizon, bottom at the canvas foot). */
-		function traceRoad(ctx) {
-			ctx.beginPath();
-			ctx.moveTo(235.2, HORIZON_Y);
-			ctx.lineTo(244.8, HORIZON_Y);
-			ctx.lineTo(441.6, 320);
-			ctx.lineTo(38.400000000000006, 320);
-			ctx.closePath();
-		}
-		/** The z-offset that scrolls the road texture at the same rate the world moves. */
-		function worldScroll(distance, period) {
-			return distance * .1 % period;
-		}
-		/** Draw one frame. */
+		/** Draw one frame of the run. */
 		function renderRacing(ctx, state) {
 			const p = paletteFor(state.score);
 			ctx.clearRect(0, 0, 480, 320);
-			const shakeAmp = state.shake * 6;
-			const ox = shakeAmp > 0 ? (Math.random() - .5) * shakeAmp : 0;
-			const oy = shakeAmp > 0 ? (Math.random() - .5) * shakeAmp : 0;
+			const shakeAmp = state.shake * 8;
+			const sx = shakeAmp > 0 ? (Math.random() - .5) * shakeAmp : 0;
+			const sy = shakeAmp > 0 ? (Math.random() - .5) * shakeAmp : 0;
 			ctx.save();
-			ctx.translate(ox, oy);
+			ctx.translate(sx, sy);
 			drawSky(ctx, state, p);
-			drawGround(ctx, p);
 			drawRoad(ctx, state, p);
 			drawRoadside(ctx, state, p);
-			drawObstacles(ctx, state);
-			drawPlayerCar(ctx, state);
-			drawHud(ctx, state);
+			drawObstacles(ctx, state, p);
+			drawPlayerCar(ctx, state, p);
+			drawHud(ctx, state, p);
 			ctx.restore();
 			if (state.flash > 0) {
-				ctx.fillStyle = `rgba(255,255,255,${(state.flash * .5).toFixed(3)})`;
+				ctx.fillStyle = `rgba(255,255,255,${state.flash.toFixed(3)})`;
 				ctx.fillRect(0, 0, 480, 320);
 			}
+			if (state.over) drawGameOver(ctx, state, p);
 		}
+		/** Sky gradient + a low sun disc. */
 		function drawSky(ctx, state, p) {
-			const grad = ctx.createLinearGradient(0, 0, 0, 131);
-			grad.addColorStop(0, p.skyTop);
-			grad.addColorStop(1, p.skyBottom);
+			const grad = ctx.createLinearGradient(0, 0, 0, 132);
+			grad.addColorStop(0, p.top);
+			grad.addColorStop(1, p.bottom);
 			ctx.fillStyle = grad;
-			ctx.fillRect(0, 0, 480, 131);
+			ctx.fillRect(0, 0, 480, 132);
+			const sunX = 336 - state.distance % 400 * .2;
+			const sunY = HORIZON_Y * .5;
 			ctx.fillStyle = p.sun;
-			const sx = 480 * .72;
-			const sy = HORIZON_Y * .4;
-			const sr = p.isNight ? 11 : 20;
 			ctx.beginPath();
-			ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+			ctx.arc(sunX, sunY, 26, 0, Math.PI * 2);
 			ctx.fill();
-			if (!p.isNight) {
-				ctx.fillStyle = `${p.sun}45`;
-				ctx.beginPath();
-				ctx.arc(sx, sy, sr + 12, 0, Math.PI * 2);
-				ctx.fill();
-			}
-			ctx.fillStyle = p.isNight ? "#101020" : `${p.grassDark}cc`;
-			ctx.beginPath();
-			ctx.moveTo(0, HORIZON_Y);
-			for (let i = 0; i <= 12; i += 1) {
-				const hx = i / 12 * 480;
-				const hy = 113 - Math.sin(i * 1.3) * 12 - Math.sin(i * .7 + 2) * 6;
-				ctx.lineTo(hx, hy);
-			}
-			ctx.lineTo(480, HORIZON_Y);
-			ctx.closePath();
-			ctx.fill();
-		}
-		function drawGround(ctx, p) {
-			ctx.fillStyle = p.grass;
-			ctx.fillRect(0, HORIZON_Y, 480, 199);
 		}
 		/**
-		* The road: a solid trapezoid reaching the horizon, then scrolling rumble
-		* stripes clipped inside it (so the far edge never oscillates against the
-		* grass), then the edge lines.
+		* The road: a trapezoid from the horizon (narrow) to the canvas bottom (wide),
+		* plus two edge lines and scrolling dashed lane markings between the lanes.
 		*/
 		function drawRoad(ctx, state, p) {
+			ctx.fillStyle = p.grass;
+			ctx.fillRect(0, HORIZON_Y, 480, 208);
 			ctx.fillStyle = p.road;
-			traceRoad(ctx);
+			ctx.beginPath();
+			ctx.moveTo(220.8, HORIZON_Y);
+			ctx.lineTo(259.2, HORIZON_Y);
+			ctx.lineTo(456, 320);
+			ctx.lineTo(24, 320);
+			ctx.closePath();
 			ctx.fill();
-			const bandCount = 26;
-			const bandLen = 100 / bandCount;
-			const scroll = worldScroll(state.distance, bandLen);
-			ctx.save();
-			traceRoad(ctx);
-			ctx.clip();
-			for (let i = 0; i < bandCount; i += 1) {
-				const z1 = i * bandLen - scroll;
-				const z2 = z1 + bandLen;
-				if (z2 < 0) continue;
-				const y1 = HORIZON_Y + 199 * scaleAtZ(Math.max(0, z1));
-				const y2 = HORIZON_Y + 199 * scaleAtZ(z2);
-				ctx.fillStyle = i % 2 === 0 ? p.road : p.roadDark;
-				ctx.fillRect(0, y1, 480, Math.max(1, y2 - y1));
-			}
-			ctx.restore();
-			const dashPeriod = 4.5;
-			const dashScroll = worldScroll(state.distance, dashPeriod) / dashPeriod;
-			const dividers = [(LANES[0] + LANES[1]) / 2, (LANES[1] + LANES[2]) / 2];
-			for (const dx of dividers) {
-				const dashes = 18;
-				for (let i = 0; i < dashes; i += 1) {
-					const z1 = (i + dashScroll) / dashes * 90 + 1;
-					const z2 = z1 + 2.2;
-					if (z2 > 92) continue;
-					const a = project(dx, z1);
-					const b = project(dx, z2);
-					const w = Math.max(1, 4 * a.s);
-					ctx.fillStyle = p.laneMark;
-					ctx.beginPath();
-					ctx.moveTo(a.px - w, a.py);
-					ctx.lineTo(a.px + w, a.py);
-					ctx.lineTo(b.px + w * .6, b.py);
-					ctx.lineTo(b.px - w * .6, b.py);
-					ctx.closePath();
-					ctx.fill();
-				}
-			}
 			ctx.strokeStyle = p.roadEdge;
 			ctx.lineWidth = 2;
-			for (const side of [-1, 1]) {
+			ctx.beginPath();
+			ctx.moveTo(220.8, HORIZON_Y);
+			ctx.lineTo(24, 320);
+			ctx.moveTo(259.2, HORIZON_Y);
+			ctx.lineTo(456, 320);
+			ctx.stroke();
+			const dashCount = 16;
+			const dividers = [LANES[0] + (LANES[1] - LANES[0]) / 2, LANES[1] + (LANES[2] - LANES[1]) / 2];
+			for (const dividerX of dividers) for (let i = 0; i < dashCount; i += 1) {
+				const z = (i + 1 - state.distance * .02 % 1) / dashCount * 100;
+				if (z <= .5) continue;
+				const zNext = z - 2.2;
+				const a = project(dividerX, Math.max(.5, z));
+				const b = project(dividerX, Math.max(.5, zNext));
+				const w = Math.max(1, 3 * a.scale);
+				ctx.fillStyle = p.laneMark;
 				ctx.beginPath();
-				ctx.moveTo(CENTER_X + side * ROAD_TOP_HALF, HORIZON_Y);
-				ctx.lineTo(CENTER_X + side * ROAD_BOTTOM_HALF, 320);
-				ctx.stroke();
+				ctx.moveTo(a.x - w, a.y);
+				ctx.lineTo(a.x + w, a.y);
+				ctx.lineTo(b.x + w * .7, b.y);
+				ctx.lineTo(b.x - w * .7, b.y);
+				ctx.closePath();
+				ctx.fill();
 			}
 		}
-		/** Roadside trees and lamp posts at regular intervals. */
+		/**
+		* Roadside objects (alternating trees and poles) that scale up as they
+		* approach, reinforcing the speed sensation.
+		*/
 		function drawRoadside(ctx, state, p) {
-			const spacing = 8;
-			const offset = worldScroll(state.distance, 16);
-			for (let i = 0; i < 16; i += 1) {
+			const spacing = 12;
+			const offset = state.distance * .6 % spacing;
+			for (let i = 0; i < 10; i += 1) {
 				const z = (i + 1) * spacing - offset;
-				if (z < 1 || z > 90) continue;
-				for (const side of [-1, 1]) {
-					const proj = project(side * 1.3, z);
-					const size = 42 * proj.s;
-					if (size < 2) continue;
-					if ((i + (side > 0 ? 1 : 0)) % 2 === 0) {
-						ctx.fillStyle = "#5a3e26";
-						ctx.fillRect(proj.px - size * .04, proj.py - size * .2, size * .08, size * .2);
-						ctx.fillStyle = p.grassDark;
-						ctx.beginPath();
-						ctx.arc(proj.px, proj.py - size * .32, size * .18, 0, Math.PI * 2);
-						ctx.fill();
-					} else {
-						ctx.fillStyle = "#3a3a42";
-						ctx.fillRect(proj.px - size * .015, proj.py - size * .35, size * .03, size * .35);
-						ctx.fillStyle = p.isNight ? "#ffd860" : "#6a6a72";
-						ctx.beginPath();
-						ctx.arc(proj.px, proj.py - size * .36, size * .04, 0, Math.PI * 2);
-						ctx.fill();
-					}
+				if (z <= 1 || z >= 100) continue;
+				const a = project((i % 2 === 0 ? -1 : 1) * 1.25, z);
+				const size = Math.max(2, 30 * a.scale);
+				if (i % 2 === 0) {
+					ctx.fillStyle = "#6b4a2a";
+					ctx.fillRect(a.x - size * .08, a.y - size * .3, size * .16, size * .3);
+					ctx.fillStyle = p.grassDark;
+					ctx.beginPath();
+					ctx.arc(a.x, a.y - size * .45, size * .32, 0, Math.PI * 2);
+					ctx.fill();
+				} else {
+					ctx.fillStyle = "#e0e0e0";
+					ctx.fillRect(a.x - size * .04, a.y - size * .5, size * .08, size * .5);
+					ctx.fillStyle = "#c03030";
+					ctx.fillRect(a.x - size * .08, a.y - size * .5, size * .16, size * .08);
 				}
 			}
 		}
-		/** All obstacles sorted far-to-near. */
-		function drawObstacles(ctx, state) {
+		/** Draw all obstacles, sorted far-to-near so nearer ones overlap farther ones. */
+		function drawObstacles(ctx, state, p) {
 			const sorted = [...state.obstacles].sort((a, b) => b.z - a.z);
-			for (const obs of sorted) {
-				if (obs.z < -2) continue;
-				const z = Math.max(.5, obs.z);
-				const laneX = LANES[obs.lane + 1];
-				const proj = project(laneX, z);
-				if (proj.s < .03) continue;
-				drawObstacleShape(ctx, obs, proj.px, proj.py, proj.s, z);
-			}
+			for (const obstacle of sorted) drawObstacle(ctx, obstacle, p);
 		}
-		/** Obstacle shape by type, at projected (px, py) with scale s. */
-		function drawObstacleShape(ctx, obs, cx, by, s, z) {
-			switch (obs.type) {
+		/** Draw a single obstacle at its projected position and scale. */
+		function drawObstacle(ctx, obstacle, p) {
+			const laneX = LANES[obstacle.lane + 1];
+			const proj = project(laneX, Math.max(.5, obstacle.z));
+			const s = proj.scale;
+			if (s < .04) return;
+			const cx = proj.x;
+			const baseY = proj.y;
+			switch (obstacle.type) {
 				case "cone": {
-					const h = 28 * s, w = 16 * s;
+					const h = 30 * s;
+					const w = 16 * s;
 					ctx.fillStyle = "#e87020";
 					ctx.beginPath();
-					ctx.moveTo(cx, by - h);
-					ctx.lineTo(cx - w / 2, by);
-					ctx.lineTo(cx + w / 2, by);
+					ctx.moveTo(cx, baseY - h);
+					ctx.lineTo(cx - w / 2, baseY);
+					ctx.lineTo(cx + w / 2, baseY);
 					ctx.closePath();
 					ctx.fill();
-					ctx.fillStyle = "#fff";
-					ctx.fillRect(cx - w * .35, by - h * .55, w * .7, h * .12);
+					ctx.fillStyle = "#f0f0f0";
+					ctx.fillRect(cx - w * .35, baseY - h * .55, w * .7, h * .12);
 					break;
 				}
 				case "rock": {
-					const r = 14 * s;
-					ctx.fillStyle = "#7a7a82";
+					const r = 16 * s;
+					ctx.fillStyle = "#8a8a92";
 					ctx.beginPath();
-					ctx.ellipse(cx, by - r * .6, r, r * .8, 0, 0, Math.PI * 2);
+					ctx.arc(cx, baseY - r * .7, r, 0, Math.PI * 2);
+					ctx.fill();
+					ctx.fillStyle = "#6e6e76";
+					ctx.beginPath();
+					ctx.arc(cx - r * .3, baseY - r * .5, r * .5, 0, Math.PI * 2);
 					ctx.fill();
 					break;
 				}
 				case "barrel": {
-					const h = 32 * s, w = 18 * s;
-					ctx.fillStyle = "#c8302c";
-					ctx.fillRect(cx - w / 2, by - h, w, h);
-					ctx.fillStyle = "#ffd840";
-					ctx.fillRect(cx - w / 2, by - h * .72, w, h * .1);
-					ctx.fillRect(cx - w / 2, by - h * .38, w, h * .1);
+					const h = 34 * s;
+					const w = 20 * s;
+					ctx.fillStyle = "#c03030";
+					ctx.fillRect(cx - w / 2, baseY - h, w, h);
+					ctx.fillStyle = "#f0f0f0";
+					ctx.fillRect(cx - w / 2, baseY - h * .7, w, h * .12);
+					ctx.fillRect(cx - w / 2, baseY - h * .35, w, h * .12);
 					break;
 				}
 				case "car":
-					drawCarSprite(ctx, cx, by, s, "#3060d0", "#a8c8f0");
+					drawCarSprite(ctx, cx, baseY, s, "#3060d0", "#a0c0f0");
 					break;
 				case "barrier": {
-					const h = 22 * s;
-					const laneA = LANES[obs.lane + 1];
-					const neighbour = obs.lane <= 0 ? obs.lane + 1 : obs.lane - 1;
-					const laneB = LANES[neighbour + 1];
-					const a = project(laneA, z);
-					const b = project(laneB, z);
-					const left = Math.min(a.px, b.px) - 6 * s;
-					const w = Math.max(a.px, b.px) + 6 * s - left;
-					ctx.fillStyle = "#c8302c";
-					ctx.fillRect(left, by - h, w, h);
+					const h = 24 * s;
+					const neighbour = obstacle.lane <= 0 ? obstacle.lane + 1 : obstacle.lane - 1;
+					const proj2 = project(LANES[neighbour + 1], Math.max(.5, obstacle.z));
+					const left = Math.min(cx, proj2.x);
+					const right = Math.max(cx, proj2.x);
+					const w = right - left + 16 * s;
+					const startX = (left + right) / 2 - w / 2;
+					ctx.fillStyle = "#c03030";
+					ctx.fillRect(startX, baseY - h, w, h);
 					ctx.fillStyle = "#f0f0f0";
-					for (let i = 0; i < 4; i += 1) if (i % 2 === 1) ctx.fillRect(left + w / 4 * i, by - h, w / 4, h);
+					const stripes = 4;
+					for (let i = 0; i < stripes; i += 1) if (i % 2 === 1) ctx.fillRect(startX + w / stripes * i, baseY - h, w / stripes, h);
 					break;
 				}
 			}
 		}
-		/** Reusable car sprite (body, cabin, wheels, headlights). */
-		function drawCarSprite(ctx, cx, by, s, body, glass) {
-			const w = 44 * s, h = 28 * s;
-			ctx.fillStyle = "#181820";
-			ctx.fillRect(cx - w * .48, by - h * .22, w * .14, h * .22);
-			ctx.fillRect(cx + w * .34, by - h * .22, w * .14, h * .22);
+		/** A reusable car sprite: body, cabin/windshield, wheels, headlights. */
+		function drawCarSprite(ctx, cx, baseY, s, body, glass) {
+			const w = 46 * s;
+			const h = 30 * s;
+			ctx.fillStyle = "#1a1a1f";
+			ctx.fillRect(cx - w * .5, baseY - h * .25, w * .14, h * .25);
+			ctx.fillRect(cx + w * .36, baseY - h * .25, w * .14, h * .25);
 			ctx.fillStyle = body;
-			ctx.beginPath();
-			ctx.roundRect(cx - w * .48, by - h, w, h * .8, 3 * s);
-			ctx.fill();
+			ctx.fillRect(cx - w * .5, baseY - h, w, h * .78);
 			ctx.fillStyle = glass;
-			ctx.beginPath();
-			ctx.roundRect(cx - w * .28, by - h * 1.1, w * .56, h * .38, 2 * s);
-			ctx.fill();
+			ctx.fillRect(cx - w * .28, baseY - h * 1.15, w * .56, h * .4);
 			ctx.fillStyle = "#fff4c2";
-			ctx.fillRect(cx - w * .42, by - h * .92, w * .1, h * .16);
-			ctx.fillRect(cx + w * .32, by - h * .92, w * .1, h * .16);
+			ctx.fillRect(cx - w * .46, baseY - h * .95, w * .08, h * .18);
+			ctx.fillRect(cx + w * .38, baseY - h * .95, w * .08, h * .18);
 		}
-		/** Player car at the bottom, offset by carX using the same road projection. */
-		function drawPlayerCar(ctx, state) {
-			const cx = Math.max(26, Math.min(454, CENTER_X + state.carX * ROAD_BOTTOM_HALF));
-			const by = 308;
-			ctx.save();
-			ctx.translate(cx, by);
-			ctx.rotate(state.carX * .03);
-			ctx.fillStyle = "rgba(0,0,0,0.25)";
-			ctx.beginPath();
-			ctx.ellipse(0, 24, 30, 5, 0, 0, Math.PI * 2);
-			ctx.fill();
-			drawCarSprite(ctx, 0, 0, 1.5, "#e23b2e", "#cfe0ff");
-			ctx.restore();
+		/** The player's car at the bottom centre, offset by carX. */
+		function drawPlayerCar(ctx, state, p) {
+			drawCarSprite(ctx, 240 + (project(state.carX, .5).x - 240) * .3, 306, 1.6, Math.abs(state.carX) > 1 ? "#b06030" : "#d03030", "#cfe0ff");
 		}
-		/** HUD: speed + score. */
-		function drawHud(ctx, state) {
-			ctx.fillStyle = "rgba(0,0,0,0.4)";
-			ctx.fillRect(0, 0, 480, 24);
+		/** Heads-up display: speed (km/h) and score. */
+		function drawHud(ctx, state, p) {
+			ctx.fillStyle = "rgba(0,0,0,0.45)";
+			ctx.fillRect(0, 0, 480, 26);
 			ctx.fillStyle = "#f5f5f5";
-			ctx.font = "12px ui-monospace, monospace";
+			ctx.font = "13px ui-monospace, monospace";
 			ctx.textAlign = "left";
-			ctx.fillText(`${Math.round(Math.abs(state.speed) * 3.6)} km/h`, 8, 16);
+			const kmh = Math.round(state.speed * 3.6);
+			ctx.fillText(`${kmh} km/h`, 10, 18);
 			ctx.textAlign = "right";
-			ctx.fillText(`${state.score}`, 472, 16);
+			ctx.fillText(`鍒嗘暟 ${String(state.score).padStart(5, "0")}`, 470, 18);
+		}
+		/** Game-over overlay (shown only when the run is explicitly ended). */
+		function drawGameOver(ctx, state, p) {
+			ctx.fillStyle = "rgba(0,0,0,0.5)";
+			ctx.fillRect(0, 0, 480, 320);
+			ctx.fillStyle = "#f5f5f5";
+			ctx.font = "bold 22px ui-monospace, monospace";
+			ctx.textAlign = "center";
+			ctx.fillText("娓告垙缁撴潫", 240, 150);
+			ctx.font = "13px ui-monospace, monospace";
+			ctx.fillText(`寰楀垎 ${state.score} 路 鎸?R 閲嶆柊寮€濮媊, 240, 178);
 		}
 		//#endregion
 		//#region src/client/games/racing/index.ts
@@ -3694,16 +3623,16 @@ window.__ModuleLoader__.load({
 		}
 		const racingGame = {
 			id: "racing",
-			title: "3D 赛车",
-			icon: "🏎️",
-			description: "伪 3D 无尽赛车：加速飞驰，躲避多种障碍物，分数越高速度越快！",
+			title: "3D 璧涜溅",
+			icon: "馃弾锔?,
+			description: "浼?3D 鏃犲敖璧涜溅锛氬姞閫熼椹帮紝韬查伩澶氱闅滅鐗╋紝鍒嗘暟瓒婇珮閫熷害瓒婂揩锛?,
 			controls: [
-				"A/← 左转",
-				"D/→ 右转",
-				"W/↑ 加速",
-				"S/↓ 刹车",
-				"空格 手刹",
-				"P 暂停"
+				"A/鈫?宸﹁浆",
+				"D/鈫?鍙宠浆",
+				"W/鈫?鍔犻€?,
+				"S/鈫?鍒硅溅",
+				"绌烘牸 鎵嬪埞",
+				"P 鏆傚仠"
 			],
 			create: createRacingGame
 		};
@@ -3712,7 +3641,7 @@ window.__ModuleLoader__.load({
 		/**
 		* Built-in game collection: the single registration point for the games that
 		* ship with the plugin. Adding a game = implement {@link MiniGameDefinition}
-		* (see games/types.ts) and add one registerGame call here — the panel, the
+		* (see games/types.ts) and add one registerGame call here 鈥?the panel, the
 		* registry, and the other games never change.
 		*/
 		function registerBuiltinGames() {
@@ -3830,15 +3759,15 @@ window.__ModuleLoader__.load({
 			if (!open) return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: "dmg-rail",
 				role: "button",
-				"aria-label": "打开小游戏",
-				title: "小游戏",
+				"aria-label": "鎵撳紑灏忔父鎴?,
+				title: "灏忔父鎴?,
 				onClick: () => toggleOpen(true),
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 					className: "dmg-rail-icon",
-					children: "🎮"
+					children: "馃幃"
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 					className: "dmg-rail-text",
-					children: "小游戏"
+					children: "灏忔父鎴?
 				})]
 			});
 			const games = getGames();
@@ -3858,11 +3787,11 @@ window.__ModuleLoader__.load({
 						children: [
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: "dmg-title",
-								children: "🎮 小游戏"
+								children: "馃幃 灏忔父鎴?
 							}),
 							activeGame !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: "dmg-score",
-								children: `${activeGame.title} · 最高 ${best[activeGame.id] ?? 0}`
+								children: `${activeGame.title} 路 鏈€楂?${best[activeGame.id] ?? 0}`
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 								className: "dmg-header-actions",
@@ -3870,12 +3799,12 @@ window.__ModuleLoader__.load({
 									type: "button",
 									className: "dmg-icon-btn",
 									onClick: () => setGameId(null),
-									children: "选游戏"
+									children: "閫夋父鎴?
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
 									className: "dmg-icon-btn",
 									onClick: () => toggleOpen(false),
-									children: "收起 ▶"
+									children: "鏀惰捣 鈻?
 								})]
 							})
 						]
@@ -3903,7 +3832,7 @@ window.__ModuleLoader__.load({
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 										className: "dmg-card-best",
-										children: ["最高分 ", best[game.id] ?? 0]
+										children: ["鏈€楂樺垎 ", best[game.id] ?? 0]
 									})
 								]
 							}, game.id))
@@ -3965,7 +3894,7 @@ window.__ModuleLoader__.load({
 							type: "button",
 							className: "dmg-icon-btn",
 							onClick: () => setUserPaused((prev) => !prev),
-							children: userPaused ? "继续 ▶" : "暂停 ⏸"
+							children: userPaused ? "缁х画 鈻? : "鏆傚仠 鈴?
 						})]
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -3981,7 +3910,7 @@ window.__ModuleLoader__.load({
 							children: control
 						}, control)), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 							className: "dmg-control-tag dmg-control-muted",
-							children: "点击游戏区域获取键盘焦点"
+							children: "鐐瑰嚮娓告垙鍖哄煙鑾峰彇閿洏鐒︾偣"
 						})]
 					})
 				]
@@ -4002,7 +3931,7 @@ window.__ModuleLoader__.load({
 		//#region src/client/index.tsx
 		/**
 		* dsh-minigames client half: mounts the right-side game panel as a
-		* self-contained DOM portal (no host services, no layout slots — the panel
+		* self-contained DOM portal (no host services, no layout slots 鈥?the panel
 		* lives on document.body and manages its own geometry). The bundle registers
 		* via window.__ModuleLoader__.load with id = package name; the client runtime
 		* mounts it as a cordis plugin and calls apply once the loader tree settles.

@@ -1,11 +1,14 @@
 /**
- * Pseudo-3D racing canvas renderer: a perspective road stretching to a
- * horizon, obstacles that scale up as they approach, a car sprite at the
- * bottom, roadside scenery, and a speed/score HUD. Palette shifts with score
- * (day → sunset → night → day ...) for variety.
+ * Pseudo-3D racing canvas renderer. A single perspective projection maps world
+ * coordinates (lateral x ∈ [-1,1], depth z ≥ 0) to screen pixels; the road
+ * trapezoid, lane markings, roadside objects, obstacles, and the player car
+ * all use the same projection so everything aligns. The road is a full
+ * trapezoid whose top edge meets the horizon; scrolling rumble stripes are
+ * clipped inside it. Palette shifts with score (day → sunset → night).
  */
 import type { RacingState } from './logic.ts';
-export declare const VIEW_W = 480;
-export declare const VIEW_H = 320;
+import { VIEW_W, VIEW_H } from './logic.ts';
+export { VIEW_W };
+export { VIEW_H };
 /** Draw one frame. */
 export declare function renderRacing(ctx: CanvasRenderingContext2D, state: RacingState): void;

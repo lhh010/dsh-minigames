@@ -1,20 +1,18 @@
 /**
- * Pseudo-3D racing game definition: wires the pure road logic into a
- * {@link MiniGameInstance} — keyboard input (steer / throttle / brake /
- * handbrake), a perspective canvas renderer, distance-based score, and
- * escalating speed.
+ * Pseudo-3D racing game definition: wires the pure road logic and the
+ * perspective canvas renderer into a {@link MiniGameInstance} — rAF loop,
+ * keyboard input (steer / throttle / brake / handbrake / pause), distance-based
+ * score reporting, and restart.
  */
 import type {
   MiniGameDefinition,
   MiniGameInstance,
   MiniGameMountOptions,
 } from '../types.ts'
-import { createRacingState, step, type RacingState } from './logic.ts'
+import { createRacingState, step, type RacingInput, type RacingState } from './logic.ts'
 import { renderRacing, VIEW_W, VIEW_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
-
-const RESTART_DELAY = 400
 
 function createRacingGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -29,30 +27,28 @@ function createRacingGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   let raf = 0
   let last = 0
   let lastScore = -1
-  let overSince = 0
 
-  const input = { left: false, right: false, throttle: false, brake: false, handbrake: false }
+  const input: RacingInput = {
+    left: false,
+    right: false,
+    throttle: false,
+    brake: false,
+    handbrake: false,
+  }
 
   const reportScore = (): void => {
-    if (state.score < lastScore + 10 && !state.over) return
-    if (state.score === lastScore) return
-    lastScore = state.score
-    options?.onScore?.(state.score)
+    const score = state.score
+    // Report in 10-point steps to keep the panel header and best-score writes
+    // cheap (the score accrues quickly from distance at high speed).
+    if (score < lastScore + 10 && !state.over) return
+    if (score === lastScore) return
+    lastScore = score
+    options?.onScore?.(score)
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
     switch (event.code) {
-      case 'ArrowUp':
-      case 'KeyW':
-        event.preventDefault()
-        input.throttle = true
-        break
-      case 'ArrowDown':
-      case 'KeyS':
-        event.preventDefault()
-        input.brake = true
-        break
       case 'ArrowLeft':
       case 'KeyA':
         event.preventDefault()
@@ -63,35 +59,31 @@ function createRacingGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
         event.preventDefault()
         input.right = true
         break
+      case 'ArrowUp':
+      case 'KeyW':
+        event.preventDefault()
+        input.throttle = true
+        break
+      case 'ArrowDown':
+      case 'KeyS':
+        event.preventDefault()
+        input.brake = true
+        break
       case 'Space':
         event.preventDefault()
-        if (state.over) {
-          if (performance.now() - overSince > RESTART_DELAY) reset()
-        } else {
-          input.handbrake = true
-        }
+        input.handbrake = true
         break
       case 'KeyP':
         event.preventDefault()
         togglePause()
         break
       case 'KeyR':
-        event.preventDefault()
-        reset()
+        if (state.over) reset()
         break
     }
   }
-
   const onKeyUp = (event: KeyboardEvent): void => {
     switch (event.code) {
-      case 'ArrowUp':
-      case 'KeyW':
-        input.throttle = false
-        break
-      case 'ArrowDown':
-      case 'KeyS':
-        input.brake = false
-        break
       case 'ArrowLeft':
       case 'KeyA':
         input.left = false
@@ -100,18 +92,18 @@ function createRacingGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       case 'KeyD':
         input.right = false
         break
+      case 'ArrowUp':
+      case 'KeyW':
+        input.throttle = false
+        break
+      case 'ArrowDown':
+      case 'KeyS':
+        input.brake = false
+        break
       case 'Space':
         input.handbrake = false
         break
     }
-  }
-
-  const reset = (): void => {
-    state = createRacingState()
-    lastScore = -1
-    overSince = 0
-    input.left = input.right = input.throttle = input.brake = input.handbrake = false
-    reportScore()
   }
 
   const frame = (now: number): void => {
@@ -133,6 +125,15 @@ function createRacingGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     cancelAnimationFrame(raf)
     raf = 0
   }
+
+  const reset = (): void => {
+    state = createRacingState()
+    lastScore = -1
+    input.left = input.right = input.throttle = input.brake = input.handbrake = false
+    reportScore()
+    if (running) startLoop()
+  }
+
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -173,6 +174,6 @@ export const racingGame: MiniGameDefinition = {
   title: '3D 赛车',
   icon: '🏎️',
   description: '伪 3D 无尽赛车：加速飞驰，躲避多种障碍物，分数越高速度越快！',
-  controls: ['A/← 左转', 'D/→ 右转', 'W/↑ 加速', 'S/↓ 刹车', '空格 手刹', 'P 暂停', 'R 重开'],
+  controls: ['A/← 左转', 'D/→ 右转', 'W/↑ 加速', 'S/↓ 刹车', '空格 手刹', 'P 暂停'],
   create: createRacingGame,
 }
