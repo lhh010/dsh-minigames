@@ -13,6 +13,7 @@ interface Palette {
   cactus: string
   cactusDark: string
   bird: string
+  birdDark: string
   beak: string
   ground: string
   groundDash: string
@@ -25,11 +26,12 @@ interface Palette {
 
 const DAY: Palette = {
   bg: '#f4f1e9',
-  dino: '#4a4a55',
+  dino: '#2e2e35', // near-black pixel silhouette, like the classic dino
   dinoShade: '#8a8a96',
   cactus: '#5aa864',
   cactusDark: '#3d7a46',
   bird: '#8f8f9c',
+  birdDark: '#5f5f6c',
   beak: '#e08a30',
   ground: '#6f6f7a',
   groundDash: '#c2bdb1',
@@ -47,6 +49,7 @@ const NIGHT: Palette = {
   cactus: '#67b26f',
   cactusDark: '#45834d',
   bird: '#c6c6d2',
+  birdDark: '#8f8fa0',
   beak: '#e8a04c',
   ground: '#8f8f9c',
   groundDash: '#5c5c68',
@@ -162,20 +165,11 @@ function drawObstacle(ctx: CanvasRenderingContext2D, obstacle: Obstacle, t: numb
     }
     drawCactus(ctx, obstacle.x, obstacle.y, obstacle.w, obstacle.h, p)
   } else {
-    // Bird: body, wing, beak, eye.
-    ctx.fillStyle = p.bird
-    ctx.fillRect(obstacle.x, obstacle.y + 8, obstacle.w, obstacle.h - 8)
-    ctx.fillRect(obstacle.x + 6, obstacle.y + 6, 20, 8)
-    const flap = Math.sin(t * 22) > 0 ? -7 : 3
-    ctx.fillRect(obstacle.x + 10, obstacle.y + 4 + flap, 18, 9)
-    ctx.fillStyle = p.beak
-    ctx.fillRect(obstacle.x + obstacle.w - 8, obstacle.y + 12, 8, 5)
-    ctx.fillStyle = p.eye === '#ffffff' ? '#202028' : '#ffffff'
-    ctx.fillRect(obstacle.x + obstacle.w - 14, obstacle.y + 11, 4, 4)
+    drawBird(ctx, obstacle, t, p)
   }
 }
 
-/** One cactus trunk: two-tone body, arms, outline. */
+/** A rounded two-tone cactus with an arm on each side. */
 function drawCactus(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -184,59 +178,169 @@ function drawCactus(
   h: number,
   p: Palette,
 ): void {
+  const r = w * 0.42
+  // Left arm: horizontal spur + upright elbow.
+  const arm = Math.max(6, w * 0.38)
+  const leftY = y + h * 0.24
+  const rightY = y + h * 0.48
   ctx.fillStyle = p.cactus
-  ctx.fillRect(x, y, w, h)
+  ctx.beginPath()
+  ctx.roundRect(x - arm - 4, leftY, arm + 4, 4.5, 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.roundRect(x - arm, leftY - 7, 4.5, 7, 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.roundRect(x + w, rightY, arm + 4, 4.5, 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.roundRect(x + w, rightY - 7, 4.5, 7, 2)
+  ctx.fill()
+  // Trunk: rounded top, slightly tapered sides.
+  ctx.fillStyle = p.cactus
+  ctx.beginPath()
+  ctx.roundRect(x, y, w, h, [r, r, 3, 3])
+  ctx.fill()
+  // Shaded right edge + vertical ribs.
   ctx.fillStyle = p.cactusDark
-  ctx.fillRect(x + w - 5, y, 5, h)
-  const arm = Math.max(5, w * 0.34)
-  const leftY = y + h * 0.22
-  const rightY = y + h * 0.45
-  ctx.fillStyle = p.cactus
-  ctx.fillRect(x - arm, leftY, arm, 3)
-  ctx.fillRect(x - 3, leftY - 5, 3, 5)
-  ctx.fillRect(x + w, rightY, arm, 3)
-  ctx.fillRect(x + w, rightY - 5, 3, 5)
-  ctx.strokeStyle = p.cactusDark
-  ctx.lineWidth = 1
-  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1)
+  ctx.beginPath()
+  ctx.roundRect(x + w - 5, y + 2, 5, h - 4, 2)
+  ctx.fill()
+  ctx.globalAlpha = 0.25
+  ctx.fillStyle = p.cactusDark
+  ctx.fillRect(x + w * 0.3, y + 6, 2.5, h - 10)
+  ctx.fillRect(x + w * 0.62, y + 6, 2.5, h - 10)
+  ctx.globalAlpha = 1
+  // Highlight on the rounded top.
+  ctx.fillStyle = 'rgba(255,255,255,0.18)'
+  ctx.beginPath()
+  ctx.ellipse(x + w * 0.3, y + 3, w * 0.18, 2.5, 0, 0, Math.PI * 2)
+  ctx.fill()
 }
 
+/** A plump bird with a flapping wing, eye, beak and tail. */
+function drawBird(ctx: CanvasRenderingContext2D, o: Obstacle, t: number, p: Palette): void {
+  const x = o.x
+  const y = o.y
+  // Tail on the trailing (right) side.
+  ctx.fillStyle = p.bird
+  ctx.beginPath()
+  ctx.moveTo(x + 36, y + 13)
+  ctx.lineTo(x + 46, y + 9)
+  ctx.lineTo(x + 38, y + 19)
+  ctx.closePath()
+  ctx.fill()
+  // Body: plump ellipse.
+  ctx.beginPath()
+  ctx.ellipse(x + 24, y + 16, 15, 10.5, 0, 0, Math.PI * 2)
+  ctx.fill()
+  // Head merged at the front (left, it flies leftwards).
+  ctx.beginPath()
+  ctx.arc(x + 11, y + 8.5, 6.5, 0, Math.PI * 2)
+  ctx.fill()
+  // Beak.
+  ctx.fillStyle = p.beak
+  ctx.beginPath()
+  ctx.moveTo(x + 3, y + 7)
+  ctx.lineTo(x - 3, y + 10)
+  ctx.lineTo(x + 5, y + 11)
+  ctx.closePath()
+  ctx.fill()
+  // Eye with pupil.
+  ctx.fillStyle = p.eye === '#ffffff' ? '#202028' : '#ffffff'
+  ctx.beginPath()
+  ctx.arc(x + 10, y + 7, 1.8, 0, Math.PI * 2)
+  ctx.fill()
+  // Flapping wing.
+  const flap = Math.sin(t * 22) * 5
+  ctx.fillStyle = p.birdDark
+  ctx.beginPath()
+  ctx.ellipse(x + 24, y + 10.5 + flap * 0.6, 9, 5, -0.35, 0, Math.PI * 2)
+  ctx.fill()
+  // Chest highlight.
+  ctx.fillStyle = 'rgba(255,255,255,0.16)'
+  ctx.beginPath()
+  ctx.ellipse(x + 28, y + 15, 7, 4.5, 0, 0, Math.PI * 2)
+  ctx.fill()
+}
+
+/** The dino sprite as a pixel matrix (17 rows x 18 cols): 1 = body, 0 = empty.
+ * The lone 0 inside the head (row 2, col 11) is the white eye. The legs are
+ * the last four rows, drawn dynamically for the run cycle. */
+const DINO_MATRIX: readonly (readonly number[])[] = [
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+  [1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+  [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+  [1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+  [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+  [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+]
+
+const DINO_COLS = 18
+const DINO_STATIC_ROWS = 13
+const EYE_R = 2
+const EYE_C = 11
+
+/** Draw the static sprite rows, scaled to fill the 46x50 hitbox. */
+function drawDinoBody(ctx: CanvasRenderingContext2D, x: number, y: number, height: number, p: Palette): void {
+  const cellW = 46 / DINO_COLS
+  const cellH = height / 17
+  ctx.fillStyle = p.dino
+  for (let r = 0; r < DINO_STATIC_ROWS; r += 1) {
+    const row = DINO_MATRIX[r]!
+    for (let c = 0; c < DINO_COLS; c += 1) {
+      if (!row[c]) continue
+      const x0 = x + Math.round(c * cellW)
+      const x1 = x + Math.round((c + 1) * cellW)
+      const y0 = y + Math.round(r * cellH)
+      const y1 = y + Math.round((r + 1) * cellH)
+      ctx.fillRect(x0, y0, x1 - x0, y1 - y0)
+    }
+  }
+  // The white eye at the lone 0 in the head.
+  ctx.fillStyle = p.eye
+  const ex = x + Math.round(EYE_C * cellW)
+  const ey = y + Math.round(EYE_R * cellH)
+  ctx.fillRect(ex, ey, Math.ceil(cellW * 1.3), Math.ceil(cellH * 1.3))
+}
+
+/** Standing pose: matrix body + two running legs (tucked mid-air). */
 function drawDino(ctx: CanvasRenderingContext2D, state: DinoState, p: Palette): void {
   const dino = state.dino
   const x = dino.x
   if (dino.ducking) {
-    // Low, horizontal silhouette.
-    ctx.fillStyle = p.dino
-    ctx.fillRect(x + 2, GROUND_Y - 18, 40, 16)
-    ctx.fillRect(x + 36, GROUND_Y - 24, 10, 9)
-    ctx.fillStyle = p.eye
-    ctx.fillRect(x + 43, GROUND_Y - 21, 2, 2)
-    ctx.fillStyle = p.dinoShade
-    ctx.fillRect(x + 6, GROUND_Y - 3, 8, 3)
-    ctx.fillRect(x + 18, GROUND_Y - 3, 8, 3)
-    ctx.fillRect(x + 30, GROUND_Y - 3, 8, 3)
+    drawDinoDucking(ctx, x, GROUND_Y, p)
     return
   }
   const y = dino.y
   const phase = dino.onGround ? Math.floor(state.t * 13) % 2 : 0
-  // Tail, torso, head, snout.
+  const legL = dino.onGround ? (phase === 0 ? 12 : 9) : 5
+  const legR = dino.onGround ? (phase === 0 ? 9 : 12) : 5
+  drawDinoBody(ctx, x, y, 50, p)
+  const legTop = y + Math.round(DINO_STATIC_ROWS * (50 / 17))
   ctx.fillStyle = p.dino
-  ctx.fillRect(x + 2, y + 16, 5, 14)
-  ctx.fillRect(x + 6, y + 16, 22, 30)
-  ctx.fillRect(x + 22, y + 8, 20, 24)
-  ctx.fillRect(x + 36, y + 18, 10, 9)
-  // Arm.
-  ctx.fillRect(x + 12, y + 34, 6, 10)
-  // Eye: white with a dark pupil.
-  ctx.fillStyle = p.eye
-  ctx.fillRect(x + 33, y + 13, 5, 5)
-  ctx.fillStyle = p.eye === '#ffffff' ? '#202028' : '#ffffff'
-  ctx.fillRect(x + 35, y + 14, 2, 3)
-  // Legs hang from the body (y + 42 = body bottom), so they lift with the jump
-  // and alternate on a fixed cycle while on the ground.
-  ctx.fillStyle = p.dinoShade
-  ctx.fillRect(x + 8, y + 42, 8, phase === 0 ? 8 : 5)
-  ctx.fillRect(x + 21, y + 42, 8, phase === 0 ? 5 : 8)
+  // Two legs run alternately; they tuck in while jumping.
+  ctx.fillRect(x + 10, legTop, 8, legL)
+  ctx.fillRect(x + 21, legTop, 8, legR)
+  // Feet.
+  ctx.fillRect(x + 9, legTop + legL - 3, 10, 3)
+  ctx.fillRect(x + 20, legTop + legR - 3, 10, 3)
+}
+
+/** Ducking: the same sprite flattened into the low hitbox. */
+function drawDinoDucking(ctx: CanvasRenderingContext2D, x: number, ground: number, p: Palette): void {
+  drawDinoBody(ctx, x, ground - 26, 26, p)
+  // Feet hugging the ground.
+  ctx.fillStyle = p.dino
+  ctx.fillRect(x + 10, ground - 6, 8, 5)
+  ctx.fillRect(x + 21, ground - 6, 8, 5)
 }
 
 function drawGameOver(ctx: CanvasRenderingContext2D, state: DinoState, p: Palette): void {
