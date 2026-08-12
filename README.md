@@ -33,9 +33,15 @@ DSH Web UI 右侧小游戏面板：等待模型回复或修 bug 时的摸鱼神�
 
 ## 版本兼容 / Version compatibility
 
-兼容 DSH snapshot0810（`snapshots/20260810T155924Z`）：纯浏览器端 bundle（node half 仅 loader 占位），客户端元数据声明为嵌套 `dsh.client`——0810 的 ClientModuleHostService 只读该字段，顶层 `dshClient` 会被静默忽略（无日志无报错，插件不进 boot 图）。0810 实机验证通过。
+兼容 DSH snapshot0810（`snapshots/20260810T155924Z`）与 snapshot0811（`snapshots/20260811T152241Z`）：纯浏览器端 bundle（node half 仅 loader 占位），客户端元数据声明为嵌套 `dsh.client`——0810 的 ClientModuleHostService 只读该字段，顶层 `dshClient` 会被静默忽略（无日志无报错，插件不进 boot 图）。0810 实机验证通过；0811 实机 boot 验证通过（见下）。
 
-**npm 发版兼容**：兼容 DSH npm 发版 `@deepseek-ai/dsh@0.0.1-rc.1`（即 snapshot0810 的 npm 发版；`npx -p @deepseek-ai/dsh@0.0.1-rc.1 dsh web` 可访问指定版本并启动，lib 生产模式）。实测（同源本地基线）：npm 基线安装后运行时加载、对基线构建产物 typecheck 与 `window.__DSH_BOOT__` 清单均通过。注意：`peerDependencies.cordis` 声明为 `^4.0.0-rc.7`，而 npm 发版将 vendored `cordis` 一并按 `0.0.1-rc.?` 统一预发布版本号发布——纯 `npm install` 报 peer 冲突（ERESOLVE）时加 `--legacy-peer-deps` 即可；经 `dsh plugin`/pnpm 安装自动处理，运行不受影响。
+**npm 发版兼容**：兼容 DSH npm 发版 `@deepseek-ai/dsh@0.0.1-rc.2`（即 snapshot0811 的 npm 发版；`npx -p @deepseek-ai/dsh@0.0.1-rc.2 dsh web` 可访问指定版本并启动，lib 生产模式）。实测（npm 基线）：node 半/invariant 半在 rc.2 consumer 中加载成功；client 半经 `window.__ModuleLoader__.load` 正确注册；typecheck 与 201 个单测通过。注意：0811 起 vendored cordis 更名为 `@deepseek-ai/cordis@4.0.1-rc.1`（npm 发版不再发布 `cordis` 名义的 vendored 包）。本插件 `peerDependencies.cordis` 声明为 `^4.0.0-rc.7` 且源码对 `cordis` 只有 type-only 导入（`src/index.ts`、`src/client/index.tsx`）——npm 安装时 peer 解析到公开 `cordis` 包仍可工作，`--legacy-peer-deps` 可绕过冲突，但建议将 peer 与类型导入迁移至 `@deepseek-ai/cordis` 以对齐官方基线；构建产物（lib/*.js）零 cordis 运行时导入，更名不影响已构建 bundle 的运行时加载。
+
+### 0811 兼容要点（snapshot0811，实机验证）
+
+- **bundle 机制不变**：0811 仍支持 `dsh.bundle.patch` → `cordis.patch.yml` 的组合包层机制（本插件的 profile bundles 安装方式照旧），客户端 `dsh.client` 元数据发现与 `window.__ModuleLoader__` 加载协议均未变。
+- **cordis 更名**：0811 将 vendored cordis 由 `cordis@4.0.0-rc.7` 更名为 `@deepseek-ai/cordis@4.0.1-rc.1`。本插件对 cordis 只有 type-only 导入，构建产物零 cordis 运行时导入——更名不影响已构建 bundle 的运行时加载；npm 基线 typecheck 时 `cordis` 裸导入解析到公开 `cordis` 包仍可通过，对齐建议见上。
+- **实机 boot 验证**：snapshot0811（`snapshots/20260811T152241Z`）web 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-external/dsh-minigames`，`/plugins/@dsh-external/dsh-minigames/client.js` 返回 200，右侧面板（🎮 小游戏）实测渲染。typecheck 与 201 个单测对 0811 基线通过。
 
 ## 更新记录 / Changelog
 
