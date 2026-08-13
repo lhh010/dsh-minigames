@@ -1,5 +1,7 @@
 # dsh-minigames
 
+**简体中文** | [English](./README.en.md)
+
 DSH Web UI 右侧小游戏面板：等待模型回复或修 bug 时的摸鱼神器。
 
 - **折叠态**：浏览器右缘一条小竖条（🎮），不占空间。
