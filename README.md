@@ -264,7 +264,7 @@ DSH Web UI 右侧小游戏面板：等待模型回复或修 bug 时的摸鱼神�
 前置：已构建的 DSH 20260808+ 快照、`pnpm`。
 
 ```sh
-git clone https://github.com/dsh-external/dsh-minigames.git   # 或直接使用本目录
+git clone https://github.com/lhh010/dsh-minigames.git   # 或直接使用本目录
 cd dsh-minigames
 pnpm install
 pnpm build
