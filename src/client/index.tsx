@@ -7,7 +7,7 @@
  */
 import { createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { MiniGamePanel } from './panel/Panel.tsx'
 import './app.css'
 

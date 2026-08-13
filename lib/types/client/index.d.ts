@@ -1,4 +1,4 @@
-import type { Context } from 'cordis';
+import type { Context } from '@deepseek-ai/cordis';
 import './app.css';
 /** No host services are required. */
 export declare const inject: string[];

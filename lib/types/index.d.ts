@@ -7,7 +7,7 @@
  * routes, tools, or services.
  * @module @dsh-external/dsh-minigames
  */
-import type { Context } from 'cordis';
+import type { Context } from '@deepseek-ai/cordis';
 /** Stable Cordis plugin name (the loader row id). */
 export declare const name = "dsh-minigames";
 /**
