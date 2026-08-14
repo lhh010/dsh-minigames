@@ -265,7 +265,7 @@ Compatible with DSH snapshot0810 (`snapshots/20260810T155924Z`), snapshot0811 (`
 Prerequisites: a built DSH 20260808+ snapshot and `pnpm`.
 
 ```sh
-git clone https://github.com/lhh010/dsh-minigames.git   # 或直接使用本目录
+git clone https://github.com/omdsh-dev/dsh-minigames.git   # 或直接使用本目录
 cd dsh-minigames
 pnpm install
 pnpm build
