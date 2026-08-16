@@ -1,20 +1,21 @@
 /**
  * Memory-match game definition: wires the pure deck logic into a
- * {@link MiniGameInstance} — click to flip cards (with a brief mismatch
- * reveal), restart, and a moves counter.
+ * {@link MiniGameInstance} — click to flip cards (a mismatched pair stays
+ * face-up for one second, then both flip back together), restart, and a
+ * moves counter.
  */
 import type {
   MiniGameDefinition,
   MiniGameInstance,
   MiniGameMountOptions,
 } from '../types.ts'
-import { createMemoryState, flip, type MemoryState } from './logic.ts'
+import { createMemoryState, flip, resetFlip, type MemoryState } from './logic.ts'
 import { COLS, PAIRS } from './logic.ts'
 import { renderMemory, LOGICAL_W, LOGICAL_H, CELL, HUD_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 
-const MISMATCH_MS = 600
+const REVEAL_MS = 1000
 
 function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -28,7 +29,8 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   let running = false
   let raf = 0
   let last = 0
-  let lockUntil = 0 // brief reveal window after a mismatch
+  let lockUntil = 0 // ignore clicks while a mismatched pair is on display
+  let flipTimer = 0 // timeout that flips a mismatched pair back down
   let lastScore = -1
 
   const reportScore = (): void => {
@@ -55,7 +57,14 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     const index = indexFromEvent(event)
     if (index === null) return
     const result = flip(state, index)
-    if (result === 'mismatch') lockUntil = performance.now() + MISMATCH_MS
+    if (result === 'mismatch') {
+      // Reveal both cards for a full second, then flip them back together.
+      lockUntil = performance.now() + REVEAL_MS
+      flipTimer = window.setTimeout(() => {
+        resetFlip(state)
+        reportScore()
+      }, REVEAL_MS)
+    }
     reportScore()
   }
 
@@ -63,7 +72,9 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     if (!gameHasFocus(host)) return
     if (event.code === 'KeyR') {
       event.preventDefault()
+      clearTimeout(flipTimer)
       state = createMemoryState()
+      lockUntil = 0
       lastScore = -1
     } else if (event.code === 'KeyP') {
       event.preventDefault()
@@ -117,6 +128,7 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     destroy: () => {
       running = false
       stopLoop()
+      clearTimeout(flipTimer)
       fit.dispose()
       canvas.removeEventListener('mousedown', onMouseDown)
       window.removeEventListener('keydown', onKeyDown)
