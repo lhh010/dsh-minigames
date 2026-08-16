@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  createMemoryState, flip, PAIRS,
+  createMemoryState, flip, resetFlip, PAIRS,
 } from '../src/client/games/memory/logic.ts'
 
 function lcg(seed: number): () => number {
@@ -36,7 +36,7 @@ describe('memory logic', () => {
     expect(state.cards[1]).toBeNull()
   })
 
-  it('returns mismatch for different cards and lets them flip again', () => {
+  it('returns mismatch and keeps both cards face-up until resetFlip', () => {
     const state = createMemoryState(lcg(1))
     state.cards = [0, 1, 0, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7]
     flip(state, 0)
@@ -46,9 +46,15 @@ describe('memory logic', () => {
     // Cards stay on the board.
     expect(state.cards[0]).toBe(0)
     expect(state.cards[1]).toBe(1)
-    // A new flip starts fresh.
-    expect(flip(state, 0)).toBe('noop')
-    expect(state.flipped).toContain(0)
+    // Both cards remain face-up during the reveal window.
+    expect(state.flipped).toEqual([0, 1])
+    // New flips are ignored while the mismatched pair is showing.
+    expect(flip(state, 2)).toBe('noop')
+    // resetFlip turns them back down together; a fresh turn can start.
+    resetFlip(state)
+    expect(state.flipped).toEqual([])
+    flip(state, 2)
+    expect(flip(state, 3)).toBe('mismatch')
   })
 
   it('finishes when all pairs are matched', () => {
