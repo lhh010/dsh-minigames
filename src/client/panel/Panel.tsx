@@ -98,6 +98,16 @@ function windowHeight(viewport: number): number {
   return Math.min(viewport * 0.65, 680)
 }
 
+/** Clamp the floating window inside the viewport for its rendered size. */
+function clampWindowPos(p: { x: number; y: number }, w: number, h: number): { x: number; y: number } {
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  return {
+    x: Math.min(Math.max(p.x, WINDOW_MARGIN), Math.max(WINDOW_MARGIN, vw - w - WINDOW_MARGIN)),
+    y: Math.min(Math.max(p.y, WINDOW_MARGIN), Math.max(WINDOW_MARGIN, vh - h - WINDOW_MARGIN)),
+  }
+}
+
 /** Clamp the launcher button inside the viewport. */
 function clampLauncherPos(p: { x: number; y: number }): { x: number; y: number } {
   const vw = window.innerWidth
@@ -118,14 +128,14 @@ export function MiniGamePanel(): ReactNode {
   })
   const [pos, setPos] = useState<{ x: number; y: number }>(() => {
     const saved = loadPos()
-    if (saved !== null) return saved
+    if (saved !== null) return clampWindowPos(saved, width, windowHeight(window.innerHeight))
     const fallbackWidth = Math.min(Math.round(window.innerWidth / 2), 640)
     return { x: Math.max(WINDOW_MARGIN, window.innerWidth - fallbackWidth - 12), y: 80 }
   })
   const [dock, setDock] = useState<DockState>(() => loadDock())
   const [launcherPos, setLauncherPos] = useState<{ x: number; y: number }>(() => {
     const saved = loadLauncherPos()
-    if (saved !== null) return saved
+    if (saved !== null) return clampLauncherPos(saved)
     return { x: window.innerWidth - LAUNCHER_SIZE - 18, y: window.innerHeight - LAUNCHER_SIZE - 18 }
   })
   const [best, setBest] = useState<Record<string, number>>(() => {
