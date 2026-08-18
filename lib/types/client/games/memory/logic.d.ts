@@ -21,3 +21,5 @@ export interface MemoryState {
 export declare function createMemoryState(rng?: () => number): MemoryState;
 /** Flip a card. Returns 'match' | 'mismatch' | 'noop' when the flip resolved a pair. */
 export declare function flip(state: MemoryState, index: number): 'match' | 'mismatch' | 'noop';
+/** Turn any face-up cards back down (e.g. after a mismatch reveal delay). */
+export declare function resetFlip(state: MemoryState): void;
