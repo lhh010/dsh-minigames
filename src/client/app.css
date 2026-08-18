@@ -2,6 +2,68 @@
  * collision-free in the host page; the stylesheet is injected by the client
  * bundle as one <style data-plugin> tag. Palette matches the DSH dark shell. */
 
+/* Floating window: draggable, edge-snapping, hideable. */
+.dmg-float {
+  position: fixed;
+  z-index: 2147482900;
+  display: flex;
+  flex-direction: column;
+  min-width: 360px;
+  min-height: 320px;
+  max-width: calc(100vw - 16px);
+  background: #15151b;
+  color: #d8d8e0;
+  border: 1px solid #3a3a45;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.dmg-float-header {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.dmg-float-header:active {
+  cursor: grabbing;
+}
+
+/* Floating launcher shown while the window is hidden; draggable (left/top
+ * come from inline styles), a click without travel opens the window. */
+.dmg-launcher {
+  position: fixed;
+  z-index: 2147482900;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid #3a3a45;
+  background: #1b1b22;
+  color: #d8d8e0;
+  font-size: 22px;
+  line-height: 1;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  transition: transform 0.12s ease, background 0.12s ease;
+  padding: 0;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dmg-launcher:hover {
+  transform: scale(1.08);
+  background: #23232c;
+}
+
+.dmg-launcher:active {
+  cursor: grabbing;
+}
+
 .dmg-rail {
   position: fixed;
   right: 0;

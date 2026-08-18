@@ -42,8 +42,9 @@ export function flip(state: MemoryState, index: number): 'match' | 'mismatch' | 
   const symbol = state.cards[index]
   if (symbol === null || state.flipped.includes(index)) return 'noop'
   if (state.flipped.length >= 2) {
-    // Two face-up cards unresolved (from a mismatch): turn them down.
-    state.flipped = []
+    // A mismatched pair is still face-up for its reveal; ignore new flips
+    // until the caller calls resetFlip.
+    return 'noop'
   }
   state.flipped.push(index)
   if (state.flipped.length < 2) return 'noop'
@@ -60,6 +61,12 @@ export function flip(state: MemoryState, index: number): 'match' | 'mismatch' | 
     if (state.matched === PAIRS) state.finished = true
     return 'match'
   }
-  state.flipped = []
+  // Keep both cards face-up so the caller can reveal them, then flip them
+  // back down together via resetFlip after a delay.
   return 'mismatch'
+}
+
+/** Turn any face-up cards back down (e.g. after a mismatch reveal delay). */
+export function resetFlip(state: MemoryState): void {
+  state.flipped = []
 }

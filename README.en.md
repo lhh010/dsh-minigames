@@ -2,11 +2,13 @@
 
 [简体中文](./README.md) | **English**
 
-Mini-games panel on the right side of the DSH Web UI: a slacking-off companion for killing time while waiting for model replies or fixing bugs.
+Floating mini-games window in the DSH Web UI: a slacking-off companion for killing time while waiting for model replies or fixing bugs.
 
-- **Collapsed state**: a slim vertical bar (🎮) at the right edge of the browser, taking up no space.
-- **Expanded state**: click to have it occupy the **right half** of the window (50vw by default; drag its left edge to resize between 360px–80vw),
-  then freely pick a game inside the panel.
+- **Collapsed state**: hiding the window leaves a round floating 🎮 button (bottom-right by default) that you can **freely drag** and whose position is
+  remembered — releasing after a drag (> 5px travel) does NOT reopen the window; only a **click** does.
+- **Expanded state**: a floating mini-games window — **drag the title bar** to move it anywhere; releasing near a screen edge auto-**snaps** to that edge
+  (left/right docking, top/bottom edge-hugging). Position, dock state, and width persist across reloads; default width is min(50vw, 640px), draggable on
+  its left edge between 360px–80vw, and you can freely pick a game inside the panel.
 - **Games** (all offline, zero asset files, Canvas-rendered):
   1. 🦖 **Dino Run** — the classic Chrome T-Rex (day/night/rain);
   2. 🧱 **Tetris** — classic falling-block line clearing;
@@ -27,7 +29,7 @@ Mini-games panel on the right side of the DSH Web UI: a slacking-off companion f
   17. 🟡 **Pac-Man** — classic maze munching; power pellets let you eat the ghosts back;
   18. 🎯 **Aim Training** — FPS aim practice: locked mouse turns the view to track a 3D drifting target; left-click shoots with recoil.
 - **Reserved extension interface**: a game registry (`registerGame`) — adding a game only requires implementing one interface.
-- **Experience details**: games auto-pause when the panel collapses or the tab is switched, and resume when you come back; each game's high score is
+- **Experience details**: games auto-pause when the window is hidden or the tab is switched, and resume when you come back; each game's high score is
   stored in localStorage; keyboard input only takes effect after clicking the game area and never hijacks the chat input box.
 - **Responsive sizing**: the game canvas adapts to the panel's **real available space** (toolbar + canvas + control hints always display fully with
   no scrollbars; browser zoom and panel drag-resizing reflow automatically), with width/height caps of 960px.
@@ -51,6 +53,16 @@ Compatible with DSH snapshot0810 (`snapshots/20260810T155924Z`), snapshot0811 (`
 - **Live-instance boot verification**: after web starts on the final snapshot (`snapshots/20260812T172954Z-final`), the `window.__DSH_BOOT__` manifest includes `@dsh-external/dsh-minigames` and `/plugins/@dsh-external/dsh-minigames/client.js` returns 200; the boot manifest after starting `dsh web` as an npm rc.5 consumer also includes this plugin. typecheck, build, and 201 unit tests pass against the final-snapshot baseline.
 
 ## Changelog
+
+### 2026-08-16 · v0.3.3 — Floating window and draggable 🎮 launcher
+
+- **Floating window**: the collapsed rail is replaced by a round floating 🎮 button; the expanded state is a draggable, edge-snapping
+  (left/right docking, top/bottom edge-hugging) floating window with position, dock state, and width persisted
+- **Draggable 🎮 button**: dragging (> 5px travel) moves the button and clamps it to the viewport; releasing remembers the position
+  (`dsh-minigames:launcher`) without opening the window; a click without travel opens it
+- **Resize fix**: dragging the left edge now anchors to the window's actual right edge (the old math assumed the right edge touched the viewport)
+- **Accessibility**: the collapsed state is now a native `<button>` instead of `<div role="button">`
+- **Verification**: typecheck and 201 unit tests pass; live-loading verification passes
 
 ### 2026-08-11 · v0.3.2 — Dino Run character polish
 
