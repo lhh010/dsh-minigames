@@ -75,10 +75,11 @@ export function renderOthello(ctx: CanvasRenderingContext2D, state: OthelloState
   ctx.fillRect(0, 0, LOGICAL_W, HUD_H)
   ctx.font = '13px ui-monospace, monospace'
   ctx.textAlign = 'left'
+  // Hollow ○ = the black side (player), filled ● = the white side (AI).
   ctx.fillStyle = '#d8d8e0'
-  ctx.fillText(`● ${countDiscs(state, 1)}`, 12, 20)
+  ctx.fillText(`○ ${countDiscs(state, 1)}`, 12, 20)
   ctx.fillStyle = '#e8e8ec'
-  ctx.fillText(`○ ${countDiscs(state, 2)}`, 52, 20)
+  ctx.fillText(`● ${countDiscs(state, 2)}`, 52, 20)
   if (!state.over) {
     ctx.fillStyle = TEXT
     ctx.textAlign = 'right'
@@ -95,7 +96,7 @@ export function renderOthello(ctx: CanvasRenderingContext2D, state: OthelloState
     ctx.fillText(title, BOARD_W / 2, HUD_H + BOARD_H / 2 - 8)
     ctx.fillStyle = TEXT
     ctx.font = '13px ui-monospace, monospace'
-    ctx.fillText(`● ${countDiscs(state, 1)} : ${countDiscs(state, 2)} ○ · 按 R 重新开始`, BOARD_W / 2, HUD_H + BOARD_H / 2 + 20)
+    ctx.fillText(`○ ${countDiscs(state, 1)} : ${countDiscs(state, 2)} ● · 按 R 重新开始`, BOARD_W / 2, HUD_H + BOARD_H / 2 + 20)
   }
 }
 
