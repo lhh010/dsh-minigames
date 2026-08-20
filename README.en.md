@@ -54,6 +54,10 @@ Compatible with DSH snapshot0810 (`snapshots/20260810T155924Z`), snapshot0811 (`
 
 ## Changelog
 
+### 2026-08-20 · v0.3.4 — Fix inverted Othello HUD disc symbols
+
+- **Fix**: the Othello HUD and end-of-game score used disc symbols counter-intuitively — the filled `●` was paired with the black (player) count and the hollow `○` with the white (AI) count, which read as if the score or winner was computed wrong. Now `○` (hollow) = black (player) and `●` (filled) = white (AI), matching the discs on the board; placement/flip/end-of-game logic is unchanged (verified with 300 simulated random games).
+
 ### 2026-08-16 · v0.3.3 — Floating window and draggable 🎮 launcher
 
 - **Floating window**: the collapsed rail is replaced by a round floating 🎮 button; the expanded state is a draggable, edge-snapping
