@@ -39,7 +39,7 @@ DSH Web UI 浮动小游戏窗口：等待模型回复或修 bug 时的摸鱼神�
 
 兼容 DSH snapshot0810（`snapshots/20260810T155924Z`）、snapshot0811（`snapshots/20260811T152241Z`）与最终快照 snapshot0812（`snapshots/20260812T172954Z-final`）：纯浏览器端 bundle（node half 仅 loader 占位），客户端元数据声明为嵌套 `dsh.client`——0810 的 ClientModuleHostService 只读该字段，顶层 `dshClient` 会被静默忽略（无日志无报错，插件不进 boot 图）。0810 实机验证通过；0811 与 0812 最终快照实机 boot 验证通过（见下）。
 
-**npm 发版兼容**：兼容 DSH npm 发版 `@deepseek-ai/dsh@0.0.1-rc.5`（dist-tag `next`，即最终快照 snapshot0812 的 npm 发版；`npm exec -p @deepseek-ai/dsh@0.0.1-rc.5 -- dsh --profile web --port <port>` 可访问指定版本并启动，lib 生产模式），同时保持兼容 `@deepseek-ai/dsh@0.0.1-rc.2`（snapshot0811 的 npm 发版）。实测（npm rc.5 基线）：`dsh web` 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-external/dsh-minigames`，`/plugins/@dsh-external/dsh-minigames/client.js` 返回 200；typecheck、build 与 201 个单测通过。注意：0811 起 vendored cordis 更名为 `@deepseek-ai/cordis`（npm 发版不再发布 `cordis` 名义的 vendored 包）。本插件源码对 cordis 只有 type-only 导入（`src/index.ts`、`src/client/index.tsx`、`src/invariant.ts`），已把类型导入与 peer/devDependencies 迁移至 `@deepseek-ai/cordis`（peer `^4.0.1-rc.1`，npm rc.5 基线上为 `4.0.1-rc.4`）——构建产物（lib/*.js）零 cordis 运行时导入，纯 `npm install` 不再报 ERESOLVE，无需 `--legacy-peer-deps`。
+**npm 发版兼容**：兼容 DSH npm 发版 `@deepseek-ai/dsh@0.1.1-rc.1`（v0.3.5 实机 boot 验证：`dsh --profile web` 启动后 boot 清单包含 `@dsh-external/dsh-minigames`、`/plugins/@dsh-external/dsh-minigames/client.js` 返回 200——本插件是纯浏览器端 bundle（`document.body` portal），不依赖任何宿主服务/槽位，0.1.1-rc.1 上零改动），同时兼容 `@deepseek-ai/dsh@0.0.1-rc.5`（dist-tag `next`，即最终快照 snapshot0812 的 npm 发版；`npm exec -p @deepseek-ai/dsh@0.0.1-rc.5 -- dsh --profile web --port <port>` 可访问指定版本并启动，lib 生产模式），同时保持兼容 `@deepseek-ai/dsh@0.0.1-rc.2`（snapshot0811 的 npm 发版）。实测（npm rc.5 基线）：`dsh web` 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-external/dsh-minigames`，`/plugins/@dsh-external/dsh-minigames/client.js` 返回 200；typecheck、build 与 201 个单测通过。注意：0811 起 vendored cordis 更名为 `@deepseek-ai/cordis`（npm 发版不再发布 `cordis` 名义的 vendored 包）。本插件源码对 cordis 只有 type-only 导入（`src/index.ts`、`src/client/index.tsx`、`src/invariant.ts`），已把类型导入与 peer/devDependencies 迁移至 `@deepseek-ai/cordis`（peer `^4.0.1-rc.1`，npm rc.5 基线上为 `4.0.1-rc.4`）——构建产物（lib/*.js）零 cordis 运行时导入，纯 `npm install` 不再报 ERESOLVE，无需 `--legacy-peer-deps`。
 
 ### 0811 兼容要点（snapshot0811，实机验证）
 
@@ -54,6 +54,10 @@ DSH Web UI 浮动小游戏窗口：等待模型回复或修 bug 时的摸鱼神�
 - **实机 boot 验证**：最终快照（`snapshots/20260812T172954Z-final`）web 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-external/dsh-minigames`，`/plugins/@dsh-external/dsh-minigames/client.js` 返回 200；npm rc.5 consumer `dsh web` 启动后 boot 清单同样包含本插件。typecheck、build 与 201 个单测对最终快照基线通过。
 
 ## 更新记录 / Changelog
+
+### 2026-08-20 · v0.3.5 — 声明 DSH 0.1.1-rc.1 兼容性（实机 boot 验证）
+
+- **验证**：DSH npm `0.1.1-rc.1` 实机 boot 验证通过——boot 清单包含 `@dsh-external/dsh-minigames`、client.js 返回 200；本插件为纯浏览器端 bundle（`document.body` portal），不依赖任何宿主服务或布局槽位，0.1.1-rc.1 上零改动，全部 18 款游戏行为不变
 
 ### 2026-08-20 · v0.3.4 — 修复黑白棋 HUD 棋子符号反向
 
