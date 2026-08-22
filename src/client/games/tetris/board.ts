@@ -162,7 +162,7 @@ export function hardDrop(state: TetrisState): number {
 }
 
 /** Merge the current piece into the grid, clear lines, score, and spawn next. */
-function lock(state: TetrisState): void {
+export function lock(state: TetrisState): void {
   const piece = state.current
   if (piece === null || state.over) return
   for (let r = 0; r < piece.shape.length; r += 1) {
@@ -174,6 +174,14 @@ function lock(state: TetrisState): void {
     }
   }
   const cleared = clearFullRows(state.grid)
+  // Self-check: a full row must never survive a lock. Violation means the
+  // clear logic broke; dumping the row beats silently freezing the board.
+  for (let r = 0; r < ROWS; r += 1) {
+    if (state.grid[r]!.every(cell => cell !== 0)) {
+      console.error(`dsh-minigames tetris: full row ${r} survived clearing`, JSON.stringify(state.grid[r]))
+      break
+    }
+  }
   if (cleared > 0) {
     state.lines += cleared
     state.score += LINE_SCORES[cleared]! * state.level
@@ -225,4 +233,11 @@ export function ghostY(state: TetrisState): number {
   let y = piece.y
   while (!collides(state.grid, { ...piece, y: y + 1 })) y += 1
   return y
+}
+
+/** Whether the current piece is resting on the floor/stack (cannot descend). */
+export function isLanded(state: TetrisState): boolean {
+  const piece = state.current
+  if (piece === null || state.over) return false
+  return collides(state.grid, { ...piece, shape: piece.shape, x: piece.x, y: piece.y + 1 })
 }

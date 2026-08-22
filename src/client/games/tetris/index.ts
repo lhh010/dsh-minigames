@@ -10,12 +10,17 @@ import type {
   MiniGameMountOptions,
 } from '../types.ts'
 import {
-  createTetrisState, gravityInterval, hardDrop, holdPiece, move, rotate,
+  createTetrisState, gravityInterval, hardDrop, holdPiece, isLanded, lock, move, rotate,
   type TetrisState,
 } from './board.ts'
 import { renderTetris, BOARD_W, BOARD_H, LOGICAL_W } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+
+/** Controllable window between landing and locking (standard Tetris lock delay). */
+const LOCK_DELAY_MS = 400
+/** Max slide/rotate refreshes of the lock window per piece (anti-stall bound). */
+const LOCK_RESETS_PER_PIECE = 15
 
 function createTetrisGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -31,11 +36,24 @@ function createTetrisGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   let last = 0
   let gravityAcc = 0
   let lastScore = -1
+  // Lock delay: when the piece lands it stays controllable for a short window
+  // (slide/rotate) before locking; sliding or rotating refreshes the window,
+  // bounded by LOCK_RESETS_PER_PIECE so a piece cannot be stalled forever.
+  let landedAt: number | null = null
+  let lockResets = 0
 
   const reportScore = (): void => {
     if (state.score === lastScore) return
     lastScore = state.score
     options?.onScore?.(state.score)
+  }
+
+  /** Refresh the lock-delay window after a successful slide/rotate of a landed piece. */
+  const touchLanded = (): void => {
+    if (landedAt !== null && lockResets < LOCK_RESETS_PER_PIECE) {
+      landedAt = performance.now()
+      lockResets += 1
+    }
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -44,12 +62,12 @@ function createTetrisGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       case 'ArrowLeft':
       case 'KeyA':
         event.preventDefault()
-        move(state, -1, 0)
+        if (move(state, -1, 0)) touchLanded()
         break
       case 'ArrowRight':
       case 'KeyD':
         event.preventDefault()
-        move(state, 1, 0)
+        if (move(state, 1, 0)) touchLanded()
         break
       case 'ArrowDown':
       case 'KeyS':
@@ -61,22 +79,26 @@ function createTetrisGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
         event.preventDefault()
         state.score += hardDrop(state) * 2
         gravityAcc = 0
+        landedAt = null
+        lockResets = 0
         reportScore()
         break
       case 'ArrowUp':
       case 'KeyX':
       case 'KeyW':
         event.preventDefault()
-        rotate(state, 1)
+        if (rotate(state, 1)) touchLanded()
         break
       case 'KeyZ':
         event.preventDefault()
-        rotate(state, -1)
+        if (rotate(state, -1)) touchLanded()
         break
       case 'KeyC':
         event.preventDefault()
         holdPiece(state)
         gravityAcc = 0
+        landedAt = null
+        lockResets = 0
         break
       case 'KeyP':
         event.preventDefault()
@@ -93,6 +115,22 @@ function createTetrisGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     if (!running) return
     const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
     last = now
+    if (!state.over && state.current !== null && isLanded(state)) {
+      // Landed: hold the piece in place for the lock-delay window, then lock.
+      // Gravity accumulation pauses so the next piece starts fresh.
+      if (landedAt === null) landedAt = now
+      if (now - landedAt >= LOCK_DELAY_MS) {
+        lock(state)
+        landedAt = null
+        lockResets = 0
+        gravityAcc = 0
+        reportScore()
+      }
+      renderTetris(ctx, state)
+      return
+    }
+    landedAt = null
+    lockResets = 0
     gravityAcc += dt * 1000
     const interval = gravityInterval(state.level)
     while (gravityAcc >= interval && !state.over) {
@@ -119,6 +157,8 @@ function createTetrisGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   const reset = (): void => {
     state = createTetrisState()
     gravityAcc = 0
+    landedAt = null
+    lockResets = 0
     lastScore = -1
     reportScore()
     if (running) startLoop()
