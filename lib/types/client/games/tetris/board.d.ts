@@ -46,6 +46,8 @@ export declare function move(state: TetrisState, dx: number, dy: number): boolea
 export declare function rotate(state: TetrisState, dir: 1 | -1): boolean;
 /** Drop the current piece to the floor. Returns the cells dropped. */
 export declare function hardDrop(state: TetrisState): number;
+/** Merge the current piece into the grid, clear lines, score, and spawn next. */
+export declare function lock(state: TetrisState): void;
 /** Remove full rows (returning how many) and compact the grid above. */
 export declare function clearFullRows(grid: number[][]): number;
 /** Swap the current piece with the hold slot (once per piece). */
@@ -54,3 +56,5 @@ export declare function holdPiece(state: TetrisState): void;
 export declare function gravityInterval(level: number): number;
 /** Ghost drop y: where the current piece would land. */
 export declare function ghostY(state: TetrisState): number;
+/** Whether the current piece is resting on the floor/stack (cannot descend). */
+export declare function isLanded(state: TetrisState): boolean;

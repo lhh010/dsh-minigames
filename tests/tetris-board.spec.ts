@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   clearFullRows, collides, createTetrisState, ghostY, gravityInterval,
-  hardDrop, holdPiece, move, rotate, spawn,
+  hardDrop, holdPiece, isLanded, lock, move, rotate, spawn,
   COLS, ROWS,
 } from '../src/client/games/tetris/board.ts'
 
@@ -160,5 +160,55 @@ describe('tetris board', () => {
     expect(gravityInterval(1)).toBe(800)
     expect(gravityInterval(2)).toBe(720)
     expect(gravityInterval(99)).toBe(120)
+  })
+
+  describe('isLanded / lock (lock-delay support)', () => {
+    it('reports airborne for a freshly spawned piece', () => {
+      const state = createTetrisState(lcg(3))
+      // A fresh board's floor is far below the spawn row.
+      expect(isLanded(state)).toBe(false)
+    })
+
+    it('reports landed once the piece rests on the stack, and locking clears full rows', () => {
+      const state = createTetrisState(lcg(3))
+      // Bottom row filled except cols 3..6; force a horizontal I over the gap.
+      for (let c = 0; c < COLS; c += 1) { if (c < 3 || c > 6) state.grid[ROWS - 1]![c] = 2 }
+      state.current!.kind = 1
+      state.current!.shape = [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]]
+      hardDrop(state)
+      // After a hard drop the I merged and cleared the bottom row; craft the
+      // landed assertion with the NEXT piece against a raised floor instead.
+      for (let r = ROWS - 2; r < ROWS; r += 1) {
+        for (let c = 0; c < COLS; c += 1) { if (c !== 4) state.grid[r]![c] = 3 }
+      }
+      // Steer whatever piece is current onto column 4's shaft via hard drops
+      // at x=4; the piece lands resting there.
+      while (move(state, -1, 0)) {}
+      for (let i = 0; i < 4; i += 1) move(state, 1, 0)
+      if (!state.over) {
+        hardDrop(state)
+        // The piece locked on landing, so the fresh current piece is airborne
+        // unless the stack reaches the top.
+        if (!state.over) expect(isLanded(state)).toBe(false)
+      }
+      // Direct landed-state check: pin a piece one cell above a filled floor.
+      const probe = createTetrisState(lcg(5))
+      for (let c = 0; c < COLS; c += 1) probe.grid[ROWS - 1]![c] = 2
+      probe.current!.kind = 1
+      probe.current!.shape = [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]]
+      probe.current!.x = 0
+      probe.current!.y = ROWS - 3
+      expect(isLanded(probe)).toBe(true)
+      const linesBefore = probe.lines
+      // Cells on the board plus the 4 of the locking piece; the cleared bottom
+      // row removes COLS of them, so the net after lock is cellsBefore + 4 - COLS.
+      const cellsBefore = probe.grid.flat().filter((cell) => cell !== 0).length + 4
+      lock(probe)
+      // Bottom row clears (+1 line); everything above compacts one row down,
+      // so the just-locked I now rests on the new bottom row.
+      expect(probe.lines).toBe(linesBefore + 1)
+      expect(probe.grid.flat().filter((cell) => cell !== 0).length).toBe(cellsBefore - COLS)
+      expect(probe.grid.some((row) => row.every((cell) => cell !== 0))).toBe(false)
+    })
   })
 })

@@ -54,6 +54,12 @@ Compatible with DSH snapshot0810 (`snapshots/20260810T155924Z`), snapshot0811 (`
 
 ## Changelog
 
+### 2026-08-22 · v0.3.6 — Fix Tetris landed-row not clearing (lock delay)
+
+- **Root cause**: after reaching its final cell the piece did not merge immediately; it waited for the next gravity tick to fail before locking + clearing — up to **800ms** of hover at level 1, during which a completed row looked like it "should clear but didn't". At high levels the opposite applied (120ms), making it impossible to slide pieces into the leftmost column and leaving permanently one-cell-short rows.
+- **Fix**: standard **lock delay** — a landed piece stays controllable for 400ms (slide/rotate refreshes the window, max 15 refreshes per piece against infinite stalling), then auto-locks and clears immediately; Space hard drop / Down soft drop at the floor still lock instantly. Added a self-check in `lock()`: any full row surviving a clear logs an error (impossible by construction).
+- **Verification**: 2 new unit tests for `isLanded`/`lock` (with conservation assertion); all 203 tests pass; typecheck and build clean.
+
 ### 2026-08-20 · v0.3.5 — Declare DSH 0.1.1-rc.1 compatibility (real boot verification)
 
 - **Verification**: real boot verification passed on DSH npm `0.1.1-rc.1` — the boot manifest includes `@dsh-external/dsh-minigames` and client.js returns 200; the plugin is a pure browser bundle (a `document.body` portal) with no host-service or slot dependencies, so all 18 games behave unchanged on 0.1.1-rc.1
