@@ -35,17 +35,51 @@ DSH Web UI 浮动小游戏窗口：等待模型回复或修 bug 时的摸鱼神�
   始终完整展示，不出现滚动条；浏览器缩放/面板拖宽缩窄都会自动重排），宽高上限
   960px。
 
-## 版本兼容 / Version compatibility
+## 安装
 
-兼容 DSH snapshot0810（`snapshots/20260810T155924Z`）、snapshot0811（`snapshots/20260811T152241Z`）与最终快照 snapshot0812（`snapshots/20260812T172954Z-final`）：纯浏览器端 bundle（node half 仅 loader 占位），客户端元数据声明为嵌套 `dsh.client`——0810 的 ClientModuleHostService 只读该字段，顶层 `dshClient` 会被静默忽略（无日志无报错，插件不进 boot 图）。0810 实机验证通过；0811 与 0812 最终快照实机 boot 验证通过（见下）。
+前置：已构建的 DSH 20260808+ 快照、`pnpm`。
 
-**alpha 发版兼容**：兼容 `dsh-v0.1.2-alpha.1`（GitHub tag `dsh-v0.1.2-alpha.1`，不发布 npm，源码构建安装；v0.3.7 验证：`dsh --profile web --dump-config` boot 组合包含 `@dsh-external/dsh-minigames`，typecheck 与 203 个单测在新源码基线上全绿——本插件纯浏览器端自包含 bundle，零 cordis/宿主服务运行时依赖，该版本的 Client API 重构（dsh-client-runtime 移除、Conversation 视图化）不影响本插件）。
+```sh
+# 方式一：git 依赖固定 tag（公开镜像，推荐；也可用 github:lhh010/dsh-minigames）
+dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.7'
 
-## 迁移指南（DSH 0.1.1-rc.1 → 0.1.2-alpha.1）
+# 方式二：本地安装
+git clone https://github.com/lhh010/dsh-minigames.git   # 或直接使用本目录
+cd dsh-minigames
+pnpm install
+pnpm build
 
-本插件**无需迁移**：它是纯浏览器端自包含 bundle（`document.body` portal，Node half 仅 loader 占位），对 cordis 只有 type-only 导入，零宿主服务/槽位运行时依赖。0.1.2-alpha.1 的客户端破坏性重构（`@deepseek-ai/dsh-client-runtime` 移除、`ConversationSnapshot` 视图化、`ctx.slots.inject` 注册范式）只影响使用这些 API 的插件，不影响本插件；直接安装最新 tag（`#v0.3.7`）即可。
+# 装入当前 web profile（自动写入依赖并加入 dsh.profile.bundles）
+dsh plugin --profile web add /绝对路径/to/dsh-minigames
 
-**npm 发版兼容**：兼容 DSH npm 发版 `@deepseek-ai/dsh@0.1.1-rc.1`（v0.3.5 实机 boot 验证：`dsh --profile web` 启动后 boot 清单包含 `@dsh-external/dsh-minigames`、`/plugins/@dsh-external/dsh-minigames/client.js` 返回 200——本插件是纯浏览器端 bundle（`document.body` portal），不依赖任何宿主服务/槽位，0.1.1-rc.1 上零改动），同时兼容 `@deepseek-ai/dsh@0.0.1-rc.5`（dist-tag `next`，即最终快照 snapshot0812 的 npm 发版；`npm exec -p @deepseek-ai/dsh@0.0.1-rc.5 -- dsh --profile web --port <port>` 可访问指定版本并启动，lib 生产模式），同时保持兼容 `@deepseek-ai/dsh@0.0.1-rc.2`（snapshot0811 的 npm 发版）。实测（npm rc.5 基线）：`dsh web` 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-external/dsh-minigames`，`/plugins/@dsh-external/dsh-minigames/client.js` 返回 200；typecheck、build 与 201 个单测通过。注意：0811 起 vendored cordis 更名为 `@deepseek-ai/cordis`（npm 发版不再发布 `cordis` 名义的 vendored 包）。本插件源码对 cordis 只有 type-only 导入（`src/index.ts`、`src/client/index.tsx`、`src/invariant.ts`），已把类型导入与 peer/devDependencies 迁移至 `@deepseek-ai/cordis`（peer `^4.0.1-rc.1`，npm rc.5 基线上为 `4.0.1-rc.4`）——构建产物（lib/*.js）零 cordis 运行时导入，纯 `npm install` 不再报 ERESOLVE，无需 `--legacy-peer-deps`。
+# 可选：确认组合配置只出现一个插件行
+dsh --profile web --dump-config | grep dsh-minigames
+```
+
+> **安装提示**：pnpm 11 首次安装可能拦截 node-pty 等构建脚本——在 `~/.dsh/profiles/web` 下执行 `pnpm approve-builds --all` 放行后重跑安装命令；装完**硬刷新浏览器**（Ctrl/Cmd+Shift+R）。
+
+### 提示词安装（让 DSH 自己装）
+
+把下面这段提示词发给任意一个 DSH 会话，模型会替你完成安装：
+
+> 帮我安装 dsh-minigames 插件（DSH 浮动小游戏窗口插件），步骤：
+> 1. 执行 `dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.7'`（首次可能被 pnpm 11 拦截 node-pty 构建脚本而失败）
+> 2. 在 `~/.dsh/profiles/web` 下执行 `pnpm approve-builds --all`（放行构建脚本）
+> 3. 再执行一次第 1 步的安装命令
+> 4. 完成后提醒我硬刷新浏览器（Ctrl/Cmd+Shift+R）
+> 遇到报错先查 https://github.com/lhh010/dsh-minigames README 的常见问题/已知限制。
+
+插件集合变更在**重启 `dsh web`** 后生效。卸载：
+
+```sh
+dsh plugin --profile web remove @dsh-external/dsh-minigames
+```
+
+> 本仓库同时携带 `dsh.plugin.json`（registry 通道清单）与 `cordis.patch.yml`
+> （官方 profile bundle 通道）；二选一安装，不要同时启用。
+
+
+-rc.5`（dist-tag `next`，即最终快照 snapshot0812 的 npm 发版；`npm exec -p @deepseek-ai/dsh@0.0.1-rc.5 -- dsh --profile web --port <port>` 可访问指定版本并启动，lib 生产模式），同时保持兼容 `@deepseek-ai/dsh@0.0.1-rc.2`（snapshot0811 的 npm 发版）。实测（npm rc.5 基线）：`dsh web` 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-external/dsh-minigames`，`/plugins/@dsh-external/dsh-minigames/client.js` 返回 200；typecheck、build 与 201 个单测通过。注意：0811 起 vendored cordis 更名为 `@deepseek-ai/cordis`（npm 发版不再发布 `cordis` 名义的 vendored 包）。本插件源码对 cordis 只有 type-only 导入（`src/index.ts`、`src/client/index.tsx`、`src/invariant.ts`），已把类型导入与 peer/devDependencies 迁移至 `@deepseek-ai/cordis`（peer `^4.0.1-rc.1`，npm rc.5 基线上为 `4.0.1-rc.4`）——构建产物（lib/*.js）零 cordis 运行时导入，纯 `npm install` 不再报 ERESOLVE，无需 `--legacy-peer-deps`。
 
 ### 0811 兼容要点（snapshot0811，实机验证）
 

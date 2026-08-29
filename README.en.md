@@ -34,16 +34,50 @@ Floating mini-games window in the DSH Web UI: a slacking-off companion for killi
 - **Responsive sizing**: the game canvas adapts to the panel's **real available space** (toolbar + canvas + control hints always display fully with
   no scrollbars; browser zoom and panel drag-resizing reflow automatically), with width/height caps of 960px.
 
-## Version compatibility
+## Installation
 
-Compatible with DSH snapshot0810 (`snapshots/20260810T155924Z`), snapshot0811 (`snapshots/20260811T152241Z`), and the final snapshot snapshot0812 (`snapshots/20260812T172954Z-final`): it is a pure browser-side bundle (the node half is only a loader placeholder), with client metadata declared as nested `dsh.client` — snapshot0810's ClientModuleHostService reads only that field, and a top-level `dshClient` is silently ignored (no logs, no errors, and the plugin never enters the boot graph). Verified against 0810 on a live instance; boot verification passed on live instances of 0811 and the final 0812 snapshot (see below).
+Prerequisites: a built DSH 20260808+ snapshot and `pnpm`.
 
-**alpha release compatibility**: compatible with `dsh-v0.1.2-alpha.1` (GitHub tag `dsh-v0.1.2-alpha.1`, source-built install, not published to npm; v0.3.7 verification: `dsh --profile web --dump-config` boot composition includes `@dsh-external/dsh-minigames`, typecheck and all 203 unit tests pass on the new source baseline — this plugin is a self-contained pure browser bundle with zero cordis/host-service runtime dependencies, so that version's Client API rework (dsh-client-runtime removal, Conversation view migration) does not affect it).
+```sh
+# Option 1: pinned-tag git dependency (public mirror, recommended; github:lhh010/dsh-minigames also works)
+dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.7'
 
-## Migration guide (DSH 0.1.1-rc.1 → 0.1.2-alpha.1)
+# Option 2: local install
+git clone https://github.com/lhh010/dsh-minigames.git
+cd dsh-minigames
+pnpm install
+pnpm build
 
-This plugin **needs no migration**: it is a self-contained pure browser bundle (a `document.body` portal; the Node half is only a loader placeholder) with type-only cordis imports and zero host-service/slot runtime dependencies. The 0.1.2-alpha.1 breaking Client rework (removal of `@deepseek-ai/dsh-client-runtime`, `ConversationSnapshot` view refactor, `ctx.slots.inject` registration form) only affects plugins using those APIs, not this one; install the latest tag (`#v0.3.7`) directly.
-**npm release compatibility**: compatible with the DSH npm release `@deepseek-ai/dsh@0.1.1-rc.1` (v0.3.5 real boot verification: after `dsh --profile web` starts, the boot manifest includes `@dsh-external/dsh-minigames` and `/plugins/@dsh-external/dsh-minigames/client.js` returns 200 — this plugin is a pure browser bundle (a `document.body` portal) with no host-service or slot dependencies, zero change on 0.1.1-rc.1), while remaining compatible with `@deepseek-ai/dsh@0.0.1-rc.5` (dist-tag `next`, i.e. the npm release of the final snapshot snapshot0812; `npm exec -p @deepseek-ai/dsh@0.0.1-rc.5 -- dsh --profile web --port <port>` accesses the pinned version and starts it in lib production mode), while also staying compatible with `@deepseek-ai/dsh@0.0.1-rc.2` (the npm release of snapshot0811). Tested against the npm rc.5 baseline: after `dsh web` starts, the `window.__DSH_BOOT__` manifest includes `@dsh-external/dsh-minigames`, and `/plugins/@dsh-external/dsh-minigames/client.js` returns 200; typecheck, build, and 201 unit tests pass. Note: starting with 0811 the vendored cordis was renamed to `@deepseek-ai/cordis` (npm releases no longer publish a vendored package under the `cordis` name). This plugin's source imports cordis only as types (`src/index.ts`, `src/client/index.tsx`, `src/invariant.ts`), and the type imports plus peer/devDependencies have been migrated to `@deepseek-ai/cordis` (peer `^4.0.1-rc.1`, which is `4.0.1-rc.4` on the npm rc.5 baseline) — the build output (lib/*.js) has zero cordis runtime imports, a plain `npm install` no longer raises ERESOLVE, and `--legacy-peer-deps` is unnecessary.
+# Install into the current web profile (writes the dependency and adds it to dsh.profile.bundles)
+dsh plugin --profile web add /absolute/path/to/dsh-minigames
+
+# Optional: confirm the composed config lists the plugin once
+dsh --profile web --dump-config | grep dsh-minigames
+```
+
+> **Install tips**: pnpm 11 may block node-pty build scripts on first install — run `pnpm approve-builds --all` under `~/.dsh/profiles/web` and re-run the install; then **hard-refresh the browser** (Ctrl/Cmd+Shift+R).
+
+### Prompt install (let DSH install it)
+
+Paste this prompt into any DSH session and the agent installs it for you:
+
+> Install the dsh-minigames plugin (DSH floating minigames window plugin):
+> 1. Run `dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.7'` (the first run may fail because pnpm 11 blocks node-pty build scripts)
+> 2. Under `~/.dsh/profiles/web`, run `pnpm approve-builds --all` (approve the build scripts)
+> 3. Re-run the install command from step 1
+> 4. Remind me to hard-refresh the browser (Ctrl/Cmd+Shift+R)
+> On errors, first check the FAQ/known limitations in the README at https://github.com/lhh010/dsh-minigames.
+Plugin-set changes take effect after **restarting `dsh web`**. To uninstall:
+
+```sh
+dsh plugin --profile web remove @dsh-external/dsh-minigames
+```
+
+> This repository ships both `dsh.plugin.json` (registry-channel manifest) and `cordis.patch.yml`
+> (official profile bundle channel); install through one of them — never enable both at once.
+
+
+est includes `@dsh-external/dsh-minigames` and `/plugins/@dsh-external/dsh-minigames/client.js` returns 200 — this plugin is a pure browser bundle (a `document.body` portal) with no host-service or slot dependencies, zero change on 0.1.1-rc.1), while remaining compatible with `@deepseek-ai/dsh@0.0.1-rc.5` (dist-tag `next`, i.e. the npm release of the final snapshot snapshot0812; `npm exec -p @deepseek-ai/dsh@0.0.1-rc.5 -- dsh --profile web --port <port>` accesses the pinned version and starts it in lib production mode), while also staying compatible with `@deepseek-ai/dsh@0.0.1-rc.2` (the npm release of snapshot0811). Tested against the npm rc.5 baseline: after `dsh web` starts, the `window.__DSH_BOOT__` manifest includes `@dsh-external/dsh-minigames`, and `/plugins/@dsh-external/dsh-minigames/client.js` returns 200; typecheck, build, and 201 unit tests pass. Note: starting with 0811 the vendored cordis was renamed to `@deepseek-ai/cordis` (npm releases no longer publish a vendored package under the `cordis` name). This plugin's source imports cordis only as types (`src/index.ts`, `src/client/index.tsx`, `src/invariant.ts`), and the type imports plus peer/devDependencies have been migrated to `@deepseek-ai/cordis` (peer `^4.0.1-rc.1`, which is `4.0.1-rc.4` on the npm rc.5 baseline) — the build output (lib/*.js) has zero cordis runtime imports, a plain `npm install` no longer raises ERESOLVE, and `--legacy-peer-deps` is unnecessary.
 
 ### 0811 compatibility notes (snapshot0811, verified on a live instance)
 
