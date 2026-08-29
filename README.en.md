@@ -296,18 +296,34 @@ This plugin **needs no migration**: it is a self-contained pure browser bundle (
 Prerequisites: a built DSH 20260808+ snapshot and `pnpm`.
 
 ```sh
-git clone https://github.com/omdsh-dev/dsh-minigames.git   # 或直接使用本目录
+# Option 1: pinned-tag git dependency (public mirror, recommended; github:omdsh-dev/dsh-minigames also works)
+dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.7'
+
+# Option 2: local install
+git clone https://github.com/lhh010/dsh-minigames.git
 cd dsh-minigames
 pnpm install
 pnpm build
 
-# 装入当前 web profile（自动写入依赖并加入 dsh.profile.bundles）
-dsh plugin --profile web add /绝对路径/to/dsh-minigames
+# Install into the current web profile (writes the dependency and adds it to dsh.profile.bundles)
+dsh plugin --profile web add /absolute/path/to/dsh-minigames
 
-# 可选：确认组合配置只出现一个插件行
+# Optional: confirm the composed config lists the plugin once
 dsh --profile web --dump-config | grep dsh-minigames
 ```
 
+> **Install tips**: pnpm 11 may block node-pty build scripts on first install — run `pnpm approve-builds --all` under `~/.dsh/profiles/web` and re-run the install; then **hard-refresh the browser** (Ctrl/Cmd+Shift+R).
+
+### Prompt install (let DSH install it)
+
+Paste this prompt into any DSH session and the agent installs it for you:
+
+> Install the dsh-minigames plugin (DSH floating minigames window plugin):
+> 1. Run `dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.7'` (the first run may fail because pnpm 11 blocks node-pty build scripts)
+> 2. Under `~/.dsh/profiles/web`, run `pnpm approve-builds --all` (approve the build scripts)
+> 3. Re-run the install command from step 1
+> 4. Remind me to hard-refresh the browser (Ctrl/Cmd+Shift+R)
+> On errors, first check the FAQ/known limitations in the README at https://github.com/lhh010/dsh-minigames.
 Plugin-set changes take effect after **restarting `dsh web`**. To uninstall:
 
 ```sh
