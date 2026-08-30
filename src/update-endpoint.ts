@@ -27,7 +27,7 @@ function semverCompare(a: string, b: string): number {
 
 /** TTL cache for the ls-remote result; failures are cached too, so an offline
  * machine answers instantly instead of blocking every page load on DNS/TCP. */
-const CACHE_TTL_MS = 300_000
+const CACHE_TTL_MS = 60_000
 const GIT_TIMEOUT_MS = 8_000
 let latestCache: { at: number; latest: string | undefined } | undefined
 let latestInflight: Promise<string | undefined> | undefined
