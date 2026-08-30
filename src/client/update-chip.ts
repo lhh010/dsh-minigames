@@ -3,7 +3,8 @@
  * via the host endpoint (falling back to copying the prompt). Self-contained
  * fixed DOM with a close (×) button; all `[data-update-chip]` elements across
  * plugins are stacked into one non-overlapping column by a shared relayout, so
- * update prompts never overlap each other.
+ * update prompts never overlap each other. When the version check fails
+ * (network unreachable), a neutral gray chip with a retry button shows instead.
  */
 import { PLUGIN_VERSION, fetchLatestTag, compareSemver, runUpdate, updatePrompt, UPDATE_ID, MIRROR, PACKAGE_SPEC } from './update-check.ts'
 
@@ -13,7 +14,7 @@ export function startUpdateChip(): void {
   if (started) return
   started = true
   void fetchLatestTag().then((tag) => {
-    if (tag === undefined) return
+    if (tag === undefined) { renderOfflineChip(); return }
     if (compareSemver(tag, PLUGIN_VERSION) <= 0) return
     renderChip(tag)
   })
@@ -71,6 +72,48 @@ function renderChip(tag: string): void {
       el.setAttribute('title', result.detail)
     })
   })
+  document.body.appendChild(el)
+  relayout()
+}
+
+/** Neutral gray chip shown when the version check cannot reach the network. */
+function renderOfflineChip(): void {
+  if (document.querySelector(`[data-update-chip="${UPDATE_ID}"]`) !== null) return
+  const el = document.createElement('div')
+  el.setAttribute('data-update-chip', UPDATE_ID)
+  el.setAttribute('title', '无法连接宿主端点 / GitHub 查询新版本（可能是网络不可达）')
+  el.style.cssText = 'position:fixed;left:12px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #4a5060;border-radius:10px;background:#22252c;color:#9aa3b5;font:12px/1.4 system-ui,Segoe UI,sans-serif;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.3);'
+  const label = document.createElement('span')
+  label.style.cssText = 'pointer-events:none;'
+  label.textContent = `⚠ ${LABEL} 版本检查失败（网络不可达），点击重试`
+  const retry = document.createElement('button')
+  retry.textContent = '重试'
+  retry.setAttribute('aria-label', '重试版本检查')
+  retry.style.cssText = 'pointer-events:auto;border:0;background:transparent;color:#8fa3c8;font:inherit;cursor:pointer;padding:0 2px;line-height:1;'
+  const close = document.createElement('button')
+  close.textContent = '×'
+  close.setAttribute('aria-label', '关闭')
+  close.title = '关闭'
+  close.style.cssText = 'pointer-events:auto;border:0;background:transparent;color:#8fa3c8;font:inherit;cursor:pointer;padding:0 2px;line-height:1;'
+  close.addEventListener('click', (event) => { event.stopPropagation(); el.remove(); relayout() })
+  el.appendChild(label)
+  el.appendChild(retry)
+  el.appendChild(close)
+  let retrying = false
+  const retryOnce = (): void => {
+    if (retrying) return
+    retrying = true
+    label.textContent = '版本检查中…'
+    void fetchLatestTag().then((tag) => {
+      retrying = false
+      if (tag === undefined) { label.textContent = `⚠ ${LABEL} 仍无法查询新版本`; return }
+      el.remove()
+      relayout()
+      if (compareSemver(tag, PLUGIN_VERSION) > 0) renderChip(tag)
+    })
+  }
+  retry.addEventListener('click', (event) => { event.stopPropagation(); retryOnce() })
+  el.addEventListener('click', (event) => { if ((event.target as HTMLElement).closest('button') === null) retryOnce() })
   document.body.appendChild(el)
   relayout()
 }

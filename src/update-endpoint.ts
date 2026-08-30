@@ -6,7 +6,7 @@
  * Only this plugin's own fixed tag is ever installed; a local link install is
  * detected and skipped (auto-update would sever the developer link).
  */
-import { execFileSync, spawn } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
@@ -25,18 +25,33 @@ function semverCompare(a: string, b: string): number {
   return (pa[0]! - pb[0]!) || (pa[1]! - pb[1]!) || (pa[2]! - pb[2]!)
 }
 
-function latestFromGit(): string | undefined {
-  try {
-    const out = execFileSync('git', ['ls-remote', '--tags', REPO_GIT], { encoding: 'utf8', maxBuffer: 1024 * 1024 })
-    let latest: string | undefined
-    for (const line of out.split('\n')) {
-      const trimmed = line.trim()
-      if (trimmed.length === 0) continue
-      const match = trimmed.match(/refs\/tags\/(v\d+\.\d+\.\d+)$/)
-      if (match !== null && (latest === undefined || semverCompare(match[1]!, latest) > 0)) latest = match[1]!
-    }
-    return latest
-  } catch { return undefined }
+/** TTL cache for the ls-remote result; failures are cached too, so an offline
+ * machine answers instantly instead of blocking every page load on DNS/TCP. */
+const CACHE_TTL_MS = 300_000
+const GIT_TIMEOUT_MS = 8_000
+let latestCache: { at: number; latest: string | undefined } | undefined
+let latestInflight: Promise<string | undefined> | undefined
+
+function latestFromGit(): Promise<string | undefined> {
+  if (latestCache !== undefined && Date.now() - latestCache.at < CACHE_TTL_MS) return Promise.resolve(latestCache.latest)
+  if (latestInflight !== undefined) return latestInflight
+  latestInflight = new Promise((resolve) => {
+    execFile('git', ['ls-remote', '--tags', REPO_GIT], { encoding: 'utf8', maxBuffer: 1024 * 1024, timeout: GIT_TIMEOUT_MS, killSignal: 'SIGKILL' }, (error, stdout) => {
+      latestInflight = undefined
+      let latest: string | undefined
+      if (error === null && typeof stdout === 'string') {
+        for (const line of stdout.split('\n')) {
+          const trimmed = line.trim()
+          if (trimmed.length === 0) continue
+          const match = trimmed.match(/refs\/tags\/(v\d+\.\d+\.\d+)$/)
+          if (match !== null && (latest === undefined || semverCompare(match[1]!, latest) > 0)) latest = match[1]!
+        }
+      }
+      latestCache = { at: Date.now(), latest }
+      resolve(latest)
+    })
+  })
+  return latestInflight
 }
 
 function isLinkInstall(): boolean {
@@ -69,7 +84,7 @@ export function registerUpdateEndpoint(ctx: Context): void {
   ctx.effect(() => {
     const latestDispose = ctx.webServer.register({
       kind: 'exact', path: LATEST_PATH,
-      handler: (_req, res) => { const body = `${JSON.stringify({ latest: latestFromGit() ?? null })}\n`; res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); res.end(body) },
+      handler: (_req, res) => { void latestFromGit().then((latest) => { const body = `${JSON.stringify({ latest: latest ?? null })}\n`; res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); res.end(body) }) },
     })
     const dispose = ctx.webServer.register({
       kind: 'exact', path: UPDATE_PATH,
