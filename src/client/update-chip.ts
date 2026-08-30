@@ -15,7 +15,7 @@ export function startUpdateChip(): void {
   started = true
   void fetchLatestTag().then((tag) => {
     if (tag === undefined) { renderOfflineChip(); return }
-    if (compareSemver(tag, PLUGIN_VERSION) <= 0) return
+    if (compareSemver(tag, PLUGIN_VERSION) <= 0) { renderCurrentChip(tag); return }
     renderChip(tag)
   })
 }
@@ -116,4 +116,22 @@ function renderOfflineChip(): void {
   el.addEventListener('click', (event) => { if ((event.target as HTMLElement).closest('button') === null) retryOnce() })
   document.body.appendChild(el)
   relayout()
+}
+
+/** Transient confirmation when the check succeeds and we are already current. */
+function renderCurrentChip(tag: string): void {
+  if (document.querySelector(`[data-update-chip="${UPDATE_ID}"]`) !== null) return
+  const el = document.createElement('div')
+  el.setAttribute('data-update-chip', UPDATE_ID)
+  el.setAttribute('title', '版本检查成功，当前已是最新版本')
+  el.style.cssText = 'position:fixed;left:12px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #2f5d3a;border-radius:10px;background:#1c2a22;color:#9fd8ae;font:12px/1.4 system-ui,Segoe UI,sans-serif;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.3);'
+  const label = document.createElement('span')
+  label.style.cssText = 'pointer-events:none;'
+  label.textContent = `✓ ${LABEL} 已是最新版本 ${tag}`
+  el.appendChild(label)
+  el.addEventListener('pointerdown', (event) => { event.stopPropagation() })
+  el.addEventListener('click', () => { el.remove(); relayout() })
+  document.body.appendChild(el)
+  relayout()
+  setTimeout(() => { el.remove(); relayout() }, 4000)
 }
