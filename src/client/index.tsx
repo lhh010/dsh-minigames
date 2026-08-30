@@ -22,7 +22,10 @@ export const name = 'dsh-minigames-client'
  * returns the disposer cordis runs on teardown (HMR, plugin unload).
  * @param ctx - the browser-side cordis context.
  */
+import { startUpdateChip } from './update-chip.ts'
+
 export function apply(ctx: Context): void {
+  startUpdateChip()
   ctx.effect(() => {
     const host = document.createElement('div')
     host.setAttribute('data-dsh-minigames', '')

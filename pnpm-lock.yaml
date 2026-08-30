@@ -11,6 +11,12 @@ importers:
       '@deepseek-ai/cordis':
         specifier: link:../test-lhh010/vendor/cordis
         version: link:../test-lhh010/vendor/cordis
+      '@deepseek-ai/dsh-home-paths':
+        specifier: link:../.dsh/source/current/packages/util/home-paths
+        version: link:../.dsh/source/current/packages/util/home-paths
+      '@deepseek-ai/dsh-host-webserver':
+        specifier: link:../.dsh/source/current/packages/host/webserver
+        version: link:../.dsh/source/current/packages/host/webserver
       '@types/node':
         specifier: ^22.20.0
         version: 22.20.1
