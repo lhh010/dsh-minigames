@@ -34,6 +34,9 @@ Floating mini-games window in the DSH Web UI: a slacking-off companion for killi
 - **Responsive sizing**: the game canvas adapts to the panel's **real available space** (toolbar + canvas + control hints always display fully with
   no scrollbars; browser zoom and panel drag-resizing reflow automatically), with width/height caps of 960px.
 
+> **Pick the plugin version that matches your DSH** (a mismatch crashes: common symptom `useConversation is not a function`)
+> - DSH **0.1.1-rc.2** (npm latest): install the **old** version `'@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.5'`
+> - DSH **0.1.2-alpha.1 / alpha.2**: install the **new** version (the default command below)
 ## Installation
 
 Prerequisites: a built DSH 20260808+ snapshot and `pnpm`.

@@ -35,6 +35,9 @@ DSH Web UI 浮动小游戏窗口：等待模型回复或修 bug 时的摸鱼神�
   始终完整展示，不出现滚动条；浏览器缩放/面板拖宽缩窄都会自动重排），宽高上限
   960px。
 
+> **你的 DSH 版本决定装哪个插件版本**（装错会崩：常见症状 `useConversation is not a function`）
+> - DSH **0.1.1-rc.2**（npm 最新）：装**旧版** `'@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.5'`
+> - DSH **0.1.2-alpha.1 / alpha.2**：装**新版**（下方默认命令）
 ## 安装
 
 前置：已构建的 DSH 20260808+ 快照、`pnpm`。
