@@ -55,7 +55,7 @@ function renderChip(tag: string): void {
     label.textContent = '更新中…'
     void runUpdate(tag).then((result) => {
       if (result.ok) {
-        label.textContent = `已更新到 ${tag}，请硬刷新（Ctrl/Cmd+Shift+R）`
+        label.textContent = result.hostChanged === true ? `已更新到 ${tag}（含宿主侧变更），请重启 dsh 生效` : `已更新到 ${tag}，客户端自动刷新生效（未见变化可硬刷新 Ctrl/Cmd+Shift+R）`
         el.setAttribute('title', '已更新，硬刷新生效')
         return
       }
@@ -69,7 +69,7 @@ function renderChip(tag: string): void {
       void navigator.clipboard?.writeText(updatePrompt(tag))
         .then(() => { label.textContent = `自动更新失败（详见剪贴板提示词）：${result.detail.slice(0, 80)}` })
         .catch(() => { label.textContent = `自动更新失败：${result.detail.slice(0, 80)}` })
-      el.setAttribute('title', result.detail)
+      el.setAttribute('title', result.recovery !== undefined ? `${result.detail}\n恢复命令：${result.recovery}` : result.detail)
     })
   })
   document.body.appendChild(el)

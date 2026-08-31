@@ -7,6 +7,8 @@
  * detected and skipped (auto-update would sever the developer link).
  */
 import { execFile, spawn } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
@@ -80,6 +82,17 @@ function readBody(req: { on: (e: string, l: (c: Buffer) => void) => void }): Pro
   return new Promise((resolve, reject) => { let body = ''; req.on('data', (c: Buffer) => { body += c.toString(); if (body.length > 4096) reject(new Error('body too large')) }); req.on('end', () => { resolve(body) }) })
 }
 
+/** SHA-256 of the installed host bundle; undefined when absent. Compared before/after
+ * an install so the client only asks for a dsh restart when the host half changed. */
+function hostBundleHash(): string | undefined {
+  try {
+    const scopeDir = PACKAGE_SPEC.slice(0, PACKAGE_SPEC.indexOf('/'))
+    const pkgDir = PACKAGE_SPEC.slice(PACKAGE_SPEC.indexOf('/') + 1)
+    const p = resolve(dshHomePath('profiles', 'web', 'node_modules'), scopeDir, pkgDir, 'lib', 'index.js')
+    return createHash('sha256').update(readFileSync(p)).digest('hex')
+  } catch { return undefined }
+}
+
 export function registerUpdateEndpoint(ctx: Context): void {
   ctx.effect(() => {
     const latestDispose = ctx.webServer.register({
@@ -91,12 +104,18 @@ export function registerUpdateEndpoint(ctx: Context): void {
       handler: async (req, res) => {
         const send = (status: number, value: unknown): void => { const body = `${JSON.stringify(value)}\n`; res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); res.end(body) }
         if (req.method !== 'POST') { send(405, { ok: false, error: 'method not allowed' }); return }
+        // R-12 边界：宿主路由无鉴权，安装动作要求客户端专用头 + 同源 Origin 双保险。
+        const clickToken = req.headers['x-dsh-plugin-update']
+        const originHeader = req.headers.origin
+        const sameOrigin = originHeader === undefined || (typeof originHeader === 'string' && originHeader === `http://${ctx.webServer.host}:${String(ctx.webServer.port)}`)
+        if (clickToken !== 'click' || !sameOrigin) { send(403, { ok: false, error: 'forbidden: update requires the same-origin click header' }); return }
         try {
           const parsed: unknown = JSON.parse(await readBody(req))
           const tag = (parsed as { tag?: unknown }).tag
           if (typeof tag !== 'string' || !/^v\d+\.\d+\.\d+$/.test(tag)) { send(400, { ok: false, error: 'invalid tag' }); return }
+          const hashBefore = hostBundleHash()
           const result = await runInstall(tag)
-          send(result.link ? 200 : (result.ok ? 200 : 500), { ok: result.ok, link: result.link, output: result.output.slice(-4000), tag })
+          send(result.link ? 200 : (result.ok ? 200 : 500), { ok: result.ok, link: result.link, output: result.output.slice(-4000), tag, hostChanged: result.ok && hashBefore !== hostBundleHash(), ...(result.ok ? {} : { recovery: `dsh plugin --profile web add '${PACKAGE_SPEC}@github:${MIRROR}#${tag}'` }) })
         } catch (e) { send(400, { ok: false, error: String((e as Error)?.message ?? e) }) }
       },
     })

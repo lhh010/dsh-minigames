@@ -9,5 +9,7 @@ export interface UpdateResult {
     readonly ok: boolean;
     readonly detail: string;
     readonly link?: boolean;
+    readonly recovery?: string;
+    readonly hostChanged?: boolean;
 }
 export declare function runUpdate(tag: string): Promise<UpdateResult>;

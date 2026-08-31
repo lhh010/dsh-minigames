@@ -36,12 +36,12 @@ export async function fetchLatestTag(): Promise<string | undefined> {
 export function updatePrompt(tag: string): string {
   return [`帮我更新 ${UPDATE_ID} 插件到 ${tag}，步骤：`, `1. 执行 dsh plugin --profile web add '${PACKAGE_SPEC}@github:${MIRROR}#${tag}'（首次可能被 pnpm 11 拦截构建脚本，则先在 ~/.dsh/profiles/web 执行 pnpm approve-builds --all）`, '2. 完成后提醒我硬刷新浏览器（Ctrl/Cmd+Shift+R）'].join('\n')
 }
-export interface UpdateResult { readonly ok: boolean; readonly detail: string; readonly link?: boolean }
+export interface UpdateResult { readonly ok: boolean; readonly detail: string; readonly link?: boolean; readonly recovery?: string; readonly hostChanged?: boolean }
 export async function runUpdate(tag: string): Promise<UpdateResult> {
   try {
-    const res = await fetch(`/${UPDATE_ID}/update`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tag }), signal: AbortSignal.timeout(130000) })
+    const res = await fetch(`/${UPDATE_ID}/update`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-dsh-plugin-update': 'click' }, body: JSON.stringify({ tag }), signal: AbortSignal.timeout(130000) })
     const body: unknown = await res.json().catch(() => ({}))
-    const parsed = body as { ok?: boolean; output?: string; error?: string; link?: boolean }
-    return { ok: res.ok && parsed.ok === true, detail: typeof parsed.output === 'string' ? parsed.output : (parsed.error ?? String(res.status)), link: parsed.link === true }
+    const parsed = body as { ok?: boolean; output?: string; error?: string; link?: boolean; recovery?: string; hostChanged?: boolean }
+    return { ok: res.ok && parsed.ok === true, detail: typeof parsed.output === 'string' ? parsed.output : (parsed.error ?? String(res.status)), link: parsed.link === true, ...(typeof parsed.recovery === 'string' ? { recovery: parsed.recovery } : {}), ...(parsed.hostChanged === true ? { hostChanged: true } : {}) }
   } catch (e) { return { ok: false, detail: String((e as Error)?.message ?? e) } }
 }
