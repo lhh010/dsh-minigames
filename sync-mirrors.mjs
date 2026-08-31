@@ -62,6 +62,8 @@ for (const [remote, org] of REMOTES) {
   if (!noPush) {
     git('fetch', remote)
     git('push', '--force-with-lease', remote, 'HEAD:main')
+    // README 安装命令引用的发布 tag 必须在每个镜像上存在，否则 pnpm #<tag> 解析失败（此前只推分支漏了 tag）。
+    git('push', remote, '--tags')
   }
 }
 
