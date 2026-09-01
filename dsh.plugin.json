@@ -1,6 +1,6 @@
 {
   "id": "@dsh-external/dsh-minigames",
-  "version": "0.1.0",
+  "version": "0.3.10",
   "main": "./lib/index.js",
   "description": "DSH Web UI 右侧小游戏面板：恐龙跳一跳 / 俄罗斯方块 / 坦克大战(AI)，可扩展游戏注册表",
   "engines": {
