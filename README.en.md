@@ -36,14 +36,14 @@ Floating mini-games window in the DSH Web UI: a slacking-off companion for killi
 
 > **Pick the plugin version that matches your DSH** (a mismatch crashes: common symptom `useConversation is not a function`)
 > - DSH **0.1.1-rc.2** (npm latest): install the **old** version `'@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.5'`
-> - DSH **0.1.2-alpha.1 / alpha.2 / alpha.3 / alpha.4 / alpha.5**: install the **new** version (the default command below)
+> - DSH **0.1.2-alpha.1 / alpha.2 / alpha.3 / alpha.4 / alpha.5 / rc.1**: install the **new** version (the default command below)
 ## Installation
 
 Prerequisites: a built DSH 20260808+ snapshot and `pnpm`.
 
 ```sh
 # Option 1: pinned-tag git dependency (public mirror, recommended; github:lhh010/dsh-minigames also works)
-dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.13'
+dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.14'
 
 # Option 2: local install
 git clone https://github.com/lhh010/dsh-minigames.git
@@ -65,7 +65,7 @@ dsh --profile web --dump-config | grep dsh-minigames
 Paste this prompt into any DSH session and the agent installs it for you:
 
 > Install the dsh-minigames plugin (DSH floating minigames window plugin):
-> 1. Run `dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.13'` (the first run may fail because pnpm 11 blocks node-pty build scripts)
+> 1. Run `dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.14'` (the first run may fail because pnpm 11 blocks node-pty build scripts)
 > 2. Under `~/.dsh/profiles/web`, run `pnpm approve-builds --all` (approve the build scripts)
 > 3. Re-run the install command from step 1
 > 4. Remind me to hard-refresh the browser (Ctrl/Cmd+Shift+R)
@@ -95,6 +95,10 @@ est includes `@dsh-external/dsh-minigames` and `/plugins/@dsh-external/dsh-minig
 - **Live-instance boot verification**: after web starts on the final snapshot (`snapshots/20260812T172954Z-final`), the `window.__DSH_BOOT__` manifest includes `@dsh-external/dsh-minigames` and `/plugins/@dsh-external/dsh-minigames/client.js` returns 200; the boot manifest after starting `dsh web` as an npm rc.5 consumer also includes this plugin. typecheck, build, and 201 unit tests pass against the final-snapshot baseline.
 
 ## Changelog
+
+### 2026-09-03 · v0.3.14 — Declare DSH 0.1.2-rc.1 support
+
+- **Verification**: alpha.5 → rc.1 is version-bump-only upstream (252 files, zero code diff); verified live on rc.1, no code changes needed
 
 ### 2026-08-22 · v0.3.6 — Fix Tetris landed-row not clearing (lock delay)
 
@@ -334,7 +338,7 @@ Prerequisites: a built DSH 20260808+ snapshot and `pnpm`.
 
 ```sh
 # Option 1: pinned-tag git dependency (public mirror, recommended; github:lhh010/dsh-minigames also works)
-dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.13'
+dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.14'
 
 # Option 2: local install
 git clone https://github.com/lhh010/dsh-minigames.git
@@ -356,7 +360,7 @@ dsh --profile web --dump-config | grep dsh-minigames
 Paste this prompt into any DSH session and the agent installs it for you:
 
 > Install the dsh-minigames plugin (DSH floating minigames window plugin):
-> 1. Run `dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.13'` (the first run may fail because pnpm 11 blocks node-pty build scripts)
+> 1. Run `dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.14'` (the first run may fail because pnpm 11 blocks node-pty build scripts)
 > 2. Under `~/.dsh/profiles/web`, run `pnpm approve-builds --all` (approve the build scripts)
 > 3. Re-run the install command from step 1
 > 4. Remind me to hard-refresh the browser (Ctrl/Cmd+Shift+R)
