@@ -28,6 +28,7 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
   let raf = 0
   let last = 0
   let aiAt = 0
+  let aiRemaining = 0
   let lastScore = -1
 
   const reportScore = (): void => {
@@ -36,6 +37,14 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
     if (score === lastScore) return
     lastScore = score
     options?.onScore?.(score)
+  }
+
+  const reset = (): void => {
+    state = createOthelloState()
+    aiAt = 0
+    aiRemaining = 0
+    lastScore = -1
+    reportScore()
   }
 
   const cellFromEvent = (event: MouseEvent): { r: number; c: number } | null => {
@@ -49,6 +58,7 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
   }
 
   const onMouseDown = (event: MouseEvent): void => {
+    if (!running) return
     if (state.over || state.turn !== 1) return
     const cell = cellFromEvent(event)
     if (cell === null) return
@@ -60,14 +70,16 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR')) return
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     if (event.code === 'KeyR') {
       event.preventDefault()
-      state = createOthelloState()
-      aiAt = 0
-      lastScore = -1
+      if (options?.onRestartRequest) options.onRestartRequest()
+      else reset()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
-      togglePause()
+      if (options?.onPauseRequest) options.onPauseRequest()
+      else togglePause()
     }
   }
 
@@ -80,6 +92,8 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
       const move = chooseAiMove(state)
       if (move !== null) place(state, move.r, move.c)
       else passTurn(state)
+      aiAt = 0
+      aiRemaining = 0
       reportScore()
     }
     void dt
@@ -101,11 +115,19 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
   }
   const pause = (): void => {
     running = false
+    if (aiAt > 0) {
+      aiRemaining = Math.max(0, aiAt - performance.now())
+      aiAt = 0
+    }
     stopLoop()
   }
   const resume = (): void => {
     if (running) return
     running = true
+    if (aiRemaining > 0) {
+      aiAt = performance.now() + aiRemaining
+      aiRemaining = 0
+    }
     startLoop()
   }
 

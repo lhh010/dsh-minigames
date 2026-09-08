@@ -26,6 +26,7 @@ function createHopGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
   let raf = 0
   let last = 0
   let lastScore = -1
+  let chargeHeld = false
 
   const reportScore = (): void => {
     if (state.score === lastScore) return
@@ -33,37 +34,60 @@ function createHopGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     options?.onScore?.(state.score)
   }
 
+  const reset = (): void => {
+    state = createHopState()
+    chargeHeld = false
+    lastScore = -1
+    reportScore()
+  }
+
   const onMouseDown = (): void => {
-    if (state.over) return
+    if (!running || state.over) return
+    chargeHeld = true
     startCharge(state)
   }
 
   const onMouseUp = (): void => {
-    if (state.over || !state.jumping) {
+    if (!chargeHeld) return
+    chargeHeld = false
+    if (running && (state.over || !state.jumping)) {
       jump(state)
       reportScore()
     }
   }
 
+  const clearCharge = (): void => {
+    chargeHeld = false
+  }
+
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR')) return
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     if (event.code === 'Space' || event.code === 'ArrowUp' || event.code === 'KeyW') {
       event.preventDefault()
-      if (state.over) return
+      if (!running || state.over) return
+      chargeHeld = true
       startCharge(state)
     } else if (event.code === 'KeyR') {
       event.preventDefault()
-      state = createHopState()
-      lastScore = -1
+      if (options?.onRestartRequest) options.onRestartRequest()
+      else reset()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
-      togglePause()
+      if (options?.onPauseRequest) {
+        clearCharge()
+        options.onPauseRequest()
+      }
+      else togglePause()
     }
   }
 
   const onKeyUp = (event: KeyboardEvent): void => {
     if (event.code === 'Space' || event.code === 'ArrowUp' || event.code === 'KeyW') {
-      if (state.over || !state.jumping) {
+      if (!chargeHeld) return
+      chargeHeld = false
+      if (running && (state.over || !state.jumping)) {
         jump(state)
         reportScore()
       }
@@ -96,6 +120,7 @@ function createHopGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
   }
   const pause = (): void => {
     running = false
+    clearCharge()
     stopLoop()
   }
   const resume = (): void => {
@@ -106,8 +131,10 @@ function createHopGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
 
   canvas.addEventListener('mousedown', onMouseDown)
   canvas.addEventListener('mouseup', onMouseUp)
+  window.addEventListener('mouseup', onMouseUp)
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
+  window.addEventListener('blur', clearCharge)
   focusGameHost(host)
   running = true
   startLoop()
@@ -123,8 +150,10 @@ function createHopGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
       fit.dispose()
       canvas.removeEventListener('mousedown', onMouseDown)
       canvas.removeEventListener('mouseup', onMouseUp)
+      window.removeEventListener('mouseup', onMouseUp)
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('blur', clearCharge)
     },
   }
 }

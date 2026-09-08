@@ -34,23 +34,32 @@ function createFlappyGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     options?.onScore?.(state.score)
   }
 
+  const reset = (): void => {
+    state = createFlappyState()
+    lastScore = -1
+    reportScore()
+  }
+
   const onPointerDown = (): void => {
-    if (state.over) return
+    if (!running || state.over) return
     flap(state)
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR')) return
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     if (event.code === 'Space' || event.code === 'ArrowUp' || event.code === 'KeyW') {
       event.preventDefault()
       if (!state.over) flap(state)
     } else if (event.code === 'KeyR') {
       event.preventDefault()
-      state = createFlappyState()
-      lastScore = -1
+      if (options?.onRestartRequest) options.onRestartRequest()
+      else reset()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
-      togglePause()
+      if (options?.onPauseRequest) options.onPauseRequest()
+      else togglePause()
     }
   }
 

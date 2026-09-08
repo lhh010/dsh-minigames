@@ -7,6 +7,7 @@ import type { SudokuState } from './logic.ts';
 import { type Difficulty } from './logic.ts';
 export declare const CELL = 40;
 export declare const HUD_H = 30;
+export declare const PAD_H = 38;
 export declare const BOARD_W: number;
 export declare const BOARD_H: number;
 export declare const LOGICAL_W: number;

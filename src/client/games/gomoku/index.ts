@@ -29,6 +29,7 @@ function createGomokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   let raf = 0
   let last = 0
   let aiAt = 0 // timestamp when the AI should move
+  let aiRemaining = 0
   let lastScore = -1
 
   const reportScore = (): void => {
@@ -37,6 +38,14 @@ function createGomokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     if (score === lastScore) return
     lastScore = score
     options?.onScore?.(score)
+  }
+
+  const reset = (): void => {
+    state = createGomokuState()
+    aiAt = 0
+    aiRemaining = 0
+    lastScore = -1
+    reportScore()
   }
 
   const indexFromEvent = (event: MouseEvent): { r: number; c: number } | null => {
@@ -50,6 +59,7 @@ function createGomokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   }
 
   const onMouseDown = (event: MouseEvent): void => {
+    if (!running) return
     if (state.over || state.turn !== 1) return
     const cell = indexFromEvent(event)
     if (cell === null) return
@@ -61,14 +71,16 @@ function createGomokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR')) return
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     if (event.code === 'KeyR') {
       event.preventDefault()
-      state = createGomokuState()
-      aiAt = 0
-      lastScore = -1
+      if (options?.onRestartRequest) options.onRestartRequest()
+      else reset()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
-      togglePause()
+      if (options?.onPauseRequest) options.onPauseRequest()
+      else togglePause()
     }
   }
 
@@ -80,6 +92,8 @@ function createGomokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     if (!state.over && state.turn === 2 && now >= aiAt) {
       const move = chooseAiMove(state)
       if (move !== null) place(state, move.r, move.c)
+      aiAt = 0
+      aiRemaining = 0
       reportScore()
     }
     void dt
@@ -101,11 +115,19 @@ function createGomokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   }
   const pause = (): void => {
     running = false
+    if (aiAt > 0) {
+      aiRemaining = Math.max(0, aiAt - performance.now())
+      aiAt = 0
+    }
     stopLoop()
   }
   const resume = (): void => {
     if (running) return
     running = true
+    if (aiRemaining > 0) {
+      aiAt = performance.now() + aiRemaining
+      aiRemaining = 0
+    }
     startLoop()
   }
 

@@ -33,6 +33,12 @@ function createBreakoutGame(host: HTMLElement, options?: MiniGameMountOptions): 
     options?.onScore?.(state.score)
   }
 
+  const reset = (): void => {
+    state = createBreakoutState()
+    lastScore = -1
+    reportScore()
+  }
+
   const paddleFromEvent = (event: MouseEvent): void => {
     const rect = canvas.getBoundingClientRect()
     const x = ((event.clientX - rect.left) * LOGICAL_W) / rect.width
@@ -40,17 +46,19 @@ function createBreakoutGame(host: HTMLElement, options?: MiniGameMountOptions): 
   }
 
   const onMouseMove = (event: MouseEvent): void => {
-    if (state.over) return
+    if (!running || state.over) return
     paddleFromEvent(event)
   }
 
   const onMouseDown = (event: MouseEvent): void => {
-    if (state.over) return
+    if (!running || state.over) return
     paddleFromEvent(event)
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR')) return
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
       event.preventDefault()
       movePaddle(state, state.paddleX - 26)
@@ -59,11 +67,12 @@ function createBreakoutGame(host: HTMLElement, options?: MiniGameMountOptions): 
       movePaddle(state, state.paddleX + 26)
     } else if (event.code === 'KeyR') {
       event.preventDefault()
-      state = createBreakoutState()
-      lastScore = -1
+      if (options?.onRestartRequest) options.onRestartRequest()
+      else reset()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
-      togglePause()
+      if (options?.onPauseRequest) options.onPauseRequest()
+      else togglePause()
     }
   }
 

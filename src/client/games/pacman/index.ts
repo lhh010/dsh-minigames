@@ -45,8 +45,17 @@ function createPacmanGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     options?.onScore?.(state.score)
   }
 
+  const reset = (): void => {
+    state = createPacmanState()
+    t = 0
+    lastScore = -1
+    reportScore()
+  }
+
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR')) return
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     const dir = KEY_DIR[event.code]
     if (dir !== undefined) {
       event.preventDefault()
@@ -55,11 +64,12 @@ function createPacmanGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     }
     if (event.code === 'KeyR') {
       event.preventDefault()
-      state = createPacmanState()
-      lastScore = -1
+      if (options?.onRestartRequest) options.onRestartRequest()
+      else reset()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
-      togglePause()
+      if (options?.onPauseRequest) options.onPauseRequest()
+      else togglePause()
     }
   }
 
