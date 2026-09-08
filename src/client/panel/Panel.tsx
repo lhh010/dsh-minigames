@@ -40,6 +40,7 @@ function Controller(): ReactNode {
 
 export function MiniGamePanel(): ReactNode {
   const [open, setOpen] = useState(() => read('open') === '1')
+  const [theme, setTheme] = useState(() => read('theme') === 'light' ? 'light' : 'dark')
   const [gameId, setGameId] = useState<string | null>(null)
   const [library, setLibrary] = useState(true)
   const [pendingGame, setPendingGame] = useState<string | null>(null)
@@ -147,11 +148,15 @@ export function MiniGamePanel(): ReactNode {
   }
 
   return <>
-    {!open && <button ref={launcherRef} type="button" className="dmg-launcher" style={{ left: launcher.x, top: launcher.y }} aria-label="打开小游戏" title="小游戏 · 拖动可移动" onPointerDown={event => { suppressClick.current = false; drag(event, 'launcher') }} onClick={() => { if (suppressClick.current) { suppressClick.current = false; return } toggleOpen(true) }}><Controller /></button>}
-    <section ref={panelRef} className="dmg-float" aria-label="小游戏" hidden={!open} style={{ left: pos.x, top: pos.y, width, height }} data-dock={dock}>
+    {!open && <button ref={launcherRef} type="button" className="dmg-launcher" data-theme={theme} style={{ left: launcher.x, top: launcher.y }} aria-label="打开小游戏" title="小游戏 · 拖动可移动" onPointerDown={event => { suppressClick.current = false; drag(event, 'launcher') }} onClick={() => { if (suppressClick.current) { suppressClick.current = false; return } toggleOpen(true) }}><Controller /></button>}
+    <section ref={panelRef} className="dmg-float" aria-label="小游戏" hidden={!open} style={{ left: pos.x, top: pos.y, width, height }} data-dock={dock} data-theme={theme}>
       <header className="dmg-header" onPointerDown={event => drag(event, 'window')}>
         <span className="dmg-title"><Controller />小游戏</span>
         <div className="dmg-header-actions">
+          <button type="button" className="dmg-theme" aria-label={theme === 'dark' ? '切换到白天主题' : '切换到夜间主题'} title={theme === 'dark' ? '切换到白天主题' : '切换到夜间主题'} onClick={() => { const next = theme === 'dark' ? 'light' : 'dark'; setTheme(next); save('theme', next) }}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">{theme === 'dark' ? <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></> : <path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10Z" />}</svg>
+            {theme === 'dark' ? '白天' : '夜间'}
+          </button>
           <label className="dmg-dock"><span className="dmg-sr-only">窗口位置</span><select aria-label="窗口位置" value={dock} onChange={event => setDockTo(event.target.value as Dock)}><option value="free">浮动窗口</option><option value="left">靠左停放</option><option value="right">靠右停放</option></select></label>
           <button type="button" className="dmg-close" aria-label="隐藏小游戏" title="隐藏，保留本局" onClick={() => toggleOpen(false)}>×</button>
         </div>

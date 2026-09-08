@@ -151,6 +151,22 @@ afterEach(async () => {
 })
 
 describe('MiniGamePanel', () => {
+  it('切换白天主题时保留本局，并在重新挂载后恢复外观', async () => {
+    const view = await mountPanel()
+    const panel = await openLibrary(view)
+    await choose(view, 'Alpha')
+    await startGame(view)
+    const first = required(fakes.alpha.instances[0], 'the Alpha instance')
+    await click(required(view.querySelector('[aria-label="切换到白天主题"]'), 'theme button'))
+    expect(panel.dataset.theme).toBe('light')
+    expect(first.instance.destroy).not.toHaveBeenCalled()
+    expect(fakes.alpha.create).toHaveBeenCalledTimes(1)
+    await act(async () => root?.unmount())
+    root = undefined
+    const restored = await mountPanel()
+    expect(restored.querySelector<HTMLElement>('.dmg-float')?.dataset.theme).toBe('light')
+  })
+
   it('opens the game library from the launcher and persists visibility', async () => {
     const view = await mountPanel()
     const panel = required(view.querySelector<HTMLElement>('.dmg-float'), 'the panel')

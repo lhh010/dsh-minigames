@@ -67,8 +67,10 @@ function createHopGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     if (event.code === 'Space' || event.code === 'ArrowUp' || event.code === 'KeyW') {
       event.preventDefault()
       if (!running || state.over) return
-      chargeHeld = true
-      startCharge(state)
+      if (!chargeHeld) {
+        chargeHeld = true
+        startCharge(state)
+      }
     } else if (event.code === 'KeyR') {
       event.preventDefault()
       if (options?.onRestartRequest) options.onRestartRequest()
@@ -99,7 +101,7 @@ function createHopGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     if (!running) return
     const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
     last = now
-    charge(state, dt)
+    if (chargeHeld) charge(state, dt)
     stepHop(state, dt)
     reportScore()
     renderHop(ctx, state)

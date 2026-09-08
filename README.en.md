@@ -4,6 +4,7 @@
 
 Floating mini-games window in the DSH Web UI: a slacking-off companion for killing time while waiting for model replies or fixing bugs.
 
+- **Light and dark themes**: switch from the header to restyle the window, library, buttons, pause/confirmation UI and launcher. Your choice persists, and switching keeps the current round.
 - **Game library**: filter by puzzle, board, arcade or reflex games; search names and controls. Personal bests appear after scoring.
 - **Floating window**: drag the header to move, choose floating/left/right placement from the menu, and drag the edge to resize.
   The resize handle also supports keyboard arrow keys. Window size and position stay within small viewports.
