@@ -13,6 +13,16 @@ export interface MiniGameMountOptions {
    * not throttle).
    */
   onScore?: (score: number) => void
+  /**
+   * 请求面板切换暂停（通常由游戏的 P 快捷键触发）。提供此回调后，游戏
+   * 不直接修改自身运行状态，暂停状态由面板统一维护。
+   */
+  onPauseRequest?: () => void
+  /**
+   * 请求面板重开（通常由游戏的 R 快捷键触发）。面板可以重新创建实例，
+   * 让工具栏状态与当前游戏保持一致。
+   */
+  onRestartRequest?: (restart?: () => void) => void
 }
 
 /** The runtime handle of one mounted game; the panel drives its lifecycle. */
@@ -23,6 +33,8 @@ export interface MiniGameInstance {
   pause(): void
   /** Resume after pause. */
   resume(): void
+  /** 可选的就地重开钩子，面板可用它保留本局的游戏选项。 */
+  restart?: () => void
   /** Stop the loop and release all resources (keyboard, rAF, timers). */
   destroy(): void
 }

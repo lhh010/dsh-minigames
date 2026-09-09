@@ -43,8 +43,24 @@ function createDinoGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     options?.onScore?.(score)
   }
 
+  const reset = (): void => {
+    state = createDinoState()
+    overSince = 0
+    jumpEdge = false
+    duckHeld = false
+    lastScore = -1
+    reportScore()
+  }
+
+  const clearInput = (): void => {
+    jumpEdge = false
+    duckHeld = false
+  }
+
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR')) return
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     if (event.code === 'Space' || event.code === 'ArrowUp') {
       event.preventDefault()
       if (state.over) {
@@ -57,13 +73,22 @@ function createDinoGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
       duckHeld = true
     } else if (event.code === 'KeyP') {
       event.preventDefault()
-      togglePause()
+      if (options?.onPauseRequest) {
+        clearInput()
+        options.onPauseRequest()
+      }
+      else togglePause()
+    } else if (event.code === 'KeyR') {
+      event.preventDefault()
+      if (options?.onRestartRequest) options.onRestartRequest()
+      else reset()
     }
   }
   const onKeyUp = (event: KeyboardEvent): void => {
     if (event.code === 'ArrowDown') duckHeld = false
   }
   const onClick = (): void => {
+    if (!running) return
     if (state.over) {
       if (performance.now() - overSince > RESTART_DELAY) reset()
       return
@@ -96,16 +121,6 @@ function createDinoGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     raf = 0
   }
 
-  const reset = (): void => {
-    state = createDinoState()
-    overSince = 0
-    jumpEdge = false
-    duckHeld = false
-    lastScore = -1
-    reportScore()
-    if (running) startLoop()
-  }
-
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -113,6 +128,7 @@ function createDinoGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
 
   const pause = (): void => {
     running = false
+    clearInput()
     stopLoop()
   }
   const resume = (): void => {
@@ -123,6 +139,7 @@ function createDinoGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
 
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
+  window.addEventListener('blur', clearInput)
   canvas.addEventListener('click', onClick)
   focusGameHost(host)
   running = true
@@ -139,6 +156,7 @@ function createDinoGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
       fit.dispose()
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('blur', clearInput)
       canvas.removeEventListener('click', onClick)
     },
   }
@@ -149,6 +167,6 @@ export const dinoGame: MiniGameDefinition = {
   title: '恐龙跳一跳',
   icon: '🦖',
   description: 'Chrome 经典小恐龙：空格/点击跳跃，↓ 蹲下躲鸟，速度越来越快。',
-  controls: ['空格 / ↑ / 点击：跳跃', '↓：蹲下躲鸟', 'P：暂停'],
+  controls: ['空格 / ↑ / 点击：跳跃', '↓：蹲下躲鸟', 'R：重开', 'P：暂停'],
   create: createDinoGame,
 }

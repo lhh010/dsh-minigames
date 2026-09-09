@@ -37,8 +37,18 @@ function createTanksGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     options?.onScore?.(world.score)
   }
 
+  const clearInput = (): void => {
+    input.up = false
+    input.down = false
+    input.left = false
+    input.right = false
+    input.fire = false
+  }
+
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR')) return
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     switch (event.code) {
       case 'ArrowUp':
       case 'KeyW':
@@ -66,10 +76,16 @@ function createTanksGame(host: HTMLElement, options?: MiniGameMountOptions): Min
         break
       case 'KeyP':
         event.preventDefault()
-        togglePause()
+        if (options?.onPauseRequest) {
+          clearInput()
+          options.onPauseRequest()
+        }
+        else togglePause()
         break
       case 'KeyR':
-        if (world.result !== 'none') reset()
+        event.preventDefault()
+        if (options?.onRestartRequest) options.onRestartRequest()
+        else if (world.result !== 'none') reset()
         break
     }
   }
@@ -120,7 +136,7 @@ function createTanksGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   const reset = (): void => {
     world = createWorld()
     lastScore = -1
-    input.up = input.down = input.left = input.right = input.fire = false
+    clearInput()
     reportScore()
     if (running) startLoop()
   }
@@ -131,6 +147,7 @@ function createTanksGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   }
   const pause = (): void => {
     running = false
+    clearInput()
     stopLoop()
   }
   const resume = (): void => {
@@ -141,6 +158,7 @@ function createTanksGame(host: HTMLElement, options?: MiniGameMountOptions): Min
 
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
+  window.addEventListener('blur', clearInput)
   focusGameHost(host)
   running = true
   startLoop()
@@ -156,6 +174,7 @@ function createTanksGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       fit.dispose()
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('blur', clearInput)
     },
   }
 }

@@ -4,11 +4,14 @@
 
 Floating mini-games window in the DSH Web UI: a slacking-off companion for killing time while waiting for model replies or fixing bugs.
 
-- **Collapsed state**: hiding the window leaves a round floating 🎮 button (bottom-right by default) that you can **freely drag** and whose position is
-  remembered — releasing after a drag (> 5px travel) does NOT reopen the window; only a **click** does.
-- **Expanded state**: a floating mini-games window — **drag the title bar** to move it anywhere; releasing near a screen edge auto-**snaps** to that edge
-  (left/right docking, top/bottom edge-hugging). Position, dock state, and width persist across reloads; default width is min(50vw, 640px), draggable on
-  its left edge between 360px–80vw, and you can freely pick a game inside the panel.
+- **Light and dark themes**: switch from the header to restyle the window, library, buttons, pause/confirmation UI and launcher. Your choice persists, and switching keeps the current round.
+- **Game library**: filter by puzzle, board, arcade or reflex games; search names and controls. Personal bests appear after scoring.
+- **Floating window**: drag the header to move, choose floating/left/right placement from the menu, and drag the edge to resize.
+  The resize handle also supports keyboard arrow keys. Window size and position stay within small viewports.
+- **Current round**: hiding the window or returning to the library pauses and preserves the game. Resume explicitly when ready.
+  Switching games and restarting require confirmation. Reloading returns to the library; personal bests and window placement persist, but rounds do not.
+- **Controls**: choose a game, read its introduction, then start. The pause overlay and toolbar share the P/R shortcut flow.
+  Leaving the game area or browser tab pauses play until you resume; expand the controls with the help button.
 - **Games** (all offline, zero asset files, Canvas-rendered):
   1. 🦖 **Dino Run** — the classic Chrome T-Rex (day/night/rain);
   2. 🧱 **Tetris** — classic falling-block line clearing;
@@ -29,7 +32,7 @@ Floating mini-games window in the DSH Web UI: a slacking-off companion for killi
   17. 🟡 **Pac-Man** — classic maze munching; power pellets let you eat the ghosts back;
   18. 🎯 **Aim Training** — FPS aim practice: locked mouse turns the view to track a 3D drifting target; left-click shoots with recoil.
 - **Reserved extension interface**: a game registry (`registerGame`) — adding a game only requires implementing one interface.
-- **Experience details**: games auto-pause when the window is hidden or the tab is switched, and resume when you come back; each game's high score is
+- **Experience details**: games auto-pause when the window is hidden or the tab is switched, and wait for you to resume; each game's high score is
   stored in localStorage; keyboard input only takes effect after clicking the game area and never hijacks the chat input box.
 - **Responsive sizing**: the game canvas adapts to the panel's **real available space** (toolbar + canvas + control hints always display fully with
   no scrollbars; browser zoom and panel drag-resizing reflow automatically), with width/height caps of 960px.
@@ -376,10 +379,14 @@ dsh plugin --profile web remove @dsh-external/dsh-minigames
 
 ## Usage
 
-1. Open the DSH Web UI (`dsh web`); a slim 🎮 bar appears at the page's right edge.
-2. Click the bar → the panel expands to occupy the right half of the window.
-3. Click a game card to start; `P` pauses, `R` restarts (after the round ends), and clicking "Choose Game" returns to the selection list.
-4. Click "Collapse" again to fold back into the bar (the game auto-pauses and progress is kept).
+1. Open DSH Web UI and click the floating controller button to open the library.
+2. Filter or search for a game, select it, then click the start button.
+3. Use the pause button or `P` to pause/resume; use restart or `R` to open the restart confirmation.
+4. Return to the library without losing the current round. Choosing another game asks before ending it.
+5. Hide with the top-right `×`; reopen and resume manually when ready.
+6. Choose window placement from the menu or drag the title bar and resize edge.
+
+Sudoku has clickable number/erase controls, confirms difficulty changes and preserves the current difficulty on restart. Minesweeper has reveal/flag modes for use without a right mouse button. Memory Match records completed rounds only; old in-progress scores are retained in storage but excluded from the new personal best.
 
 ## Development
 
@@ -407,7 +414,7 @@ src/
   client/
     index.tsx         客户端插件：DOM portal 挂载面板（ctx.effect 管理生命周期）
     app.css           面板样式（全部 dmg- 前缀，随 bundle 注入 <style>）
-    panel/Panel.tsx   折叠条 / 展开面板 / 游戏选择器 / GameArea 生命周期
+    panel/Panel.tsx   浮动窗口、确认操作与 GameArea 生命周期
     games/
       types.ts        游戏扩展接口（MiniGameDefinition / MiniGameInstance）
       registry.ts     注册表（registerGame / getGames / getGame）
@@ -467,14 +474,14 @@ registerGame(myGame)
 ```
 
 The instance returned by `create` has its lifecycle driven by the panel: when switching games, the old instance is `destroy()`ed first, then
-the new one is `create()`d; `pause()` is called when the panel collapses, the tab hides, or the user pauses.
+the new one is `create()`d. Hiding, returning to the library, losing focus or pausing calls `pause()`; explicit continuation calls `resume()`. P/R request `options.onPauseRequest` / `options.onRestartRequest` so the panel owns pause state and confirms restarts before recreating the instance. Games can provide an optional `restart()` to preserve settings, or pass a deferred action to `onRestartRequest`; cancellation never runs that action.
 Scores are reported via `options.onScore?.(score)` (called only when they change); the panel handles display and
 high-score persistence. It's recommended to split game logic into pure-function modules (no DOM/timers), covered
 by unit tests just like the existing games.
 
 ## Known Limitations and Roadmap
 
-- Keyboard control depends on the game area's focus; after clicking the chat input you must click back into the game area to keep playing (intentional).
+- Keyboard control depends on the game area's focus; clicking the chat input pauses the game; return and use the resume button to continue.
 - Tank Battle's AI uses greedy tracking + line-of-sight shooting with no pathfinding; obstacle avoidance and different armor types could be added later.
 - Match-3's and the block/tank games' level progress is not saved across sessions (only high scores persist).
 - Dino's rain and day/night are purely visual atmosphere and don't affect gameplay logic.

@@ -9,19 +9,20 @@ import { SIZE, type Difficulty } from './logic.ts'
 
 export const CELL = 40
 export const HUD_H = 30
+export const PAD_H = 38
 export const BOARD_W = SIZE * CELL
 export const BOARD_H = SIZE * CELL
 export const LOGICAL_W = BOARD_W
-export const LOGICAL_H = HUD_H + BOARD_H
+export const LOGICAL_H = HUD_H + BOARD_H + PAD_H
 
-const BG = '#1b1b22'
-const GRID = '#3a3a46'
-const BOX = '#e8c84c'
-const CLUE = '#e8e8ec'
-const ENTRY = '#4c9ae8'
-const CONFLICT = '#e45756'
+const BG = '#181b1b'
+const GRID = '#394140'
+const BOX = '#78847f'
+const CLUE = '#edeeea'
+const ENTRY = '#a8c3d0'
+const CONFLICT = '#e9a0a0'
 const CURSOR = 'rgba(255,255,255,0.16)'
-const TEXT = '#d8d8e0'
+const TEXT = '#edeeea'
 
 /** Draw one frame; cursor is the selected cell or null. */
 export function renderSudoku(ctx: CanvasRenderingContext2D, state: SudokuState, difficulty: Difficulty, cursor: { r: number; c: number } | null): void {
@@ -59,7 +60,7 @@ export function renderSudoku(ctx: CanvasRenderingContext2D, state: SudokuState, 
   for (let i = 0; i <= SIZE; i += 1) {
     ctx.beginPath()
     ctx.moveTo(i * CELL, HUD_H)
-    ctx.lineTo(i * CELL, LOGICAL_H)
+    ctx.lineTo(i * CELL, HUD_H + BOARD_H)
     ctx.stroke()
     ctx.beginPath()
     ctx.moveTo(0, HUD_H + i * CELL)
@@ -71,7 +72,7 @@ export function renderSudoku(ctx: CanvasRenderingContext2D, state: SudokuState, 
   for (let i = 0; i <= SIZE; i += 3) {
     ctx.beginPath()
     ctx.moveTo(i * CELL, HUD_H)
-    ctx.lineTo(i * CELL, LOGICAL_H)
+    ctx.lineTo(i * CELL, HUD_H + BOARD_H)
     ctx.stroke()
     ctx.beginPath()
     ctx.moveTo(0, HUD_H + i * CELL)
@@ -79,15 +80,51 @@ export function renderSudoku(ctx: CanvasRenderingContext2D, state: SudokuState, 
     ctx.stroke()
   }
 
+  // 触屏数字键盘；保留键盘输入，同时让手机和平板无需硬件数字行。
+  ctx.fillStyle = '#212525'
+  ctx.fillRect(0, HUD_H + BOARD_H, LOGICAL_W, PAD_H)
+  const padY = HUD_H + BOARD_H + 4
+  const gap = 2
+  const numberW = 30
+  const clearW = 60
+  const padX = 3
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.font = 'bold 14px ui-monospace, monospace'
+  for (let n = 1; n <= 9; n += 1) {
+    const x = padX + (n - 1) * (numberW + gap)
+    ctx.fillStyle = '#2a3030'
+    ctx.fillRect(x, padY, numberW, PAD_H - 8)
+    ctx.fillStyle = TEXT
+    ctx.fillText(String(n), x + numberW / 2, padY + (PAD_H - 8) / 2)
+  }
+  const clearX = padX + 9 * (numberW + gap)
+  ctx.fillStyle = '#39302f'
+  ctx.fillRect(clearX, padY, clearW, PAD_H - 8)
+  ctx.fillStyle = '#f0b4b4'
+  ctx.font = '12px ui-monospace, monospace'
+  ctx.fillText('清除', clearX + clearW / 2, padY + (PAD_H - 8) / 2)
+  ctx.textBaseline = 'alphabetic'
+
   // HUD: difficulty + elapsed time.
-  ctx.fillStyle = '#15151b'
+  ctx.fillStyle = '#212525'
   ctx.fillRect(0, 0, LOGICAL_W, HUD_H)
   ctx.fillStyle = TEXT
   ctx.font = '13px ui-monospace, monospace'
   ctx.textAlign = 'left'
-  const label = difficulty === 'easy' ? '简单' : difficulty === 'normal' ? '普通' : '困难'
-  ctx.fillText(`${label} · D 切换`, 10, 20)
+  const labels: Array<[Difficulty, string]> = [['easy', '简单'], ['normal', '普通'], ['hard', '困难']]
+  labels.forEach(([value, label], index) => {
+    const x = 4 + index * 44
+    ctx.fillStyle = value === difficulty ? '#c5dba7' : '#2a3030'
+    ctx.fillRect(x, 4, 40, HUD_H - 8)
+    ctx.fillStyle = value === difficulty ? '#18201c' : TEXT
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.font = '12px ui-monospace, monospace'
+    ctx.fillText(label, x + 20, HUD_H / 2)
+  })
   ctx.textAlign = 'right'
+  ctx.textBaseline = 'alphabetic'
   const s = Math.floor(state.elapsed)
   ctx.fillText(`⏱ ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`, LOGICAL_W - 10, 20)
 

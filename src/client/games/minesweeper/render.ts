@@ -13,12 +13,14 @@ export const BOARD_H = ROWS * CELL
 export const LOGICAL_W = BOARD_W
 export const LOGICAL_H = HUD_H + BOARD_H
 
-const HIDDEN = '#2e2e38'
-const HIDDEN_LIGHT = '#3a3a46'
-const REVEALED = '#1b1b22'
-const TEXT = '#d8d8e0'
-const FLAG = '#e45756'
-const MINE = '#202028'
+export type MinesweeperMode = 'reveal' | 'flag'
+
+const HIDDEN = '#2c3332'
+const HIDDEN_LIGHT = '#394140'
+const REVEALED = '#181b1b'
+const TEXT = '#edeeea'
+const FLAG = '#e9a0a0'
+const MINE = '#202525'
 
 const NUMBER_COLORS = ['', '#5abf6b', '#4c9ae8', '#e45756', '#7a4ce8', '#e88a4c', '#4cd0c9', '#e8c84c', '#9aa3b8']
 
@@ -30,18 +32,30 @@ function formatTime(seconds: number): string {
 }
 
 /** Draw one frame. */
-export function renderMinesweeper(ctx: CanvasRenderingContext2D, state: MinesweeperState): void {
+export function renderMinesweeper(ctx: CanvasRenderingContext2D, state: MinesweeperState, mode: MinesweeperMode = 'reveal'): void {
   ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H)
 
   // HUD: mines remaining + elapsed time.
-  ctx.fillStyle = '#15151b'
+  ctx.fillStyle = '#212525'
   ctx.fillRect(0, 0, LOGICAL_W, HUD_H)
   ctx.fillStyle = TEXT
   ctx.font = '13px ui-monospace, monospace'
   ctx.textAlign = 'left'
   const flagged = state.grid.flat().filter(c => c.flagged).length
   ctx.fillText(`💣 ${Math.max(0, 10 - flagged)}`, 10, 20)
+  const drawModeButton = (x: number, label: string, active: boolean): void => {
+    ctx.fillStyle = active ? '#c5dba7' : '#2a3030'
+    ctx.fillRect(x, 4, 46, HUD_H - 8)
+    ctx.fillStyle = active ? '#18201c' : TEXT
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.font = '12px ui-monospace, monospace'
+    ctx.fillText(label, x + 23, HUD_H / 2)
+  }
+  drawModeButton(88, '翻开', mode === 'reveal')
+  drawModeButton(138, '标旗', mode === 'flag')
   ctx.textAlign = 'right'
+  ctx.textBaseline = 'alphabetic'
   ctx.fillText(`⏱ ${formatTime(state.elapsed)}`, LOGICAL_W - 10, 20)
 
   // Grid.

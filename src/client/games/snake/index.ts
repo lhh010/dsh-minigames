@@ -44,6 +44,8 @@ function createSnakeGame(host: HTMLElement, options?: MiniGameMountOptions): Min
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR')) return
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     switch (event.code) {
       case 'ArrowUp':
       case 'KeyW':
@@ -59,11 +61,13 @@ function createSnakeGame(host: HTMLElement, options?: MiniGameMountOptions): Min
         event.preventDefault(); turn(state, 1); break
       case 'KeyR':
         event.preventDefault()
-        reset()
+        if (options?.onRestartRequest) options.onRestartRequest()
+        else reset()
         break
       case 'KeyP':
         event.preventDefault()
-        togglePause()
+        if (options?.onPauseRequest) options.onPauseRequest()
+        else togglePause()
         break
     }
   }

@@ -10,5 +10,6 @@ export declare const BOARD_W: number;
 export declare const BOARD_H: number;
 export declare const LOGICAL_W: number;
 export declare const LOGICAL_H: number;
+export type MinesweeperMode = 'reveal' | 'flag';
 /** Draw one frame. */
-export declare function renderMinesweeper(ctx: CanvasRenderingContext2D, state: MinesweeperState): void;
+export declare function renderMinesweeper(ctx: CanvasRenderingContext2D, state: MinesweeperState, mode?: MinesweeperMode): void;

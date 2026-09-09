@@ -33,6 +33,12 @@ function create2048Game(host: HTMLElement, options?: MiniGameMountOptions): Mini
     options?.onScore?.(state.score)
   }
 
+  const reset = (): void => {
+    state = create2048State()
+    lastScore = -1
+    reportScore()
+  }
+
   const DIR_KEYS: Record<string, 0 | 1 | 2 | 3> = {
     ArrowUp: 0, KeyW: 0,
     ArrowRight: 1, KeyD: 1,
@@ -42,6 +48,8 @@ function create2048Game(host: HTMLElement, options?: MiniGameMountOptions): Mini
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR')) return
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     const dir = DIR_KEYS[event.code]
     if (dir !== undefined) {
       event.preventDefault()
@@ -50,12 +58,12 @@ function create2048Game(host: HTMLElement, options?: MiniGameMountOptions): Mini
     }
     if (event.code === 'KeyR') {
       event.preventDefault()
-      state = create2048State()
-      lastScore = -1
-      reportScore()
+      if (options?.onRestartRequest) options.onRestartRequest()
+      else reset()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
-      togglePause()
+      if (options?.onPauseRequest) options.onPauseRequest()
+      else togglePause()
     }
   }
 

@@ -40,6 +40,14 @@ function createAimTrackGame(host: HTMLElement, options?: MiniGameMountOptions): 
     options?.onScore?.(score)
   }
 
+  const reset = (): void => {
+    state = createFpsTrackState()
+    lastScore = -1
+    t = 0
+    phase = 'ready'
+    reportScore()
+  }
+
   const lockMouse = (): void => {
     try {
       const result = canvas.requestPointerLock() as unknown as Promise<void> | undefined
@@ -55,9 +63,11 @@ function createAimTrackGame(host: HTMLElement, options?: MiniGameMountOptions): 
       // Captured: start or resume the round.
       last = performance.now()
       if (phase !== 'playing') phase = 'playing'
+      startLoop()
     } else if (phase === 'playing') {
       // Esc or browser release: park on the pause overlay.
       phase = 'paused'
+      stopLoop()
     }
   }
 
@@ -79,24 +89,24 @@ function createAimTrackGame(host: HTMLElement, options?: MiniGameMountOptions): 
   const onClick = (): void => {
     // Enter (or re-enter) the mouse lock from the ready / paused / over views.
     if (phase === 'over') {
-      state = createFpsTrackState()
-      lastScore = -1
+      reset()
     }
     if (phase !== 'playing') lockMouse()
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR')) return
     if (event.code === 'KeyR') {
       event.preventDefault()
-      state = createFpsTrackState()
-      lastScore = -1
-      if (phase === 'over') phase = 'ready'
+      if (options?.onRestartRequest) options.onRestartRequest()
+      else reset()
       return
     }
     if (event.code === 'KeyP') {
       event.preventDefault()
-      if (phase === 'playing') {
+      if (options?.onPauseRequest) options.onPauseRequest()
+      else if (phase === 'playing') {
         phase = 'paused'
         if (document.pointerLockElement === canvas) document.exitPointerLock()
       } else if (phase === 'paused') {
@@ -135,10 +145,12 @@ function createAimTrackGame(host: HTMLElement, options?: MiniGameMountOptions): 
       phase = 'paused'
       if (document.pointerLockElement === canvas) document.exitPointerLock()
     }
+    stopLoop()
   }
   const resume = (): void => {
     // The panel asks us to resume; we need a click to re-capture the mouse.
     if (phase === 'paused' || phase === 'ready') phase = 'ready'
+    startLoop()
   }
 
   document.addEventListener('pointerlockchange', onPointerLockChange)
