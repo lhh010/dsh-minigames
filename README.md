@@ -44,7 +44,7 @@ DSH Web UI 浮动小游戏窗口：等待模型回复或修 bug 时的摸鱼神�
 
 ```sh
 # 方式一：git 依赖固定 tag（公开镜像，推荐；也可用 github:lhh010/dsh-minigames）
-dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.17'
+dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.18'
 
 # 方式二：本地安装
 git clone https://github.com/lhh010/dsh-minigames.git   # 或直接使用本目录
@@ -66,7 +66,7 @@ dsh --profile web --dump-config | grep dsh-minigames
 把下面这段提示词发给任意一个 DSH 会话，模型会替你完成安装：
 
 > 帮我安装 dsh-minigames 插件（DSH 浮动小游戏窗口插件），步骤：
-> 1. 执行 `dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.17'`（首次可能被 pnpm 11 拦截 node-pty 构建脚本而失败）
+> 1. 执行 `dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.18'`（首次可能被 pnpm 11 拦截 node-pty 构建脚本而失败）
 > 2. 在 `~/.dsh/profiles/web` 下执行 `pnpm approve-builds --all`（放行构建脚本）
 > 3. 再执行一次第 1 步的安装命令
 > 4. 完成后提醒我硬刷新浏览器（Ctrl/Cmd+Shift+R）
@@ -98,6 +98,8 @@ dsh plugin --profile web remove @dsh-external/dsh-minigames
 
 ## 更新记录 / Changelog
 
+### 2026-09-09 · v0.3.18 — 声明支持 dsh-v0.1.5-alpha.2
+- **验证**：alpha.2 改动为 Sidebar 文档预览、模型文件交付、minimal 默认工具调整与 `fs-ext` 安装修复，client 插件面零代码差异；npm 已发布，钉版本实机验证；typecheck/build/203 单测全绿，启动清单确认加载
 ### 2026-09-08 · v0.3.17 — 声明支持 dsh-v0.1.5-alpha.1
 - **验证**：0.1.5 改动在会话格式 V3 / `ctx.agent` 移除 / 宿主 client bundle 服务路由改 `/plugins/??` 组合路由，client 插件面零代码差异；npm 已发布，钉版本实机验证；typecheck/build/单测全绿，启动清单确认加载
 ### 2026-09-05 · v0.3.16 — 声明支持 dsh-v0.1.3-alpha.2
@@ -363,7 +365,7 @@ dsh plugin --profile web remove @dsh-external/dsh-minigames
 
 ```sh
 # 方式一：git 依赖固定 tag（公开镜像，推荐；也可用 github:lhh010/dsh-minigames）
-dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.17'
+dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.18'
 
 # 方式二：本地安装
 git clone https://github.com/lhh010/dsh-minigames.git   # 或直接使用本目录
@@ -385,7 +387,7 @@ dsh --profile web --dump-config | grep dsh-minigames
 把下面这段提示词发给任意一个 DSH 会话，模型会替你完成安装：
 
 > 帮我安装 dsh-minigames 插件（DSH 浮动小游戏窗口插件），步骤：
-> 1. 执行 `dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.17'`（首次可能被 pnpm 11 拦截 node-pty 构建脚本而失败）
+> 1. 执行 `dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.18'`（首次可能被 pnpm 11 拦截 node-pty 构建脚本而失败）
 > 2. 在 `~/.dsh/profiles/web` 下执行 `pnpm approve-builds --all`（放行构建脚本）
 > 3. 再执行一次第 1 步的安装命令
 > 4. 完成后提醒我硬刷新浏览器（Ctrl/Cmd+Shift+R）
