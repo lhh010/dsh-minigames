@@ -75,6 +75,7 @@ function createHuarongGame(host: HTMLElement, options?: MiniGameMountOptions): M
   }
 
   const onPointerDown = (event: PointerEvent): void => {
+    if (!running) return
     if (slideEntries.length > 0) return
     if (state.solved) {
       newPuzzle()
@@ -87,14 +88,18 @@ function createHuarongGame(host: HTMLElement, options?: MiniGameMountOptions): M
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR')) return
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     if (event.code === 'KeyP') {
       event.preventDefault()
-      togglePause()
+      if (options?.onPauseRequest) options.onPauseRequest()
+      else togglePause()
       return
     }
     if (event.code === 'KeyR') {
       event.preventDefault()
-      newPuzzle()
+      if (options?.onRestartRequest) options.onRestartRequest()
+      else newPuzzle()
       return
     }
     if (state.solved || slideEntries.length > 0) return

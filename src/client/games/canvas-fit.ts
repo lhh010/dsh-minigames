@@ -32,11 +32,31 @@ export function fitCanvas(
 ): FitCanvasResult | null {
   const ctx = canvas.getContext('2d')
   if (ctx === null) return null
+  let applied = false
 
   const apply = (): void => {
-    const dpr = window.devicePixelRatio || 1
     const availW = host.clientWidth
     const availH = host.clientHeight
+    // 隐藏面板通常同时报告 0×0；跳过这次回调，避免把已有画面缩成一
+    // 个像素，恢复显示时暂停的游戏仍能保留最后一帧。
+    if (applied && availW === 0 && availH === 0) return
+
+    // 改变 canvas 尺寸会清空 backing store。先暂存像素，暂停时调整面板
+    // 大小也能继续显示最后一帧，下一次游戏帧再按逻辑坐标重绘。
+    let snapshot: HTMLCanvasElement | null = null
+    const canCopy = canvas.width > 0 && canvas.height > 0 && typeof ctx.drawImage === 'function'
+    if (canCopy) {
+      const copy = document.createElement('canvas')
+      copy.width = canvas.width
+      copy.height = canvas.height
+      const copyCtx = copy.getContext('2d')
+      if (copyCtx !== null && typeof copyCtx.drawImage === 'function') {
+        copyCtx.drawImage(canvas, 0, 0)
+        snapshot = copy
+      }
+    }
+
+    const dpr = window.devicePixelRatio || 1
     let cssW = Math.min(availW > 0 ? availW : logicalW, maxWidth)
     let cssH = cssW * (logicalH / logicalW)
     if (availH > 0 && cssH > availH) {
@@ -47,7 +67,16 @@ export function fitCanvas(
     canvas.style.height = `${cssH}px`
     canvas.width = Math.max(1, Math.round(cssW * dpr))
     canvas.height = Math.max(1, Math.round(cssH * dpr))
-    ctx.setTransform((cssW / logicalW) * dpr, 0, 0, (cssH / logicalH) * dpr, 0, 0)
+    const scaleX = (cssW / logicalW) * dpr
+    const scaleY = (cssH / logicalH) * dpr
+    ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0)
+
+    if (snapshot !== null && typeof ctx.drawImage === 'function') {
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.drawImage(snapshot, 0, 0, snapshot.width, snapshot.height, 0, 0, canvas.width, canvas.height)
+      ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0)
+    }
+    applied = true
   }
   apply()
 

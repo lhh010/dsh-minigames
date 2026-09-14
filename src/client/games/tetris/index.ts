@@ -58,6 +58,8 @@ function createTetrisGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR')) return
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     switch (event.code) {
       case 'ArrowLeft':
       case 'KeyA':
@@ -102,10 +104,13 @@ function createTetrisGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
         break
       case 'KeyP':
         event.preventDefault()
-        togglePause()
+        if (options?.onPauseRequest) options.onPauseRequest()
+        else togglePause()
         break
       case 'KeyR':
-        if (state.over) reset()
+        event.preventDefault()
+        if (options?.onRestartRequest) options.onRestartRequest()
+        else if (state.over) reset()
         break
     }
   }

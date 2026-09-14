@@ -10,7 +10,7 @@ import type {
   MiniGameMountOptions,
 } from '../types.ts'
 import { createSudokuState, place, tick, type Difficulty, type SudokuState } from './logic.ts'
-import { renderSudoku, LOGICAL_W, LOGICAL_H, CELL, HUD_H } from './render.ts'
+import { renderSudoku, LOGICAL_W, LOGICAL_H, CELL, HUD_H, BOARD_H, PAD_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 
@@ -39,7 +39,17 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 
   const newPuzzle = (): void => {
     state = createSudokuState(undefined, difficulty)
+    cursor = { r: 0, c: 0 }
     reported = false
+  }
+
+  const restartWithDifficulty = (next: Difficulty): void => {
+    const restart = (): void => {
+      difficulty = next
+      newPuzzle()
+    }
+    if (options?.onRestartRequest) options.onRestartRequest(restart)
+    else restart()
   }
 
   const cellFromEvent = (event: MouseEvent): { r: number; c: number } | null => {
@@ -52,9 +62,50 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     return { r, c }
   }
 
+  const difficultyFromEvent = (event: MouseEvent): Difficulty | null => {
+    const rect = canvas.getBoundingClientRect()
+    const x = ((event.clientX - rect.left) * LOGICAL_W) / rect.width
+    const y = ((event.clientY - rect.top) * LOGICAL_H) / rect.height
+    if (y < 0 || y >= HUD_H || x < 4 || x >= 4 + 3 * 44) return null
+    const index = Math.floor((x - 4) / 44)
+    return DIFF_CYCLE[index] ?? null
+  }
+
+  const numberFromEvent = (event: MouseEvent): number | null => {
+    const rect = canvas.getBoundingClientRect()
+    const x = ((event.clientX - rect.left) * LOGICAL_W) / rect.width
+    const y = ((event.clientY - rect.top) * LOGICAL_H) / rect.height
+    const padTop = HUD_H + BOARD_H
+    if (y < padTop || y >= padTop + PAD_H) return null
+    const padX = 3
+    const gap = 2
+    const numberW = 30
+    const clearX = padX + 9 * (numberW + gap)
+    if (x >= padX && x < padX + 9 * (numberW + gap) - gap) {
+      const index = Math.floor((x - padX) / (numberW + gap))
+      const within = (x - padX) % (numberW + gap)
+      if (within < numberW) return index + 1
+    }
+    if (x >= clearX && x < clearX + 60) return 0
+    return null
+  }
+
   const onMouseDown = (event: MouseEvent): void => {
+    if (!running) return
     if (state.won) {
       newPuzzle()
+      return
+    }
+    const selectedDifficulty = difficultyFromEvent(event)
+    if (selectedDifficulty !== null) {
+      if (selectedDifficulty !== difficulty) {
+        restartWithDifficulty(selectedDifficulty)
+      }
+      return
+    }
+    const number = numberFromEvent(event)
+    if (number !== null) {
+      place(state, cursor.r, cursor.c, number)
       return
     }
     const cell = cellFromEvent(event)
@@ -64,20 +115,24 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR' || event.code === 'KeyD')) return
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     if (event.code === 'KeyR') {
       event.preventDefault()
-      newPuzzle()
+      if (options?.onRestartRequest) options.onRestartRequest(newPuzzle)
+      else newPuzzle()
       return
     }
     if (event.code === 'KeyP') {
       event.preventDefault()
-      togglePause()
+      if (options?.onPauseRequest) options.onPauseRequest()
+      else togglePause()
       return
     }
     if (event.code === 'KeyD') {
       event.preventDefault()
-      difficulty = DIFF_CYCLE[(DIFF_CYCLE.indexOf(difficulty) + 1) % DIFF_CYCLE.length]!
-      newPuzzle()
+      const next = DIFF_CYCLE[(DIFF_CYCLE.indexOf(difficulty) + 1) % DIFF_CYCLE.length]!
+      restartWithDifficulty(next)
       return
     }
     if (state.won) return
@@ -150,6 +205,7 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     start: resume,
     pause,
     resume,
+    restart: newPuzzle,
     destroy: () => {
       running = false
       stopLoop()
@@ -165,6 +221,6 @@ export const sudokuGame: MiniGameDefinition = {
   title: '数独',
   icon: '🧩',
   description: '9×9 数独：填满且无冲突即胜，D 键切难度，越快分越高。',
-  controls: ['点击：选中格子', '1-9：填入 / 0：清除', '方向键：移动光标', 'D：切换难度', 'R：新题', 'P：暂停'],
+  controls: ['点击：选中格子', '底部数字键：填入 / 清除', '方向键：移动光标', 'HUD 难度按钮 / D：切换', 'R：新题', 'P：暂停'],
   create: createSudokuGame,
 }

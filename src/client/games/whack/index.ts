@@ -32,6 +32,12 @@ function createWhackGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     options?.onScore?.(state.score)
   }
 
+  const reset = (): void => {
+    state = createWhackState()
+    lastScore = -1
+    reportScore()
+  }
+
   const holeFromEvent = (event: MouseEvent): number | null => {
     const rect = canvas.getBoundingClientRect()
     const x = ((event.clientX - rect.left) * LOGICAL_W) / rect.width
@@ -43,7 +49,7 @@ function createWhackGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   }
 
   const onMouseDown = (event: MouseEvent): void => {
-    if (state.over) return
+    if (!running || state.over) return
     const hole = holeFromEvent(event)
     if (hole === null) return
     whack(state, hole)
@@ -52,13 +58,16 @@ function createWhackGame(host: HTMLElement, options?: MiniGameMountOptions): Min
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR')) return
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     if (event.code === 'KeyR') {
       event.preventDefault()
-      state = createWhackState()
-      lastScore = -1
+      if (options?.onRestartRequest) options.onRestartRequest()
+      else reset()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
-      togglePause()
+      if (options?.onPauseRequest) options.onPauseRequest()
+      else togglePause()
     }
   }
 
