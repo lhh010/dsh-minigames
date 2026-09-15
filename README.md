@@ -44,7 +44,7 @@ DSH Web UI 浮动小游戏窗口：等待模型回复或修 bug 时的摸鱼神�
 
 ```sh
 # 方式一：git 依赖固定 tag（公开镜像，推荐；也可用 github:lhh010/dsh-minigames）
-dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.19'
+dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.20'
 
 # 方式二：本地安装
 git clone https://github.com/lhh010/dsh-minigames.git   # 或直接使用本目录
@@ -61,42 +61,9 @@ dsh --profile web --dump-config | grep dsh-minigames
 
 > **安装提示**：pnpm 11 首次安装可能拦截 node-pty 等构建脚本——在 `~/.dsh/profiles/web` 下执行 `pnpm approve-builds --all` 放行后重跑安装命令；装完**硬刷新浏览器**（Ctrl/Cmd+Shift+R）。
 
-### 提示词安装（让 DSH 自己装）
+### 2026-09-15 · v0.3.20 — 声明支持 dsh-v0.1.6-alpha.1
 
-把下面这段提示词发给任意一个 DSH 会话，模型会替你完成安装：
-
-> 帮我安装 dsh-minigames 插件（DSH 浮动小游戏窗口插件），步骤：
-> 1. 执行 `dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.19'`（首次可能被 pnpm 11 拦截 node-pty 构建脚本而失败）
-> 2. 在 `~/.dsh/profiles/web` 下执行 `pnpm approve-builds --all`（放行构建脚本）
-> 3. 再执行一次第 1 步的安装命令
-> 4. 完成后提醒我硬刷新浏览器（Ctrl/Cmd+Shift+R）
-> 遇到报错先查 https://github.com/lhh010/dsh-minigames README 的常见问题/已知限制。
-
-插件集合变更在**重启 `dsh web`** 后生效。卸载：
-
-```sh
-dsh plugin --profile web remove @dsh-external/dsh-minigames
-```
-
-> 本仓库同时携带 `dsh.plugin.json`（registry 通道清单）与 `cordis.patch.yml`
-> （官方 profile bundle 通道）；二选一安装，不要同时启用。
-
-
--rc.5`（dist-tag `next`，即最终快照 snapshot0812 的 npm 发版；`npm exec -p @deepseek-ai/dsh@0.0.1-rc.5 -- dsh --profile web --port <port>` 可访问指定版本并启动，lib 生产模式），同时保持兼容 `@deepseek-ai/dsh@0.0.1-rc.2`（snapshot0811 的 npm 发版）。实测（npm rc.5 基线）：`dsh web` 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-external/dsh-minigames`，`/plugins/@dsh-external/dsh-minigames/client.js` 返回 200；typecheck、build 与 201 个单测通过。注意：0811 起 vendored cordis 更名为 `@deepseek-ai/cordis`（npm 发版不再发布 `cordis` 名义的 vendored 包）。本插件源码对 cordis 只有 type-only 导入（`src/index.ts`、`src/client/index.tsx`、`src/invariant.ts`），已把类型导入与 peer/devDependencies 迁移至 `@deepseek-ai/cordis`（peer `^4.0.1-rc.1`，npm rc.5 基线上为 `4.0.1-rc.4`）——构建产物（lib/*.js）零 cordis 运行时导入，纯 `npm install` 不再报 ERESOLVE，无需 `--legacy-peer-deps`。
-
-### 0811 兼容要点（snapshot0811，实机验证）
-
-- **bundle 机制不变**：0811 仍支持 `dsh.bundle.patch` → `cordis.patch.yml` 的组合包层机制（本插件的 profile bundles 安装方式照旧），客户端 `dsh.client` 元数据发现与 `window.__ModuleLoader__` 加载协议均未变。
-- **cordis 更名**：0811 将 vendored cordis 由 `cordis@4.0.0-rc.7` 更名为 `@deepseek-ai/cordis@4.0.1-rc.1`。本插件对 cordis 只有 type-only 导入，构建产物零 cordis 运行时导入——更名不影响已构建 bundle 的运行时加载；npm 基线 typecheck 时 `cordis` 裸导入解析到公开 `cordis` 包仍可通过，对齐建议见上。
-- **实机 boot 验证**：snapshot0811（`snapshots/20260811T152241Z`）web 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-external/dsh-minigames`，`/plugins/@dsh-external/dsh-minigames/client.js` 返回 200，右侧面板（🎮 小游戏）实测渲染。typecheck 与 201 个单测对 0811 基线通过。
-
-### 0812/最终快照 兼容要点（snapshots/20260812T172954Z-final，实机验证）
-
-- **cordis 更名落地**：本插件已把 type-only 导入（`src/index.ts`、`src/client/index.tsx`）与 `peerDependencies`/`devDependencies` 迁移至 `@deepseek-ai/cordis`（`^4.0.1-rc.1`；npm rc.5 基线上为 `@deepseek-ai/cordis@4.0.1-rc.4`）——构建产物（lib/*.js）零 cordis 运行时导入，npm rc.5 消费者 typecheck 全绿，`npm install` 无需 `--legacy-peer-deps`。
-- **bundle 机制不变**：最终快照仍支持 `dsh.bundle.patch` → `cordis.patch.yml` 的组合包层机制，客户端 `dsh.client` 元数据发现与 `window.__ModuleLoader__` 加载协议未变；面板不依赖任何宿主服务与布局槽（纯 `document.body` portal），与主框架版本解耦。
-- **实机 boot 验证**：最终快照（`snapshots/20260812T172954Z-final`）web 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-external/dsh-minigames`，`/plugins/@dsh-external/dsh-minigames/client.js` 返回 200；npm rc.5 consumer `dsh web` 启动后 boot 清单同样包含本插件。typecheck、build 与 201 个单测对最终快照基线通过。
-
-## 更新记录 / Changelog
+声明支持 dsh-v0.1.6-alpha.1（npm 已发布，钉版本实机验证；client 插件面零代码差异，typecheck/203 单测全绿，实机加载正常）。安装命令统一更新为 `#v0.3.20`。
 
 ### 2026-09-11 · v0.3.19 — 声明支持 dsh-v0.1.5-rc.2
 
@@ -200,6 +167,43 @@ dsh plugin --profile web remove @dsh-external/dsh-minigames
 - **验证**：typecheck 与 70 个单测通过；DSH snapshot0810 实机 + 多视口（1600×900 / 1536×864 / 1366×640 / 1280×600 / 1024×600 / 960×540 / 1600×500）实测均无滚动条
 
 ## 游戏玩法与细节
+
+### 提示词安装（让 DSH 自己装）
+
+把下面这段提示词发给任意一个 DSH 会话，模型会替你完成安装：
+
+> 帮我安装 dsh-minigames 插件（DSH 浮动小游戏窗口插件），步骤：
+> 1. 执行 `dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.20'`（首次可能被 pnpm 11 拦截 node-pty 构建脚本而失败）
+> 2. 在 `~/.dsh/profiles/web` 下执行 `pnpm approve-builds --all`（放行构建脚本）
+> 3. 再执行一次第 1 步的安装命令
+> 4. 完成后提醒我硬刷新浏览器（Ctrl/Cmd+Shift+R）
+> 遇到报错先查 https://github.com/lhh010/dsh-minigames README 的常见问题/已知限制。
+
+插件集合变更在**重启 `dsh web`** 后生效。卸载：
+
+```sh
+dsh plugin --profile web remove @dsh-external/dsh-minigames
+```
+
+> 本仓库同时携带 `dsh.plugin.json`（registry 通道清单）与 `cordis.patch.yml`
+> （官方 profile bundle 通道）；二选一安装，不要同时启用。
+
+
+-rc.5`（dist-tag `next`，即最终快照 snapshot0812 的 npm 发版；`npm exec -p @deepseek-ai/dsh@0.0.1-rc.5 -- dsh --profile web --port <port>` 可访问指定版本并启动，lib 生产模式），同时保持兼容 `@deepseek-ai/dsh@0.0.1-rc.2`（snapshot0811 的 npm 发版）。实测（npm rc.5 基线）：`dsh web` 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-external/dsh-minigames`，`/plugins/@dsh-external/dsh-minigames/client.js` 返回 200；typecheck、build 与 201 个单测通过。注意：0811 起 vendored cordis 更名为 `@deepseek-ai/cordis`（npm 发版不再发布 `cordis` 名义的 vendored 包）。本插件源码对 cordis 只有 type-only 导入（`src/index.ts`、`src/client/index.tsx`、`src/invariant.ts`），已把类型导入与 peer/devDependencies 迁移至 `@deepseek-ai/cordis`（peer `^4.0.1-rc.1`，npm rc.5 基线上为 `4.0.1-rc.4`）——构建产物（lib/*.js）零 cordis 运行时导入，纯 `npm install` 不再报 ERESOLVE，无需 `--legacy-peer-deps`。
+
+### 0811 兼容要点（snapshot0811，实机验证）
+
+- **bundle 机制不变**：0811 仍支持 `dsh.bundle.patch` → `cordis.patch.yml` 的组合包层机制（本插件的 profile bundles 安装方式照旧），客户端 `dsh.client` 元数据发现与 `window.__ModuleLoader__` 加载协议均未变。
+- **cordis 更名**：0811 将 vendored cordis 由 `cordis@4.0.0-rc.7` 更名为 `@deepseek-ai/cordis@4.0.1-rc.1`。本插件对 cordis 只有 type-only 导入，构建产物零 cordis 运行时导入——更名不影响已构建 bundle 的运行时加载；npm 基线 typecheck 时 `cordis` 裸导入解析到公开 `cordis` 包仍可通过，对齐建议见上。
+- **实机 boot 验证**：snapshot0811（`snapshots/20260811T152241Z`）web 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-external/dsh-minigames`，`/plugins/@dsh-external/dsh-minigames/client.js` 返回 200，右侧面板（🎮 小游戏）实测渲染。typecheck 与 201 个单测对 0811 基线通过。
+
+### 0812/最终快照 兼容要点（snapshots/20260812T172954Z-final，实机验证）
+
+- **cordis 更名落地**：本插件已把 type-only 导入（`src/index.ts`、`src/client/index.tsx`）与 `peerDependencies`/`devDependencies` 迁移至 `@deepseek-ai/cordis`（`^4.0.1-rc.1`；npm rc.5 基线上为 `@deepseek-ai/cordis@4.0.1-rc.4`）——构建产物（lib/*.js）零 cordis 运行时导入，npm rc.5 消费者 typecheck 全绿，`npm install` 无需 `--legacy-peer-deps`。
+- **bundle 机制不变**：最终快照仍支持 `dsh.bundle.patch` → `cordis.patch.yml` 的组合包层机制，客户端 `dsh.client` 元数据发现与 `window.__ModuleLoader__` 加载协议未变；面板不依赖任何宿主服务与布局槽（纯 `document.body` portal），与主框架版本解耦。
+- **实机 boot 验证**：最终快照（`snapshots/20260812T172954Z-final`）web 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-external/dsh-minigames`，`/plugins/@dsh-external/dsh-minigames/client.js` 返回 200；npm rc.5 consumer `dsh web` 启动后 boot 清单同样包含本插件。typecheck、build 与 201 个单测对最终快照基线通过。
+
+## 更新记录 / Changelog
 
 ### 🦖 恐龙跳一跳
 
@@ -370,7 +374,7 @@ dsh plugin --profile web remove @dsh-external/dsh-minigames
 
 ```sh
 # 方式一：git 依赖固定 tag（公开镜像，推荐；也可用 github:lhh010/dsh-minigames）
-dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.19'
+dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.20'
 
 # 方式二：本地安装
 git clone https://github.com/lhh010/dsh-minigames.git   # 或直接使用本目录
@@ -392,7 +396,7 @@ dsh --profile web --dump-config | grep dsh-minigames
 把下面这段提示词发给任意一个 DSH 会话，模型会替你完成安装：
 
 > 帮我安装 dsh-minigames 插件（DSH 浮动小游戏窗口插件），步骤：
-> 1. 执行 `dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.19'`（首次可能被 pnpm 11 拦截 node-pty 构建脚本而失败）
+> 1. 执行 `dsh plugin --profile web add '@dsh-external/dsh-minigames@github:lhh010/dsh-minigames#v0.3.20'`（首次可能被 pnpm 11 拦截 node-pty 构建脚本而失败）
 > 2. 在 `~/.dsh/profiles/web` 下执行 `pnpm approve-builds --all`（放行构建脚本）
 > 3. 再执行一次第 1 步的安装命令
 > 4. 完成后提醒我硬刷新浏览器（Ctrl/Cmd+Shift+R）
