@@ -31,14 +31,39 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   let last = 0
   let lockUntil = 0 // ignore clicks while a mismatched pair is on display
   let flipTimer = 0 // timeout that flips a mismatched pair back down
+  let revealRemaining = 0
   let lastScore = -1
 
   const reportScore = (): void => {
+    // 只在通关时上报，避免第一次翻牌的临时分数被面板当成最高分。
+    if (!state.finished) return
     // Score by fewest moves: fewer moves -> higher score.
     const score = Math.max(0, 500 - state.moves * 5)
     if (score === lastScore) return
     lastScore = score
     options?.onScore?.(score)
+  }
+
+  const reset = (): void => {
+    clearTimeout(flipTimer)
+    flipTimer = 0
+    revealRemaining = 0
+    lockUntil = 0
+    state = createMemoryState()
+    lastScore = -1
+    reportScore()
+  }
+
+  const scheduleFlipReset = (): void => {
+    if (revealRemaining <= 0) return
+    flipTimer = window.setTimeout(() => {
+      flipTimer = 0
+      if (!running) return
+      resetFlip(state)
+      lockUntil = 0
+      revealRemaining = 0
+      reportScore()
+    }, revealRemaining)
   }
 
   const indexFromEvent = (event: MouseEvent): number | null => {
@@ -52,6 +77,7 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   }
 
   const onMouseDown = (event: MouseEvent): void => {
+    if (!running) return
     if (state.finished) return
     if (performance.now() < lockUntil) return
     const index = indexFromEvent(event)
@@ -59,26 +85,25 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     const result = flip(state, index)
     if (result === 'mismatch') {
       // Reveal both cards for a full second, then flip them back together.
-      lockUntil = performance.now() + REVEAL_MS
-      flipTimer = window.setTimeout(() => {
-        resetFlip(state)
-        reportScore()
-      }, REVEAL_MS)
+      revealRemaining = REVEAL_MS
+      lockUntil = performance.now() + revealRemaining
+      scheduleFlipReset()
     }
     reportScore()
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (event.repeat && (event.code === 'KeyP' || event.code === 'KeyR')) return
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     if (event.code === 'KeyR') {
       event.preventDefault()
-      clearTimeout(flipTimer)
-      state = createMemoryState()
-      lockUntil = 0
-      lastScore = -1
+      if (options?.onRestartRequest) options.onRestartRequest()
+      else reset()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
-      togglePause()
+      if (options?.onPauseRequest) options.onPauseRequest()
+      else togglePause()
     }
   }
 
@@ -106,11 +131,21 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   }
   const pause = (): void => {
     running = false
+    if (flipTimer !== 0) {
+      clearTimeout(flipTimer)
+      flipTimer = 0
+      revealRemaining = Math.max(0, lockUntil - performance.now())
+      lockUntil = 0
+    }
     stopLoop()
   }
   const resume = (): void => {
     if (running) return
     running = true
+    if (revealRemaining > 0) {
+      lockUntil = performance.now() + revealRemaining
+      scheduleFlipReset()
+    }
     startLoop()
   }
 
