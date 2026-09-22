@@ -161,6 +161,34 @@ export function MiniGamePanel(): ReactNode {
   useEffect(() => { dockRef.current = dock }, [dock])
   useEffect(() => { launcherPosRef.current = launcherPos }, [launcherPos])
 
+  // Viewport resizes (window resize, browser zoom, OS display scaling) can
+  // push a persisted fixed-px position outside the visible area; re-clamp the
+  // launcher, the floating window, and its width back inside on every change.
+  useEffect(() => {
+    const onResize = (): void => {
+      setLauncherPos(prev => {
+        const next = clampLauncherPos(prev)
+        if (next.x !== prev.x || next.y !== prev.y) save(LS_LAUNCHER, JSON.stringify(next))
+        return next
+      })
+      setWidth(prev => {
+        const next = clampPanelWidth(prev, window.innerWidth)
+        if (next !== prev) save(LS_WIDTH, String(next))
+        return next
+      })
+      setPos(prev => {
+        const w = clampPanelWidth(widthRef.current, window.innerWidth)
+        const x = dockRef.current === 'right' ? Math.max(WINDOW_MARGIN, window.innerWidth - w - WINDOW_MARGIN) : prev.x
+        const next = clampWindowPos({ x, y: prev.y }, w, windowHeight(window.innerHeight))
+        if (next.x !== prev.x || next.y !== prev.y) save(LS_POS, JSON.stringify(next))
+        return next
+      })
+    }
+    onResize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   const activeGame = gameId === null ? undefined : getGame(gameId)
 
   const selectGame = (id: string): void => {
