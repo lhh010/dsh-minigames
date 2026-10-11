@@ -248,6 +248,10 @@ dsh plugin --profile web remove @dsh-external/dsh-minigames
 
 ## 更新记录 / Changelog
 
+### 2026-10-11 · v0.3.28 — 声明支持 dsh-v0.2.1-alpha.2
+
+- **声明**：支持 dsh-v0.2.1-alpha.2（升级实机验证：web profile `--dump-config` 全插件行加载、peer 校验零错误；宿主启动监听正常；零适配改动）；双 bundle `node --check` 通过
+
 ### 🦖 恐龙跳一跳
 
 - 空格 / ↑ / 点击跳跃，↓ 蹲下；速度会**随分数提升**（`320 + 分数×0.15`）直到

@@ -96,6 +96,10 @@ est includes `@dsh-external/dsh-minigames` and `/plugins/@dsh-external/dsh-minig
 
 ## Changelog
 
+### 2026-10-11 · v0.3.28 — declare dsh-v0.2.1-alpha.2 support
+
+- **Declaration**: supports dsh-v0.2.1-alpha.2 (verified on the real web profile: `--dump-config` loads every plugin row with zero peer errors; host boots and listens; no adaptation changes); both bundles pass `node --check`
+
 ### 2026-09-03 · v0.3.14 — Declare DSH 0.1.2-rc.1 support
 
 - **Verification**: alpha.5 → rc.1 is version-bump-only upstream (252 files, zero code diff); verified live on rc.1, no code changes needed
