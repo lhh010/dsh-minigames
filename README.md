@@ -248,6 +248,10 @@ dsh plugin --profile web remove @dsh-external/dsh-minigames
 
 ## 更新记录 / Changelog
 
+### 2026-10-17 · v0.3.31 — 声明支持 dsh-v0.2.1-alpha.5
+
+- **声明**：支持 dsh-v0.2.1-alpha.5（升级实机验证：web profile `--dump-config` 全插件行加载零错误；运行时只读探测 file-trace mermaid/katex 路由 200、better-sidebar fence 活；宿主保留 webStartup 服务、无插件面破坏性变更——新增的 `conversation.input.model.label` Slot 为并列新增键，与本插件既有注入面无冲突；零适配改动）；双 bundle `node --check` 通过
+
 ### 2026-10-16 · v0.3.30 — 声明支持 dsh-v0.2.1-alpha.4
 
 - **声明**：支持 dsh-v0.2.1-alpha.4（升级实机验证：web profile `--dump-config` 全插件行加载零错误；宿主保留 webStartup 服务、无插件面破坏性变更——新引入的 engines.dsh 兼容判定仅对声明者生效，本插件未声明故沿用原有规则；零适配改动）；双 bundle `node --check` 通过
