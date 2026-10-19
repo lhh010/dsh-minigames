@@ -1,7 +1,8 @@
 /**
  * 跳一跳 canvas renderer: platforms receding in perspective, the player cube
- * with a ground shadow that shrinks with height, a charge bar, and a
- * game-over overlay.
+ * with a ground shadow that shrinks with height, a charge bar, a game-over
+ * overlay, and a particle burst on each landing score. Uses the shared
+ * visual kit (../theme.ts).
  */
 import type { HopState } from './logic.ts';
 export declare const VIEW_W = 360;

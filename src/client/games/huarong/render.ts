@@ -1,9 +1,13 @@
 /**
  * Huarong (15-puzzle) canvas renderer: 4x4 numbered tiles that slide into the
- * empty cell, a HUD (moves + time), and a solved overlay. Palette tuned for
- * the DSH dark shell.
+ * empty cell, a HUD (moves + time), a solved overlay, and a particle burst on
+ * solve. Uses the shared visual kit (../theme.ts).
  */
 import type { HuarongState, Position, Slide } from './logic.ts'
+import {
+  THEME, accent, createParticles, drawBackground, drawOverlay, glow, hudPair, noGlow,
+  roundRectPath,
+} from '../theme.ts'
 
 export const CELL = 72
 export const HUD_H = 40
@@ -12,14 +16,10 @@ export const BOARD_H = 4 * CELL
 export const LOGICAL_W = BOARD_W
 export const LOGICAL_H = HUD_H + BOARD_H
 
-const TILE = '#3a4a6a'
-const TILE_LIGHT = '#5a7ab0'
-const TILE_SOLVED = '#3f7a4a'
-const TILE_SOLVED_LIGHT = '#5fa86a'
-const EMPTY = '#15151b'
-const GRID = '#26262e'
-const TEXT = '#f0f4ff'
-const MUTED = '#9aa3b8'
+// Render-side event observation: burst once when the puzzle is solved.
+const particles = createParticles()
+let prevSolved = false
+let prevFrameMs = 0
 
 /** What the game wants rendered this frame. */
 export interface HuarongView {
@@ -37,7 +37,7 @@ function inSolvedSpot(state: HuarongState, value: number, r: number, c: number):
   return value === r * state.cols + c + 1
 }
 
-/** Draw a single rounded tile with its number. */
+/** Draw a single rounded tile with its number; color by tile id (stable). */
 function drawTile(
   ctx: CanvasRenderingContext2D,
   state: HuarongState,
@@ -48,22 +48,20 @@ function drawTile(
   c: number,
 ): void {
   const correct = inSolvedSpot(state, value, r, c)
-  const base = correct ? TILE_SOLVED : TILE
-  const light = correct ? TILE_SOLVED_LIGHT : TILE_LIGHT
+  const base = correct ? THEME.good : accent(value)
   const size = CELL - 8
-  const radius = 10
+  glow(ctx, base, correct ? 12 : 6)
   ctx.fillStyle = base
-  ctx.beginPath()
-  ctx.roundRect(cx - size / 2, cy - size / 2, size, size, radius)
+  roundRectPath(ctx, cx - size / 2, cy - size / 2, size, size, 10)
   ctx.fill()
+  noGlow(ctx)
   // Top highlight.
-  ctx.fillStyle = light
-  ctx.beginPath()
-  ctx.roundRect(cx - size / 2 + 4, cy - size / 2 + 4, size - 8, 8, 5)
+  ctx.fillStyle = 'rgba(255,255,255,0.18)'
+  roundRectPath(ctx, cx - size / 2 + 4, cy - size / 2 + 4, size - 8, 8, 5)
   ctx.fill()
   // Number.
-  ctx.fillStyle = TEXT
-  ctx.font = 'bold 26px ui-monospace, monospace'
+  ctx.fillStyle = '#10101a'
+  ctx.font = 'bold 26px system-ui, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(String(value), cx, cy + 2)
@@ -75,31 +73,32 @@ export function renderHuarong(
   state: HuarongState,
   view: HuarongView,
 ): void {
+  const nowMs = performance.now()
+  const dtMs = prevFrameMs === 0 ? 16 : Math.min(50, nowMs - prevFrameMs)
+  prevFrameMs = nowMs
+
   ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H)
-  ctx.fillStyle = '#13131a'
-  ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H)
+  drawBackground(ctx, LOGICAL_W, LOGICAL_H)
 
   // HUD.
-  ctx.fillStyle = '#1b1b22'
-  ctx.fillRect(0, 0, LOGICAL_W, HUD_H)
-  ctx.fillStyle = TEXT
-  ctx.font = '13px ui-monospace, monospace'
-  ctx.textAlign = 'left'
-  ctx.fillText(`步数 ${state.moves}`, 10, 16)
-  ctx.textAlign = 'right'
+  hudPair(ctx, 10, 16, '步数 ', String(state.moves))
   const seconds = Math.floor(state.elapsed)
-  ctx.fillText(`用时 ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`, LOGICAL_W - 10, 16)
-  ctx.fillStyle = MUTED
-  ctx.font = '10px ui-monospace, monospace'
+  const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+  hudPair(ctx, LOGICAL_W - 10, 16, '用时 ', clock, 'right', accent(1))
+  ctx.fillStyle = THEME.textMuted
+  ctx.font = '600 10px system-ui, sans-serif'
   ctx.textAlign = 'left'
   ctx.fillText('点击/方向键滑动方块，按 1..15 顺序排列', 10, 37)
 
   // Board recess.
-  ctx.fillStyle = EMPTY
-  ctx.fillRect(0, HUD_H, BOARD_W, BOARD_H)
-  // Grid lines.
-  ctx.strokeStyle = GRID
+  ctx.fillStyle = THEME.bgBottom
+  roundRectPath(ctx, 2, HUD_H + 2, BOARD_W - 4, BOARD_H - 4, 10)
+  ctx.fill()
+  ctx.strokeStyle = THEME.panelEdge
   ctx.lineWidth = 1
+  ctx.stroke()
+  // Grid lines.
+  ctx.strokeStyle = THEME.panelEdge
   for (let i = 1; i < 4; i += 1) {
     ctx.beginPath()
     ctx.moveTo(i * CELL + 0.5, HUD_H)
@@ -133,22 +132,24 @@ export function renderHuarong(
     }
   }
 
+  // Solve burst (observed render-side; logic untouched).
+  if (view.solved && !prevSolved) {
+    particles.burst(BOARD_W / 2, HUD_H + BOARD_H / 2, THEME.good, 30, 180)
+  }
+  prevSolved = view.solved
+  particles.tick(ctx, dtMs)
+
   // Solved overlay.
   if (view.solved) {
-    ctx.fillStyle = 'rgba(19,19,26,0.7)'
-    ctx.fillRect(0, HUD_H, BOARD_W, BOARD_H)
-    ctx.fillStyle = '#ffe08a'
-    ctx.font = 'bold 28px ui-monospace, monospace'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText('完 成 ！', BOARD_W / 2, HUD_H + BOARD_H / 2 - 14)
-    ctx.fillStyle = TEXT
-    ctx.font = '14px ui-monospace, monospace'
     const seconds2 = Math.floor(state.elapsed)
-    ctx.fillText(`${state.moves} 步 · ${Math.floor(seconds2 / 60)}:${String(seconds2 % 60).padStart(2, '0')}`, BOARD_W / 2, HUD_H + BOARD_H / 2 + 18)
-    ctx.fillStyle = MUTED
-    ctx.font = '12px ui-monospace, monospace'
-    ctx.fillText('按 R 或点击 重新开始', BOARD_W / 2, HUD_H + BOARD_H / 2 + 42)
+    ctx.save()
+    ctx.translate(0, HUD_H)
+    drawOverlay(
+      ctx, BOARD_W, BOARD_H, '完成！',
+      `${state.moves} 步 · ${Math.floor(seconds2 / 60)}:${String(seconds2 % 60).padStart(2, '0')} · 按 R 或点击 重新开始`,
+      THEME.gold,
+    )
+    ctx.restore()
   }
   ctx.textBaseline = 'alphabetic'
 }

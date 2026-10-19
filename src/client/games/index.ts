@@ -23,6 +23,9 @@ import { flappyGame } from './flappy/index.ts'
 import { sudokuGame } from './sudoku/index.ts'
 import { pacmanGame } from './pacman/index.ts'
 import { aimTrackGame } from './aimtrack/index.ts'
+import { simonGame } from './simon/index.ts'
+import { sokobanGame } from './sokoban/index.ts'
+import { asteroidsGame } from './asteroids/index.ts'
 
 export { getGames, getGame } from './registry.ts'
 export { registerGame } from './registry.ts'
@@ -39,6 +42,7 @@ export function registerBuiltinGames(): void {
     dinoGame, tetrisGame, tanksGame, match3Game, huarongGame, snakeGame,
     game2048, minesweeperGame, memoryGame, gomokuGame, hopGame, breakoutGame,
     whackGame, othelloGame, flappyGame, sudokuGame, pacmanGame, aimTrackGame,
+    simonGame, sokobanGame, asteroidsGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }

@@ -1,7 +1,8 @@
 /**
  * Breakout canvas renderer: the brick wall, the paddle, the ball, and the
- * HUD. Brick colors come from the brick's own color field (stable when other
- * bricks are destroyed), and the ball is drawn in its current color.
+ * HUD, styled with the shared theme kit. Brick colors come from the brick's
+ * own color field (stable when other bricks are destroyed), and the ball is
+ * drawn in its current color. Score gains fire particle bursts at the ball.
  */
 import type { BreakoutState } from './logic.ts';
 export declare const LOGICAL_W = 480;

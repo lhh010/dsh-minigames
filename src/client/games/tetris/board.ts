@@ -209,8 +209,7 @@ export function holdPiece(state: TetrisState): void {
   state.canHold = false
   if (held === null) {
     // The hold slot was empty: the current piece takes it, and the next piece
-    // from the queue becomes current (queue refilled in spawn).
-    state.nextQueue.push(randomPiece(state.rng))
+    // from the queue becomes current (spawn shifts and refills the queue).
     spawn(state)
     // spawn() resets the hold allowance; the swap above already consumed it.
     state.canHold = false

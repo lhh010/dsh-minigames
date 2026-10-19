@@ -1,8 +1,12 @@
 /**
- * 2048 canvas renderer: a 4x4 board of tiles with power-of-two colors, a score
- * HUD, and win/game-over overlays. Palette tuned for the DSH dark shell.
+ * 2048 canvas renderer: a 4x4 board of rounded glowing tiles colored by the
+ * shared accent ramp (stable per tile value), a score HUD, and shared
+ * win/game-over overlays. Score gains fire a particle burst at the board.
  */
 import type { Game2048State } from './logic.ts'
+import {
+  THEME, accent, drawBackground, drawOverlay, glow, hudPair, noGlow, roundRectPath, createParticles,
+} from '../theme.ts'
 
 export const CELL = 64
 export const GAP = 8
@@ -12,23 +16,14 @@ export const BOARD_H = 4 * CELL + 5 * GAP
 export const LOGICAL_W = BOARD_W
 export const LOGICAL_H = HUD_H + BOARD_H
 
-const BG = '#1b1b22'
-const CELL_BG = '#26262e'
-const TEXT = '#d8d8e0'
+// Render-owned particle system + frame clock (single game instance per canvas).
+const particles = createParticles()
+let prevScore = -1
+let prevNow = 0
 
-/** Tile background color by exponent of 2 (value). */
+/** Stable tile accent by exponent of 2 (2 → accent(0), 4 → accent(1), ...). */
 function tileColor(value: number): string {
-  if (value === 2) return '#3a4a6a'
-  if (value === 4) return '#4a6a9a'
-  if (value === 8) return '#5a8ab0'
-  if (value === 16) return '#5abf8a'
-  if (value === 32) return '#e8a04c'
-  if (value === 64) return '#e8864c'
-  if (value === 128) return '#e8604c'
-  if (value === 256) return '#e84c8a'
-  if (value === 512) return '#b07cc9'
-  if (value === 1024) return '#e8c84c'
-  return '#4cd0c9'
+  return accent(Math.log2(value) - 1)
 }
 
 function tilePos(i: number): number {
@@ -37,58 +32,66 @@ function tilePos(i: number): number {
 
 /** Draw one frame. */
 export function render2048(ctx: CanvasRenderingContext2D, state: Game2048State): void {
-  ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H)
+  const now = performance.now()
+  const dt = Math.min(50, Math.max(0, now - prevNow))
+  prevNow = now
+
+  drawBackground(ctx, LOGICAL_W, LOGICAL_H)
 
   // HUD.
-  ctx.fillStyle = '#15151b'
-  ctx.fillRect(0, 0, LOGICAL_W, HUD_H)
-  ctx.fillStyle = TEXT
-  ctx.font = 'bold 16px ui-monospace, monospace'
-  ctx.textAlign = 'left'
-  ctx.fillText('2048', 10, 25)
-  ctx.textAlign = 'right'
-  ctx.font = '13px ui-monospace, monospace'
-  ctx.fillText(`得分 ${state.score}`, LOGICAL_W - 10, 25)
+  hudPair(ctx, 10, 24, '', '2048', 'left')
+  hudPair(ctx, LOGICAL_W - 10, 24, '得分', String(state.score), 'right')
 
-  // Board.
-  ctx.fillStyle = BG
-  ctx.fillRect(0, HUD_H, BOARD_W, BOARD_H)
+  // Board panel.
+  ctx.fillStyle = THEME.panel
+  glow(ctx, THEME.panelEdge, 8)
+  roundRectPath(ctx, 0, HUD_H, BOARD_W, BOARD_H, 10)
+  ctx.fill()
+  noGlow(ctx)
+  ctx.strokeStyle = THEME.panelEdge
+  ctx.lineWidth = 1
+  roundRectPath(ctx, 0.5, HUD_H + 0.5, BOARD_W - 1, BOARD_H - 1, 10)
+  ctx.stroke()
+
   for (let r = 0; r < 4; r += 1) {
     for (let c = 0; c < 4; c += 1) {
       const x = tilePos(c)
       const y = HUD_H + tilePos(r)
       const value: number | null = state.grid[r]![c] ?? null
-      ctx.fillStyle = value === null ? CELL_BG : tileColor(value)
-      ctx.fillRect(x, y, CELL, CELL)
-      if (value !== null) {
-        ctx.fillStyle = value <= 4 ? '#e8ecf4' : '#ffffff'
-        ctx.font = value >= 1024 ? 'bold 18px ui-monospace, monospace' : 'bold 24px ui-monospace, monospace'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(String(value), x + CELL / 2, y + CELL / 2)
+      if (value === null) {
+        ctx.fillStyle = THEME.bgBottom
+        roundRectPath(ctx, x, y, CELL, CELL, 8)
+        ctx.fill()
+        continue
       }
+      const color = tileColor(value)
+      // Higher tiles glow brighter.
+      ctx.fillStyle = color
+      glow(ctx, color, Math.min(18, 4 + Math.log2(value) * 1.2))
+      roundRectPath(ctx, x, y, CELL, CELL, 8)
+      ctx.fill()
+      noGlow(ctx)
+      ctx.fillStyle = value <= 4 ? THEME.text : '#ffffff'
+      ctx.font = value >= 1024 ? 'bold 18px system-ui, sans-serif' : 'bold 24px system-ui, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(String(value), x + CELL / 2, y + CELL / 2)
     }
   }
   ctx.textBaseline = 'alphabetic'
 
+  // Score gain → burst at the board centre.
+  if (state.score !== prevScore) {
+    if (prevScore >= 0 && state.score > prevScore) {
+      particles.burst(BOARD_W / 2, HUD_H + BOARD_H / 2, THEME.good, 12, 160)
+    }
+    prevScore = state.score
+  }
+  particles.tick(ctx, dt)
+
   if (state.won && !state.over) {
-    ctx.fillStyle = 'rgba(21,21,27,0.55)'
-    ctx.fillRect(0, HUD_H, BOARD_W, BOARD_H)
-    ctx.fillStyle = '#ffe08a'
-    ctx.font = 'bold 24px ui-monospace, monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText('达 成 2048 ！', BOARD_W / 2, HUD_H + BOARD_H / 2 - 8)
-    ctx.fillStyle = TEXT
-    ctx.font = '13px ui-monospace, monospace'
-    ctx.fillText('继续挑战更高分 · R 重新开始', BOARD_W / 2, HUD_H + BOARD_H / 2 + 20)
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '达成 2048！', '继续挑战更高分 · R 重新开始', THEME.gold)
   } else if (state.over) {
-    ctx.fillStyle = 'rgba(21,21,27,0.65)'
-    ctx.fillRect(0, HUD_H, BOARD_W, BOARD_H)
-    ctx.fillStyle = TEXT
-    ctx.font = 'bold 24px ui-monospace, monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText('游 戏 结 束', BOARD_W / 2, HUD_H + BOARD_H / 2 - 8)
-    ctx.font = '13px ui-monospace, monospace'
-    ctx.fillText(`得分 ${state.score} · 按 R 重新开始`, BOARD_W / 2, HUD_H + BOARD_H / 2 + 20)
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '游戏结束', `得分 ${state.score} · 按 R 重新开始`, THEME.bad)
   }
 }

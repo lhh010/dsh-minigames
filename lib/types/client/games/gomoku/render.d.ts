@@ -1,6 +1,7 @@
 /**
  * Gomoku canvas renderer: the 15x15 board with grid lines and stones, a turn
- * HUD, and a win overlay. Palette tuned for the DSH dark shell.
+ * HUD, a win overlay, and a particle burst on game end. Uses the shared
+ * visual kit (../theme.ts).
  */
 import type { GomokuState } from './logic.ts';
 export declare const CELL = 24;

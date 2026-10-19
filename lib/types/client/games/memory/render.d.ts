@@ -1,6 +1,8 @@
 /**
  * Memory-match canvas renderer: a grid of face-down cards with emoji symbols,
- * face-up cards highlighted, matched pairs removed, and a moves HUD.
+ * face-up cards highlighted, matched pairs removed, a moves HUD, and a
+ * particle burst when a pair matches. Uses the shared visual kit
+ * (../theme.ts).
  */
 import type { MemoryState } from './logic.ts';
 export declare const CELL = 48;

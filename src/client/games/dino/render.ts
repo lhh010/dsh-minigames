@@ -5,9 +5,18 @@
  */
 import type { DinoState, Obstacle } from './engine.ts'
 import { GROUND_Y, VIEW_W } from './engine.ts'
+import {
+  THEME, accent, drawBackground, drawOverlay, glow, hudPair, noGlow, roundRectPath, createParticles,
+} from '../theme.ts'
+
+// Render-owned particle system + frame clock (single game instance per canvas).
+const particles = createParticles()
+let prevOver = false
+let prevNow = 0
 
 interface Palette {
-  bg: string
+  bgTop: string
+  bgBottom: string
   dino: string
   dinoShade: string
   cactus: string
@@ -24,48 +33,62 @@ interface Palette {
   rain: string
 }
 
+// Day/night palettes tuned to the shared theme kit (day stays light — it is
+// part of the gameplay rhythm, flipped every THEME_INTERVAL points).
 const DAY: Palette = {
-  bg: '#f4f1e9',
+  bgTop: '#f4f1e9',
+  bgBottom: '#e4e0d4',
   dino: '#2e2e35', // near-black pixel silhouette, like the classic dino
   dinoShade: '#8a8a96',
-  cactus: '#5aa864',
+  cactus: accent(2),
   cactusDark: '#3d7a46',
   bird: '#8f8f9c',
   birdDark: '#5f5f6c',
-  beak: '#e08a30',
+  beak: THEME.gold,
   ground: '#6f6f7a',
   groundDash: '#c2bdb1',
   cloud: '#d9d5c9',
   text: '#4a4a55',
   eye: '#ffffff',
   fog: '#c8d2da',
-  rain: '#6f86a0',
+  rain: accent(5),
 }
 
 const NIGHT: Palette = {
-  bg: '#13131a',
-  dino: '#ececf2',
-  dinoShade: '#b9b9c6',
-  cactus: '#67b26f',
+  bgTop: THEME.bgTop,
+  bgBottom: THEME.bgBottom,
+  dino: THEME.text,
+  dinoShade: THEME.textMuted,
+  cactus: accent(2),
   cactusDark: '#45834d',
   bird: '#c6c6d2',
   birdDark: '#8f8fa0',
-  beak: '#e8a04c',
-  ground: '#8f8f9c',
-  groundDash: '#5c5c68',
+  beak: THEME.gold,
+  ground: THEME.panelEdge,
+  groundDash: '#3c3c50',
   cloud: '#2e2e38',
-  text: '#d8d8e0',
+  text: THEME.text,
   eye: '#ffffff',
   fog: '#8b96b5',
-  rain: '#9fb8d8',
+  rain: accent(5),
 }
 
 /** Draw one frame of the run. */
 export function renderDino(ctx: CanvasRenderingContext2D, state: DinoState): void {
+  const now = performance.now()
+  const dt = Math.min(50, Math.max(0, now - prevNow))
+  prevNow = now
   const p = state.night ? NIGHT : DAY
-  ctx.clearRect(0, 0, VIEW_W, GROUND_Y + 20)
-  ctx.fillStyle = p.bg
-  ctx.fillRect(0, 0, VIEW_W, GROUND_Y + 20)
+  // Night uses the shared kit background; day keeps its light sky gradient.
+  if (state.night) {
+    drawBackground(ctx, VIEW_W, GROUND_Y + 20)
+  } else {
+    const sky = ctx.createLinearGradient(0, 0, 0, GROUND_Y + 20)
+    sky.addColorStop(0, p.bgTop)
+    sky.addColorStop(1, p.bgBottom)
+    ctx.fillStyle = sky
+    ctx.fillRect(0, 0, VIEW_W, GROUND_Y + 20)
+  }
   drawClouds(ctx, state, p)
   drawGround(ctx, state, p)
   for (const obstacle of state.obstacles) drawObstacle(ctx, obstacle, state.t, p)
@@ -74,12 +97,15 @@ export function renderDino(ctx: CanvasRenderingContext2D, state: DinoState): voi
     drawFog(ctx, state, p)
     drawRain(ctx, state, p)
   }
+  // Run ends → burst at the dino.
+  if (state.over && !prevOver) {
+    particles.burst(state.dino.x + 23, state.dino.y + 25, THEME.bad, 16, 170)
+  }
+  prevOver = state.over
+  particles.tick(ctx, dt)
   // Score, classic top-right (distance-based now).
-  ctx.fillStyle = p.text
-  ctx.font = '13px ui-monospace, monospace'
-  ctx.textAlign = 'right'
-  ctx.fillText(String(Math.floor(state.score)).padStart(5, '0'), VIEW_W - 12, 22)
-  if (state.over) drawGameOver(ctx, state, p)
+  hudPair(ctx, VIEW_W - 12, 22, '', String(Math.floor(state.score)).padStart(5, '0'), 'right', p.text)
+  if (state.over) drawGameOver(ctx, state)
   // Lightning: the whole screen flashes white for an instant, over everything.
   if (state.lightning > 0) {
     ctx.fillStyle = `rgba(255,255,255,${Math.min(0.95, state.lightning).toFixed(3)})`
@@ -196,11 +222,12 @@ function drawCactus(
   ctx.beginPath()
   ctx.roundRect(x + w, rightY - 7, 4.5, 7, 2)
   ctx.fill()
-  // Trunk: rounded top, slightly tapered sides.
+  // Trunk: rounded top, slightly tapered sides, softly glowing.
   ctx.fillStyle = p.cactus
-  ctx.beginPath()
-  ctx.roundRect(x, y, w, h, [r, r, 3, 3])
+  glow(ctx, p.cactus, 8)
+  roundRectPath(ctx, x, y, w, h, r)
   ctx.fill()
+  noGlow(ctx)
   // Shaded right edge + vertical ribs.
   ctx.fillStyle = p.cactusDark
   ctx.beginPath()
@@ -293,6 +320,7 @@ function drawDinoBody(ctx: CanvasRenderingContext2D, x: number, y: number, heigh
   const cellW = 46 / DINO_COLS
   const cellH = height / 17
   ctx.fillStyle = p.dino
+  glow(ctx, p.dino, 8)
   for (let r = 0; r < DINO_STATIC_ROWS; r += 1) {
     const row = DINO_MATRIX[r]!
     for (let c = 0; c < DINO_COLS; c += 1) {
@@ -304,6 +332,7 @@ function drawDinoBody(ctx: CanvasRenderingContext2D, x: number, y: number, heigh
       ctx.fillRect(x0, y0, x1 - x0, y1 - y0)
     }
   }
+  noGlow(ctx)
   // The white eye at the lone 0 in the head.
   ctx.fillStyle = p.eye
   const ex = x + Math.round(EYE_C * cellW)
@@ -343,11 +372,9 @@ function drawDinoDucking(ctx: CanvasRenderingContext2D, x: number, ground: numbe
   ctx.fillRect(x + 21, ground - 6, 8, 5)
 }
 
-function drawGameOver(ctx: CanvasRenderingContext2D, state: DinoState, p: Palette): void {
-  ctx.fillStyle = p.text
-  ctx.font = 'bold 20px ui-monospace, monospace'
-  ctx.textAlign = 'center'
-  ctx.fillText('GAME OVER', VIEW_W / 2, GROUND_Y - 92)
-  ctx.font = '12px ui-monospace, monospace'
-  ctx.fillText(`得分 ${Math.floor(state.score)} · 按空格或点击重新开始`, VIEW_W / 2, GROUND_Y - 68)
+function drawGameOver(ctx: CanvasRenderingContext2D, state: DinoState): void {
+  drawOverlay(
+    ctx, VIEW_W, GROUND_Y + 20, 'GAME OVER',
+    `得分 ${Math.floor(state.score)} · 按空格或点击重新开始`, THEME.bad,
+  )
 }

@@ -1,7 +1,7 @@
 /**
- * Sudoku canvas renderer: the 9x9 grid with box dividers, fixed clues in
- * dark, player entries in blue, conflicts in red, a cursor highlight, and a
- * difficulty/time HUD.
+ * Sudoku canvas renderer on the shared theme kit: gradient background, a
+ * panel board with glowing cursor/conflict highlights, themed digits, a
+ * hudPair HUD, a win overlay, and a particle burst when the puzzle is solved.
  */
 import type { SudokuState } from './logic.ts';
 import { type Difficulty } from './logic.ts';

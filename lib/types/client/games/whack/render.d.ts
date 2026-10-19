@@ -1,6 +1,8 @@
 /**
- * Whack-a-mole canvas renderer: a grassy 5x5 hole grid, moles that pop up
- * with a peek animation, a time/score HUD, and a round-over overlay.
+ * Whack-a-mole canvas renderer on the shared theme kit: gradient backdrop,
+ * a rounded grass panel with themed holes, glowing moles, a hudPair HUD,
+ * hit particle bursts (observed from score + mole-set diffs), and a themed
+ * round-over overlay.
  */
 import type { WhackState } from './logic.ts';
 export declare const CELL = 64;

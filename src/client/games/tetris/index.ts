@@ -58,6 +58,8 @@ function createTetrisGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    // Gameplay keys are dead while paused (gravity/timer frozen).
+    if (!running && event.code !== 'KeyP' && event.code !== 'KeyR') return
     switch (event.code) {
       case 'ArrowLeft':
       case 'KeyA':

@@ -1,7 +1,7 @@
 /**
- * Minesweeper canvas renderer: the mine grid (hidden cells, numbers, flags),
- * a mine-counter HUD, and win/game-over overlays. Palette tuned for the DSH
- * dark shell.
+ * Minesweeper canvas renderer: the mine grid (hidden tiles, glowing numbers,
+ * flags), a mine-counter HUD, and win/game-over overlays — all on the shared
+ * theme kit. Score-side effects are render-side observations only.
  */
 import type { MinesweeperState } from './logic.ts';
 export declare const CELL = 30;

@@ -80,6 +80,7 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
   }
 
   const onPointerDown = (event: PointerEvent): void => {
+    if (!running) return // paused: freeze the board
     const cell = cellFromEvent(event)
     if (cell !== null) pop(cell)
   }
@@ -105,6 +106,7 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
         break
       case 'Space':
         event.preventDefault()
+        if (!running) return // paused: freeze the board
         pop(cursor)
         break
       case 'KeyR':
@@ -221,7 +223,7 @@ export const match3Game: MiniGameDefinition = {
   id: 'match3',
   title: '消消乐',
   icon: '💎',
-  description: '点击同色四连通块消除，一次消得越多分越高；达到目标分过关，目标逐关翻倍。',
+  description: '点击同色四连通块消除，一次消得越多分越高；达到目标分过关，目标逐关提高。',
   controls: ['点击：消除同色四连通块', '方向键 + 空格：键盘消除', 'R：重开', 'P：暂停'],
   create: createMatch3Game,
 }

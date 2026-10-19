@@ -75,6 +75,7 @@ function createHuarongGame(host: HTMLElement, options?: MiniGameMountOptions): M
   }
 
   const onPointerDown = (event: PointerEvent): void => {
+    if (!running) return // paused: freeze the board
     if (slideEntries.length > 0) return
     if (state.solved) {
       newPuzzle()

@@ -1,8 +1,8 @@
 /**
- * Pac-Man canvas renderer: a dark maze of glowing blue walls, dots and
- * flashing power pellets, a yellow Pac-Man with a mouth that faces its
- * direction, coloured ghosts (blue and flashing while frightened), and a
- * score/lives HUD.
+ * Pac-Man canvas renderer: the shared gradient background, dark wall blocks
+ * with a soft rim, glowing dots and power pellets, a gold Pac-Man and stable
+ * accent ghosts, a score/lives HUD, and overlays from the theme kit. Eat
+ * bursts are render-side observations only (previous score module variable).
  */
 import type { PacmanState } from './logic.ts';
 export declare const HUD_H = 30;

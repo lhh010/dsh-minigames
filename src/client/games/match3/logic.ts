@@ -184,7 +184,7 @@ export function updateResult(state: Match3State): void {
   }
 }
 
-/** Start the next level: fresh board, reset score, doubled target. */
+/** Start the next level: fresh board, reset score, +400 target. */
 export function advanceLevel(state: Match3State): void {
   state.level += 1
   state.target = levelTarget(state.level)

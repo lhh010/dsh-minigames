@@ -1,7 +1,8 @@
 /**
- * Tetris canvas renderer: the 10x20 board, the current piece with its ghost,
- * and the next/hold previews on the right. Palette tuned for the DSH dark
- * shell.
+ * Tetris canvas renderer on the shared theme kit: gradient backdrop, a
+ * themed board with glowing rounded blocks and a ghost outline, accent-per-
+ * kind piece colors, hudPair stats, a clear-line particle burst (observed
+ * from the lines counter), and a themed game-over overlay.
  */
 import { type TetrisState } from './board.ts';
 export declare const BOARD_W: number;

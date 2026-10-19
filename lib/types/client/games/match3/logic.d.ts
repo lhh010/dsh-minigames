@@ -63,7 +63,7 @@ export declare function applyRemoval(grid: number[][], positions: Position[]): v
 export declare function removeGroup(state: Match3State, pos: Position): Position[];
 /** Re-evaluate win/lose after a removal (no-op once a result is set). */
 export declare function updateResult(state: Match3State): void;
-/** Start the next level: fresh board, reset score, doubled target. */
+/** Start the next level: fresh board, reset score, +400 target. */
 export declare function advanceLevel(state: Match3State): void;
 /** Restart the whole run from level 1. */
 export declare function restart(state: Match3State): void;

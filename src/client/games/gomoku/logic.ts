@@ -131,7 +131,7 @@ export function chooseAiMove(state: GomokuState): Move | null {
   let best: Move | null = null
   let bestScore = -1
   for (const m of empties) {
-    // Only consider cells near existing stones (3x3 neighbourhood).
+    // Only consider cells near existing stones (5x5 neighbourhood).
     let near = false
     for (let dr = -2; dr <= 2 && !near; dr += 1) {
       for (let dc = -2; dc <= 2; dc += 1) {

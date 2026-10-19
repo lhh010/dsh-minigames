@@ -1,9 +1,9 @@
 /**
- * FPS aim-tracking canvas renderer: a first-person range — sky above a ground
- * plane with a perspective grid, the horizon tilting with pitch, a target
- * that moves in 3D (lateral + height), a fixed centre crosshair (gold while
- * locked), a right-lower gun viewmodel with muzzle flash, a HUD, and overlays
- * for ready/paused/round-end states.
+ * FPS aim-tracking canvas renderer on the shared theme kit: a themed sky/
+ * ground range with a perspective grid, a glowing target and hit markers,
+ * the fixed centre crosshair (gold while locked), a gun viewmodel with
+ * muzzle flash, a hudPair HUD, hit particle bursts (observed from the hit
+ * counter), and shared-style overlays for ready/paused/round-end states.
  */
 import type { FpsTrackState } from './logic.ts';
 /** UI phase drawn by the renderer (mirrors the instance). */

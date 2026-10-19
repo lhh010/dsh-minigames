@@ -1,29 +1,41 @@
 /**
- * Pac-Man canvas renderer: a dark maze of glowing blue walls, dots and
- * flashing power pellets, a yellow Pac-Man with a mouth that faces its
- * direction, coloured ghosts (blue and flashing while frightened), and a
- * score/lives HUD.
+ * Pac-Man canvas renderer: the shared gradient background, dark wall blocks
+ * with a soft rim, glowing dots and power pellets, a gold Pac-Man and stable
+ * accent ghosts, a score/lives HUD, and overlays from the theme kit. Eat
+ * bursts are render-side observations only (previous score module variable).
  */
 import type { PacmanState, Dir } from './logic.ts'
 import { CELL, COLS, ROWS } from './logic.ts'
+import { THEME, accent, createParticles, drawBackground, drawOverlay, glow, hudPair, noGlow } from '../theme.ts'
 
 export const HUD_H = 30
 export const LOGICAL_W = COLS * CELL
 export const LOGICAL_H = HUD_H + ROWS * CELL
 
-const BG = '#101018'
-const WALL = '#2440c8'
-const WALL_EDGE = '#3a5ae0'
-const DOT = '#ffd9a0'
-const TEXT = '#d8d8e0'
-const PAC = '#ffd83d'
-const GHOST_COLORS = ['#e45756', '#e88ac8']
+const WALL = '#23233a'
+const WALL_EDGE = '#34344e'
+const DOT = '#c8b088'
+
+// Render-side effect state: particles, the frame clock, and the previous
+// score used to detect eats.
+const particles = createParticles()
+let prevScore = 0
+let prevFrameMs = 0
 
 /** Draw one frame; `t` is a running seconds counter for flicker effects. */
 export function renderPacman(ctx: CanvasRenderingContext2D, state: PacmanState, t: number): void {
-  ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H)
-  ctx.fillStyle = BG
-  ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H)
+  const nowMs = performance.now()
+  const dtMs = prevFrameMs === 0 ? 16 : Math.min(50, nowMs - prevFrameMs)
+  prevFrameMs = nowMs
+
+  drawBackground(ctx, LOGICAL_W, LOGICAL_H)
+
+  // Eat burst at the player (observed score change; logic untouched).
+  if (state.score > prevScore) {
+    const gain = state.score - prevScore
+    particles.burst(state.px, HUD_H + state.py, gain >= 100 ? accent(4) : THEME.gold, gain >= 100 ? 22 : 10, gain >= 100 ? 170 : 120)
+  }
+  prevScore = state.score
 
   // Maze.
   for (let r = 0; r < ROWS; r += 1) {
@@ -43,15 +55,18 @@ export function renderPacman(ctx: CanvasRenderingContext2D, state: PacmanState, 
         ctx.fill()
       } else if (cell === 'o') {
         const pulse = 4 + Math.sin(t * 8) * 1.5
-        ctx.fillStyle = '#ffd9a0'
+        glow(ctx, THEME.gold, 8)
+        ctx.fillStyle = THEME.gold
         ctx.beginPath()
         ctx.arc(x + CELL / 2, y + CELL / 2, pulse, 0, Math.PI * 2)
         ctx.fill()
+        noGlow(ctx)
       }
     }
   }
 
-  // Ghosts: wavy skirt + eyes that follow the travel direction.
+  // Ghosts: wavy skirt + eyes that follow the travel direction; one stable
+  // accent per ghost id, blue-and-white flicker while frightened.
   const DIR_OFFSET: Record<Dir, readonly [number, number]> = {
     0: [0, -2],
     1: [2, 0],
@@ -61,7 +76,9 @@ export function renderPacman(ctx: CanvasRenderingContext2D, state: PacmanState, 
   state.ghosts.forEach((ghost, i) => {
     const frightened = state.fright > 0
     const flicker = frightened && Math.floor(t * 8) % 2 === 0
-    ctx.fillStyle = frightened ? (flicker ? '#ffffff' : '#4c9ae8') : GHOST_COLORS[i % GHOST_COLORS.length]!
+    const bodyColor = frightened ? (flicker ? '#ffffff' : accent(5)) : accent(4 + i)
+    ctx.fillStyle = bodyColor
+    glow(ctx, bodyColor, 10)
     const gy = HUD_H + ghost.y
     const r = CELL * 0.42
     ctx.beginPath()
@@ -77,6 +94,7 @@ export function renderPacman(ctx: CanvasRenderingContext2D, state: PacmanState, 
     ctx.lineTo(ghost.x - r, gy + r)
     ctx.closePath()
     ctx.fill()
+    noGlow(ctx)
     // Eyes look the way the ghost is moving.
     if (!frightened) {
       const [ex, ey] = DIR_OFFSET[ghost.dir]
@@ -85,7 +103,7 @@ export function renderPacman(ctx: CanvasRenderingContext2D, state: PacmanState, 
       ctx.arc(ghost.x - 4, gy - 2, 3.5, 0, Math.PI * 2)
       ctx.arc(ghost.x + 4, gy - 2, 3.5, 0, Math.PI * 2)
       ctx.fill()
-      ctx.fillStyle = '#15151b'
+      ctx.fillStyle = THEME.bgBottom
       ctx.beginPath()
       ctx.arc(ghost.x - 4 + ex, gy - 2 + ey, 1.8, 0, Math.PI * 2)
       ctx.arc(ghost.x + 4 + ex, gy - 2 + ey, 1.8, 0, Math.PI * 2)
@@ -93,7 +111,7 @@ export function renderPacman(ctx: CanvasRenderingContext2D, state: PacmanState, 
     }
   })
 
-  // Pac-Man: yellow disc with a chewing mouth facing the travel direction.
+  // Pac-Man: gold disc with a chewing mouth facing the travel direction.
   // The mouth is the *complement* of the swept wedge: fill everything except
   // the opening angle, so the disc keeps its round shape with a bite.
   const mouth = 0.12 + 0.5 * Math.abs(Math.sin(t * 12))
@@ -104,7 +122,8 @@ export function renderPacman(ctx: CanvasRenderingContext2D, state: PacmanState, 
     3: [Math.PI - mouth, Math.PI + mouth],
   }
   const [a0, a1] = angles[state.dir]
-  ctx.fillStyle = PAC
+  ctx.fillStyle = THEME.gold
+  glow(ctx, THEME.gold, 12)
   ctx.beginPath()
   ctx.moveTo(state.px, HUD_H + state.py)
   // Arc from the far edge of the mouth to the near edge (clockwise sweep
@@ -112,32 +131,17 @@ export function renderPacman(ctx: CanvasRenderingContext2D, state: PacmanState, 
   ctx.arc(state.px, HUD_H + state.py, CELL * 0.44, a1, a0)
   ctx.closePath()
   ctx.fill()
+  noGlow(ctx)
 
   // HUD.
-  ctx.fillStyle = '#15151b'
-  ctx.fillRect(0, 0, LOGICAL_W, HUD_H)
-  ctx.fillStyle = TEXT
-  ctx.font = '13px ui-monospace, monospace'
-  ctx.textAlign = 'left'
-  ctx.fillText(`得分 ${state.score}`, 10, 20)
-  ctx.textAlign = 'right'
-  ctx.fillText(`生命 ${'♥'.repeat(Math.max(0, state.lives))}`, LOGICAL_W - 10, 20)
+  hudPair(ctx, 10, 20, '得分', `${state.score}`)
+  hudPair(ctx, LOGICAL_W - 10, 20, '生命', '♥'.repeat(Math.max(0, state.lives)), 'right', THEME.bad)
+
+  particles.tick(ctx, dtMs)
 
   if (state.over) {
-    overlay(ctx, '游 戏 结 束', `得分 ${state.score} · 按 R 重新开始`)
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '游戏结束', `得分 ${state.score} · 按 R 重新开始`, THEME.bad)
   } else if (state.won) {
-    overlay(ctx, '过 关 啦 ！', `得分 ${state.score} · 按 R 重新开始`)
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '过关啦！', `得分 ${state.score} · 按 R 重新开始`, THEME.gold)
   }
-}
-
-function overlay(ctx: CanvasRenderingContext2D, title: string, sub: string): void {
-  ctx.fillStyle = 'rgba(16,16,24,0.7)'
-  ctx.fillRect(0, HUD_H, LOGICAL_W, ROWS * CELL)
-  ctx.fillStyle = '#ffe08a'
-  ctx.font = 'bold 24px ui-monospace, monospace'
-  ctx.textAlign = 'center'
-  ctx.fillText(title, LOGICAL_W / 2, HUD_H + (ROWS * CELL) / 2 - 8)
-  ctx.fillStyle = TEXT
-  ctx.font = '13px ui-monospace, monospace'
-  ctx.fillText(sub, LOGICAL_W / 2, HUD_H + (ROWS * CELL) / 2 + 20)
 }

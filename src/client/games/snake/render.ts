@@ -1,8 +1,10 @@
 /**
- * Snake canvas renderer: the grid, the snake (head brighter, body segments),
- * the food, and a game-over overlay. Palette tuned for the DSH dark shell.
+ * Snake canvas renderer: the shared gradient background with a faint grid,
+ * rounded glowing snake segments (head brightest), glowing food, a score HUD,
+ * and a game-over overlay. Eat bursts are render-side observations only.
  */
 import type { SnakeState } from './logic.ts'
+import { THEME, createParticles, drawBackground, drawOverlay, glow, hudPair, noGlow, roundRectPath } from '../theme.ts'
 
 export const CELL = 26
 export const HUD_H = 30
@@ -11,29 +13,25 @@ export const BOARD_H = 12 * CELL
 export const LOGICAL_W = BOARD_W
 export const LOGICAL_H = HUD_H + BOARD_H
 
-const BG = '#15151b'
-const GRID_LINE = 'rgba(255,255,255,0.04)'
-const SNAKE = '#5abf6b'
-const SNAKE_HEAD = '#7ae08c'
-const FOOD = '#e45756'
-const TEXT = '#d8d8e0'
+// Render-side effect state: particles, the frame clock, and the previous
+// score used to detect eats.
+const particles = createParticles()
+let prevScore = 0
+let prevFrameMs = 0
 
 /** Draw one frame. */
 export function renderSnake(ctx: CanvasRenderingContext2D, state: SnakeState): void {
-  ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H)
+  const nowMs = performance.now()
+  const dtMs = prevFrameMs === 0 ? 16 : Math.min(50, nowMs - prevFrameMs)
+  prevFrameMs = nowMs
+
+  drawBackground(ctx, LOGICAL_W, LOGICAL_H)
 
   // HUD.
-  ctx.fillStyle = '#1b1b22'
-  ctx.fillRect(0, 0, LOGICAL_W, HUD_H)
-  ctx.fillStyle = TEXT
-  ctx.font = '13px ui-monospace, monospace'
-  ctx.textAlign = 'left'
-  ctx.fillText(`得分 ${state.score}`, 10, 20)
+  hudPair(ctx, 10, 20, '得分', `${state.score}`)
 
-  // Board background + grid.
-  ctx.fillStyle = BG
-  ctx.fillRect(0, HUD_H, BOARD_W, BOARD_H)
-  ctx.strokeStyle = GRID_LINE
+  // Board grid.
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)'
   ctx.lineWidth = 1
   for (let c = 1; c < 16; c += 1) {
     ctx.beginPath(); ctx.moveTo(c * CELL + 0.5, HUD_H); ctx.lineTo(c * CELL + 0.5, LOGICAL_H); ctx.stroke()
@@ -42,28 +40,42 @@ export function renderSnake(ctx: CanvasRenderingContext2D, state: SnakeState): v
     ctx.beginPath(); ctx.moveTo(0, HUD_H + r * CELL + 0.5); ctx.lineTo(BOARD_W, HUD_H + r * CELL + 0.5); ctx.stroke()
   }
 
+  // Eat burst at the head (observed score change; logic untouched).
+  const head = state.snake[0]!
+  if (state.score > prevScore) {
+    particles.burst(head.c * CELL + CELL / 2, HUD_H + head.r * CELL + CELL / 2, THEME.good, 14, 130)
+  }
+  prevScore = state.score
+
   // Food.
-  ctx.fillStyle = FOOD
+  glow(ctx, THEME.bad, 10)
+  ctx.fillStyle = THEME.bad
   ctx.beginPath()
   ctx.arc(state.food.c * CELL + CELL / 2, HUD_H + state.food.r * CELL + CELL / 2, CELL * 0.3, 0, Math.PI * 2)
   ctx.fill()
+  noGlow(ctx)
 
-  // Snake.
+  // Snake: rounded segments, head glowing and brightest, body fading back.
   state.snake.forEach((p, i) => {
     const x = p.c * CELL
     const y = HUD_H + p.r * CELL
-    ctx.fillStyle = i === 0 ? SNAKE_HEAD : SNAKE
-    ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2)
+    if (i === 0) {
+      glow(ctx, THEME.good, 10)
+      ctx.fillStyle = THEME.good
+    } else {
+      noGlow(ctx)
+      ctx.fillStyle = THEME.good
+      ctx.globalAlpha = Math.max(0.35, 0.85 - i * 0.02)
+    }
+    roundRectPath(ctx, x + 1.5, y + 1.5, CELL - 3, CELL - 3, 7)
+    ctx.fill()
   })
+  ctx.globalAlpha = 1
+  noGlow(ctx)
+
+  particles.tick(ctx, dtMs)
 
   if (state.over) {
-    ctx.fillStyle = 'rgba(21,21,27,0.6)'
-    ctx.fillRect(0, HUD_H, BOARD_W, BOARD_H)
-    ctx.fillStyle = TEXT
-    ctx.font = 'bold 22px ui-monospace, monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText('游 戏 结 束', BOARD_W / 2, HUD_H + BOARD_H / 2 - 8)
-    ctx.font = '13px ui-monospace, monospace'
-    ctx.fillText(`得分 ${state.score} · 按 R 重新开始`, BOARD_W / 2, HUD_H + BOARD_H / 2 + 18)
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '游戏结束', `得分 ${state.score} · 按 R 重新开始`, THEME.bad)
   }
 }

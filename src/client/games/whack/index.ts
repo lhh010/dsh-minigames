@@ -43,7 +43,7 @@ function createWhackGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   }
 
   const onMouseDown = (event: MouseEvent): void => {
-    if (state.over) return
+    if (!running || state.over) return
     const hole = holeFromEvent(event)
     if (hole === null) return
     whack(state, hole)

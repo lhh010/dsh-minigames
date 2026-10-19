@@ -1,6 +1,7 @@
 /**
- * Snake canvas renderer: the grid, the snake (head brighter, body segments),
- * the food, and a game-over overlay. Palette tuned for the DSH dark shell.
+ * Snake canvas renderer: the shared gradient background with a faint grid,
+ * rounded glowing snake segments (head brightest), glowing food, a score HUD,
+ * and a game-over overlay. Eat bursts are render-side observations only.
  */
 import type { SnakeState } from './logic.ts';
 export declare const CELL = 26;

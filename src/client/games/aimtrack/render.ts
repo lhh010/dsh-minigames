@@ -1,29 +1,36 @@
 /**
- * FPS aim-tracking canvas renderer: a first-person range — sky above a ground
- * plane with a perspective grid, the horizon tilting with pitch, a target
- * that moves in 3D (lateral + height), a fixed centre crosshair (gold while
- * locked), a right-lower gun viewmodel with muzzle flash, a HUD, and overlays
- * for ready/paused/round-end states.
+ * FPS aim-tracking canvas renderer on the shared theme kit: a themed sky/
+ * ground range with a perspective grid, a glowing target and hit markers,
+ * the fixed centre crosshair (gold while locked), a gun viewmodel with
+ * muzzle flash, a hudPair HUD, hit particle bursts (observed from the hit
+ * counter), and shared-style overlays for ready/paused/round-end states.
  */
 import type { FpsTrackState } from './logic.ts'
 import {
   bulletPosition, effectivePitch, effectiveYaw, isLocked, targetScreenX, targetScreenY,
   CAM_H, CAM_X, CAM_Y, LOGICAL_H, LOGICAL_W,
 } from './logic.ts'
+import {
+  THEME, accent, createParticles, drawOverlay, glow, hudPair, noGlow,
+} from '../theme.ts'
 
-const SKY_TOP = '#0d1220'
+const SKY_TOP = '#10142a'
 const SKY_BOTTOM = '#1c2b45'
-const GROUND = '#151a12'
-const GROUND_GRID = 'rgba(255,255,255,0.07)'
-const TARGET = '#e45756'
-const TARGET_EDGE = '#ff9a98'
-const CROSSHAIR = '#7ef0a0'
-const LOCKED = '#ffd83d'
-const TEXT = '#d8d8e0'
+const GROUND = '#141a10'
+const GROUND_GRID = 'rgba(122,162,247,0.10)'
+const TARGET = accent(4)
+const TARGET_EDGE = accent(6)
+const CROSSHAIR = THEME.good
+const LOCKED = THEME.gold
 const FOCAL = LOGICAL_W / 2 // focal length for perspective projection
 
 /** UI phase drawn by the renderer (mirrors the instance). */
 export type UiPhase = 'ready' | 'playing' | 'paused' | 'over'
+
+// Render-side hit burst, observed from the hit counter.
+const particles = createParticles()
+let prevHits = -1
+let lastFrame = 0
 
 /** Project a world point at height h into screen coords (effective view). */
 function project(state: FpsTrackState, wx: number, wy: number, h: number): { x: number; y: number; depth: number } | null {
@@ -44,10 +51,13 @@ function project(state: FpsTrackState, wx: number, wy: number, h: number): { x: 
 /** Draw one frame; `t` is a running seconds counter for the target pulse. */
 export function renderAimTrack(ctx: CanvasRenderingContext2D, state: FpsTrackState, t: number, phase: UiPhase): void {
   ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H)
+  const now = performance.now()
+  const dt = Math.min(50, lastFrame === 0 ? 16 : now - lastFrame)
+  lastFrame = now
 
   // Horizon: sky above, ground below, shifting with pitch (incl. recoil).
   const horizon = LOGICAL_H / 2 + Math.tan(effectivePitch(state)) * FOCAL * 0.6
-  const sky = ctx.createLinearGradient(0, 0, 0, horizon)
+  const sky = ctx.createLinearGradient(0, 0, 0, Math.max(1, horizon))
   sky.addColorStop(0, SKY_TOP)
   sky.addColorStop(1, SKY_BOTTOM)
   ctx.fillStyle = sky
@@ -89,17 +99,19 @@ export function renderAimTrack(ctx: CanvasRenderingContext2D, state: FpsTrackSta
       const locked = isLocked(state)
       const size = Math.max(6, Math.min(18, 2600 / tp.depth))
       const pulse = 1 + Math.sin(t * 6) * 0.06
+      glow(ctx, TARGET, 14)
       ctx.fillStyle = TARGET
       ctx.beginPath()
       ctx.arc(sx, sy, size * pulse, 0, Math.PI * 2)
       ctx.fill()
+      noGlow(ctx)
       ctx.strokeStyle = TARGET_EDGE
       ctx.lineWidth = 2
       ctx.beginPath()
       ctx.arc(sx, sy, size * pulse, 0, Math.PI * 2)
       ctx.stroke()
       if (locked) {
-        ctx.strokeStyle = 'rgba(255,216,61,0.6)'
+        ctx.strokeStyle = 'rgba(224,175,104,0.6)'
         ctx.beginPath()
         ctx.arc(sx, sy, size * 1.7, 0, Math.PI * 2)
         ctx.stroke()
@@ -125,7 +137,7 @@ export function renderAimTrack(ctx: CanvasRenderingContext2D, state: FpsTrackSta
   ctx.lineTo(LOGICAL_W / 2, LOGICAL_H / 2 + 14)
   ctx.stroke()
   if (locked) {
-    ctx.fillStyle = 'rgba(255,216,61,0.22)'
+    ctx.fillStyle = 'rgba(224,175,104,0.22)'
     ctx.beginPath()
     ctx.arc(LOGICAL_W / 2, LOGICAL_H / 2, 12, 0, Math.PI * 2)
     ctx.fill()
@@ -137,12 +149,14 @@ export function renderAimTrack(ctx: CanvasRenderingContext2D, state: FpsTrackSta
     if (pos !== null) {
       const p = project(state, pos.x, pos.y, pos.h)
       if (p !== null) {
-        ctx.strokeStyle = 'rgba(255,216,61,0.85)'
+        glow(ctx, THEME.gold, 8)
+        ctx.strokeStyle = 'rgba(224,175,104,0.85)'
         ctx.lineWidth = 2
         ctx.beginPath()
         ctx.moveTo(LOGICAL_W - 90, LOGICAL_H + 10) // from the gun corner
         ctx.lineTo(p.x, p.y)
         ctx.stroke()
+        noGlow(ctx)
         ctx.fillStyle = '#fff3b0'
         ctx.beginPath()
         ctx.arc(p.x, p.y, 3, 0, Math.PI * 2)
@@ -154,7 +168,7 @@ export function renderAimTrack(ctx: CanvasRenderingContext2D, state: FpsTrackSta
       const hx = targetScreenX(state)
       const hy = targetScreenY(state)
       if (hx !== null && hy !== null) {
-        ctx.strokeStyle = 'rgba(255,216,61,0.9)'
+        ctx.strokeStyle = 'rgba(224,175,104,0.9)'
         ctx.lineWidth = 2
         const s = 5 + (1 - state.hitFlashT / 0.15) * 6
         for (let i = 0; i < 4; i += 1) {
@@ -171,34 +185,38 @@ export function renderAimTrack(ctx: CanvasRenderingContext2D, state: FpsTrackSta
   // First-person gun viewmodel (bottom-right), with recoil dip and muzzle flash.
   if (phase !== 'ready') drawGun(ctx, state)
 
+  // Hit burst, observed from the hit counter (logic untouched).
+  if (prevHits >= 0 && state.hits > prevHits) {
+    const hx = targetScreenX(state)
+    const hy = targetScreenY(state)
+    particles.burst(hx ?? LOGICAL_W / 2, hy ?? LOGICAL_H / 2, THEME.gold, 14, 150)
+  }
+  prevHits = state.hits
+  particles.tick(ctx, dt)
+
   // HUD.
   if (phase !== 'ready') {
-    ctx.fillStyle = TEXT
-    ctx.font = '13px ui-monospace, monospace'
-    ctx.textAlign = 'left'
-    ctx.fillText(`⏱ ${Math.max(0, Math.ceil(state.remaining))}s`, 10, 18)
-    ctx.textAlign = 'right'
-    ctx.fillText(`得分 ${Math.floor(state.score)} · 命中率 ${(shotRatePct(state)).toFixed(0)}%`, LOGICAL_W - 10, 18)
-    ctx.textAlign = 'left'
+    hudPair(ctx, 10, 18, '⏱ ', `${Math.max(0, Math.ceil(state.remaining))}s`, 'left', THEME.gold)
+    hudPair(ctx, LOGICAL_W - 10, 18, `得分 ${Math.floor(state.score)} · `, `命中率 ${shotRatePct(state).toFixed(0)}%`, 'right')
     ctx.font = '11px ui-monospace, monospace'
-    ctx.fillStyle = 'rgba(216,216,224,0.5)'
+    ctx.fillStyle = THEME.textMuted
+    ctx.textAlign = 'left'
     ctx.fillText('左键 射击 · P 暂停 · Esc 释放鼠标 · R 重开', 10, LOGICAL_H - 6)
   }
 
   if (phase === 'ready') {
     overlay(ctx,
-      '点 击 进 入 跟 枪',
-      '点击锁定鼠标（光标隐藏），移动鼠标转动视角\n准星固定在屏幕中央 · 左键射击 · P 暂停',
+      '点击进入跟枪',
+      '点击锁定鼠标（光标隐藏），移动鼠标转动视角',
+      '准星固定在屏幕中央 · 左键射击 · P 暂停',
     )
   } else if (phase === 'paused') {
-    overlay(ctx,
-      '已 暂 停',
-      '按 P 或点击继续 · R 重开',
-    )
+    overlay(ctx, '已暂停', '按 P 或点击继续 · R 重开')
   } else if (phase === 'over') {
     overlay(ctx,
-      '时 间 到 ！',
-      `得分 ${Math.floor(state.score)} · 命中率 ${(shotRatePct(state)).toFixed(0)}%\n点击重新开始 · R 重开`,
+      '时间到！',
+      `得分 ${Math.floor(state.score)} · 命中率 ${shotRatePct(state).toFixed(0)}%`,
+      '点击重新开始 · R 重开',
     )
   }
 }
@@ -261,6 +279,7 @@ function drawGun(ctx: CanvasRenderingContext2D, state: FpsTrackState): void {
     ctx.save()
     ctx.translate(mx, my)
     ctx.rotate(Math.PI / 4)
+    glow(ctx, THEME.gold, 12)
     ctx.fillStyle = 'rgba(255,216,61,0.95)'
     ctx.beginPath()
     ctx.moveTo(0, -11)
@@ -269,6 +288,7 @@ function drawGun(ctx: CanvasRenderingContext2D, state: FpsTrackState): void {
     ctx.lineTo(-7, 0)
     ctx.closePath()
     ctx.fill()
+    noGlow(ctx)
     ctx.fillStyle = 'rgba(255,255,255,0.8)'
     ctx.beginPath()
     ctx.moveTo(0, -5)
@@ -281,19 +301,15 @@ function drawGun(ctx: CanvasRenderingContext2D, state: FpsTrackState): void {
   }
 }
 
-function overlay(ctx: CanvasRenderingContext2D, title: string, body: string): void {
-  ctx.fillStyle = 'rgba(10,12,18,0.78)'
-  ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H)
-  ctx.fillStyle = '#ffe08a'
-  ctx.font = 'bold 22px ui-monospace, monospace'
-  ctx.textAlign = 'center'
-  ctx.fillText(title, LOGICAL_W / 2, LOGICAL_H / 2 - 30)
-  ctx.fillStyle = TEXT
-  ctx.font = '12px ui-monospace, monospace'
-  const lines = body.split('\n')
-  lines.forEach((line, i) => {
-    ctx.fillText(line, LOGICAL_W / 2, LOGICAL_H / 2 + i * 18 + 6)
-  })
+/** Shared-style overlay veil with a spaced title and up to two body lines. */
+function overlay(ctx: CanvasRenderingContext2D, title: string, line1: string, line2?: string): void {
+  drawOverlay(ctx, LOGICAL_W, LOGICAL_H, title, line1, THEME.gold)
+  if (line2 !== undefined) {
+    ctx.textAlign = 'center'
+    ctx.font = '600 13px system-ui, sans-serif'
+    ctx.fillStyle = THEME.textMuted
+    ctx.fillText(line2, LOGICAL_W / 2, LOGICAL_H / 2 + 42)
+  }
 }
 
 function shotRatePct(state: FpsTrackState): number {

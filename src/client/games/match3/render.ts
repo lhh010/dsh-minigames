@@ -1,9 +1,14 @@
 /**
  * Match-3 (消消乐) canvas renderer: a HUD strip (level, score/target progress),
- * the gem board, the click-removal animation (flash + falling gems), and the
- * win/lose overlays. Palette tuned for the DSH dark shell.
+ * the gem board, the click-removal animation (flash + falling gems), the
+ * win/lose overlays, and particle bursts on removals. Uses the shared visual
+ * kit (../theme.ts).
  */
 import type { Match3State, Position } from './logic.ts'
+import {
+  THEME, accent, createParticles, drawBackground, drawOverlay, glow, hudPair, noGlow,
+  roundRectPath,
+} from '../theme.ts'
 
 export const CELL = 44
 /** Board dimensions in cells (square). */
@@ -14,14 +19,11 @@ export const BOARD_H = BOARD_CELLS * CELL
 export const LOGICAL_W = BOARD_W
 export const LOGICAL_H = HUD_H + BOARD_H
 
-/** Gem fill colors by kind (1..5). */
-const GEM_COLORS = ['', '#e45756', '#4c9ae8', '#5abf6b', '#e8c84c', '#b07cc9']
-const GEM_DARK = ['', '#a83a3a', '#3a72b8', '#3f8f4e', '#b89a30', '#86579c']
-const BOARD_BG = '#15151b'
+/** Gem fill/dark colors by kind (1..5), from the shared accent ramp. */
+const GEM_COLORS = ['', accent(0), accent(1), accent(2), accent(3), accent(4)]
+const BOARD_BG = '#101018'
 const GRID_LINE = 'rgba(255,255,255,0.05)'
-const CURSOR = '#ffe08a'
-const TEXT = '#d8d8e0'
-const MUTED = '#7a7a8a'
+const CURSOR = THEME.gold
 
 /** What the game wants rendered this frame. */
 export interface Match3View {
@@ -42,6 +44,11 @@ export interface Match3View {
 /** The grid the renderer draws (the pre-removal grid during the clear phase). */
 export type DisplayGrid = number[][]
 
+// Render-side event observation: burst when the score jumps (a pop).
+const particles = createParticles()
+let prevScore = -1
+let prevFrameMs = 0
+
 function cellX(c: number): number {
   return c * CELL + CELL / 2
 }
@@ -53,7 +60,7 @@ function cellY(r: number): number {
 /** Draw one gem shape at (cx, cy), radius r. */
 function drawGem(ctx: CanvasRenderingContext2D, kind: number, cx: number, cy: number, r: number): void {
   const color = GEM_COLORS[kind]!
-  const dark = GEM_DARK[kind]!
+  glow(ctx, color, 7)
   ctx.fillStyle = color
   switch (kind) {
     case 1: // circle
@@ -62,8 +69,7 @@ function drawGem(ctx: CanvasRenderingContext2D, kind: number, cx: number, cy: nu
       ctx.fill()
       break
     case 2: // rounded square
-      ctx.beginPath()
-      ctx.roundRect(cx - r * 0.6, cy - r * 0.6, r * 1.2, r * 1.2, r * 0.25)
+      roundRectPath(ctx, cx - r * 0.6, cy - r * 0.6, r * 1.2, r * 1.2, r * 0.25)
       ctx.fill()
       break
     case 3: // triangle
@@ -97,7 +103,8 @@ function drawGem(ctx: CanvasRenderingContext2D, kind: number, cx: number, cy: nu
       ctx.fill()
       break
   }
-  ctx.strokeStyle = dark
+  noGlow(ctx)
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)'
   ctx.lineWidth = 1.5
   ctx.stroke()
   ctx.fillStyle = 'rgba(255,255,255,0.28)'
@@ -107,22 +114,22 @@ function drawGem(ctx: CanvasRenderingContext2D, kind: number, cx: number, cy: nu
 }
 
 function drawHud(ctx: CanvasRenderingContext2D, state: Match3State): void {
-  ctx.fillStyle = '#1b1b22'
-  ctx.fillRect(0, 0, LOGICAL_W, HUD_H)
-  ctx.fillStyle = TEXT
-  ctx.font = '13px ui-monospace, monospace'
-  ctx.textAlign = 'left'
-  ctx.fillText(`第 ${state.level} 关`, 10, 16)
-  ctx.textAlign = 'right'
-  ctx.fillText(`得分 ${state.score} / ${state.target}`, LOGICAL_W - 10, 16)
+  hudPair(ctx, 10, 16, '关卡 ', String(state.level), 'left', accent(2))
+  hudPair(ctx, LOGICAL_W - 10, 16, '得分 ', `${state.score} / ${state.target}`, 'right', THEME.gold)
   // Progress bar.
   const progress = Math.min(1, state.score / state.target)
-  ctx.fillStyle = '#26262e'
-  ctx.fillRect(10, 24, LOGICAL_W - 20, 6)
-  ctx.fillStyle = '#5abf6b'
-  ctx.fillRect(10, 24, (LOGICAL_W - 20) * progress, 6)
-  ctx.fillStyle = MUTED
-  ctx.font = '10px ui-monospace, monospace'
+  ctx.fillStyle = THEME.panelEdge
+  roundRectPath(ctx, 10, 24, LOGICAL_W - 20, 6, 3)
+  ctx.fill()
+  if (progress > 0.005) {
+    glow(ctx, THEME.good, 6)
+    ctx.fillStyle = THEME.good
+    roundRectPath(ctx, 10, 24, (LOGICAL_W - 20) * progress, 6, 3)
+    ctx.fill()
+    noGlow(ctx)
+  }
+  ctx.fillStyle = THEME.textMuted
+  ctx.font = '600 10px system-ui, sans-serif'
   ctx.textAlign = 'left'
   ctx.fillText('点击同色四连通块消除', 10, 37)
 }
@@ -134,7 +141,12 @@ export function renderMatch3(
   grid: DisplayGrid,
   view: Match3View,
 ): void {
+  const nowMs = performance.now()
+  const dtMs = prevFrameMs === 0 ? 16 : Math.min(50, nowMs - prevFrameMs)
+  prevFrameMs = nowMs
+
   ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H)
+  drawBackground(ctx, LOGICAL_W, LOGICAL_H)
   ctx.fillStyle = BOARD_BG
   ctx.fillRect(0, HUD_H, BOARD_W, BOARD_H)
   drawHud(ctx, state)
@@ -189,13 +201,23 @@ export function renderMatch3(
     }
     // Score popup rising from the removed group's center.
     const bottomRow = Math.max(...clear.removed.map(p => p.r))
-    ctx.fillStyle = '#ffe08a'
-    ctx.font = 'bold 14px ui-monospace, monospace'
+    ctx.fillStyle = THEME.gold
+    ctx.font = 'bold 14px system-ui, sans-serif'
     ctx.textAlign = 'center'
     ctx.globalAlpha = Math.max(0, 1 - clear.t)
     ctx.fillText(clear.scoreText, BOARD_W / 2, cellY(bottomRow) - 8 - clear.t * 22)
     ctx.globalAlpha = 1
   }
+
+  // Pop burst at the removed group's centroid (observed render-side).
+  if (clear !== null && prevScore >= 0 && state.score > prevScore && clear.t < 0.2) {
+    const cx = clear.removed.reduce((s, p) => s + cellX(p.c), 0) / clear.removed.length
+    const cy = clear.removed.reduce((s, p) => s + cellY(p.r), 0) / clear.removed.length
+    const kind = grid[clear.removed[0]!.r]![clear.removed[0]!.c]!
+    particles.burst(cx, cy, GEM_COLORS[kind] ?? THEME.gold, 16, 150)
+  }
+  prevScore = state.score
+  particles.tick(ctx, dtMs)
 
   // Keyboard cursor.
   if (view.cursor !== null) {
@@ -208,25 +230,14 @@ export function renderMatch3(
   }
 
   // Result overlays.
-  if (view.result === 'win') {
-    ctx.fillStyle = 'rgba(21,21,27,0.55)'
-    ctx.fillRect(0, HUD_H, BOARD_W, BOARD_H)
-    ctx.fillStyle = '#ffe08a'
-    ctx.font = 'bold 26px ui-monospace, monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText('过 关 ！', BOARD_W / 2, HUD_H + BOARD_H / 2 - 6)
-    ctx.fillStyle = TEXT
-    ctx.font = '13px ui-monospace, monospace'
-    ctx.fillText(`第 ${state.level} 关完成 · 目标 ${state.target}`, BOARD_W / 2, HUD_H + BOARD_H / 2 + 22)
-  } else if (view.result === 'lose') {
-    ctx.fillStyle = 'rgba(21,21,27,0.6)'
-    ctx.fillRect(0, HUD_H, BOARD_W, BOARD_H)
-    ctx.fillStyle = '#e45756'
-    ctx.font = 'bold 26px ui-monospace, monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText('游 戏 结 束', BOARD_W / 2, HUD_H + BOARD_H / 2 - 12)
-    ctx.fillStyle = TEXT
-    ctx.font = '13px ui-monospace, monospace'
-    ctx.fillText(`得分 ${state.score} / 目标 ${state.target} · 按 R 重新开始`, BOARD_W / 2, HUD_H + BOARD_H / 2 + 16)
+  if (view.result === 'win' || view.result === 'lose') {
+    ctx.save()
+    ctx.translate(0, HUD_H)
+    if (view.result === 'win') {
+      drawOverlay(ctx, BOARD_W, BOARD_H, '过关！', `第 ${state.level} 关完成 · 目标 ${state.target}`, THEME.gold)
+    } else {
+      drawOverlay(ctx, BOARD_W, BOARD_H, '游戏结束', `得分 ${state.score} / 目标 ${state.target} · 按 R 重新开始`, THEME.bad)
+    }
+    ctx.restore()
   }
 }

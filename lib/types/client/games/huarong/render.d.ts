@@ -1,7 +1,7 @@
 /**
  * Huarong (15-puzzle) canvas renderer: 4x4 numbered tiles that slide into the
- * empty cell, a HUD (moves + time), and a solved overlay. Palette tuned for
- * the DSH dark shell.
+ * empty cell, a HUD (moves + time), a solved overlay, and a particle burst on
+ * solve. Uses the shared visual kit (../theme.ts).
  */
 import type { HuarongState, Slide } from './logic.ts';
 export declare const CELL = 72;

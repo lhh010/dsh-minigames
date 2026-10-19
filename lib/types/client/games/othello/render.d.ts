@@ -1,6 +1,7 @@
 /**
- * Othello canvas renderer: a green 8x8 board, black/white discs, legal-move
- * hints for the player, a disc-count HUD, and a game-over overlay.
+ * Othello canvas renderer: a dark checkered board from the shared palette,
+ * glowing discs, legal-move hints for the player, a disc-count HUD, and a
+ * game-over overlay. Capture bursts are render-side observations only.
  */
 import type { OthelloState } from './logic.ts';
 export declare const CELL = 44;

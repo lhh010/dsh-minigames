@@ -1,7 +1,8 @@
 /**
  * Match-3 (消消乐) canvas renderer: a HUD strip (level, score/target progress),
- * the gem board, the click-removal animation (flash + falling gems), and the
- * win/lose overlays. Palette tuned for the DSH dark shell.
+ * the gem board, the click-removal animation (flash + falling gems), the
+ * win/lose overlays, and particle bursts on removals. Uses the shared visual
+ * kit (../theme.ts).
  */
 import type { Match3State, Position } from './logic.ts';
 export declare const CELL = 44;

@@ -1,6 +1,7 @@
 /**
- * 2048 canvas renderer: a 4x4 board of tiles with power-of-two colors, a score
- * HUD, and win/game-over overlays. Palette tuned for the DSH dark shell.
+ * 2048 canvas renderer: a 4x4 board of rounded glowing tiles colored by the
+ * shared accent ramp (stable per tile value), a score HUD, and shared
+ * win/game-over overlays. Score gains fire a particle burst at the board.
  */
 import type { Game2048State } from './logic.ts';
 export declare const CELL = 64;

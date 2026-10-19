@@ -80,7 +80,7 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       newPuzzle()
       return
     }
-    if (state.won) return
+    if (!running || state.won) return
     if (event.code.startsWith('Digit')) {
       event.preventDefault()
       const n = Number(event.code.slice(5))

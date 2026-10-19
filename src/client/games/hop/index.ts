@@ -34,6 +34,7 @@ function createHopGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
   }
 
   const onMouseDown = (): void => {
+    if (!running) return // paused: freeze the run
     if (state.over) return
     startCharge(state)
   }
@@ -49,7 +50,7 @@ function createHopGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     if (!gameHasFocus(host)) return
     if (event.code === 'Space' || event.code === 'ArrowUp' || event.code === 'KeyW') {
       event.preventDefault()
-      if (state.over) return
+      if (!running || state.over) return
       startCharge(state)
     } else if (event.code === 'KeyR') {
       event.preventDefault()
@@ -62,6 +63,7 @@ function createHopGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
   }
 
   const onKeyUp = (event: KeyboardEvent): void => {
+    if (!running) return // paused: freeze the run
     if (event.code === 'Space' || event.code === 'ArrowUp' || event.code === 'KeyW') {
       if (state.over || !state.jumping) {
         jump(state)

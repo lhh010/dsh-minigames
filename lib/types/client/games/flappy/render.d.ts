@@ -1,6 +1,7 @@
 /**
- * Flappy canvas renderer: sky gradient, scrolling pipes, a yellow bird with a
- * flapping wing, a score HUD, and a game-over overlay.
+ * Flappy canvas renderer: themed background, scrolling pipes, a gold bird
+ * with a flapping wing, a score HUD, and the shared game-over overlay. Score
+ * gains fire particle bursts at the bird.
  */
 import type { FlappyState } from './logic.ts';
 export declare const HUD_H = 30;

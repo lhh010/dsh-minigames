@@ -50,6 +50,7 @@ function createGomokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   }
 
   const onMouseDown = (event: MouseEvent): void => {
+    if (!running) return // paused: freeze the board
     if (state.over || state.turn !== 1) return
     const cell = indexFromEvent(event)
     if (cell === null) return
