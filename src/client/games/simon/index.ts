@@ -111,6 +111,7 @@ function createSimonGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       lit = null
       state = createSimonState()
       lastScore = -1
+      reportScore() // report the reset score now, not at the next round-clear
       startRound(state)
       if (running) scheduleStep(START_DELAY_MS)
     } else if (event.code === 'KeyP') {
@@ -175,6 +176,10 @@ function createSimonGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     stepRemaining = 0
     if (lit !== null && litRemaining > 0) {
       lightPad(lit, litRemaining)
+    } else if (lit !== null) {
+      // The lit deadline passed while paused (throttled timers); drop it
+      // instead of leaving the pad stuck lit forever.
+      lit = null
     }
     litRemaining = 0
     startLoop()

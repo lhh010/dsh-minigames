@@ -52,6 +52,8 @@ function createWhackGame(host: HTMLElement, options?: MiniGameMountOptions): Min
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    // Modifier chords (Ctrl/Cmd+R reload, etc.) are browser commands.
+    if (event.ctrlKey || event.altKey || event.metaKey) return
     if (event.code === 'KeyR') {
       event.preventDefault()
       state = createWhackState()

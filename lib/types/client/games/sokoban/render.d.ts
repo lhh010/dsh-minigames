@@ -12,6 +12,8 @@ export declare const LOGICAL_H: number;
 /** What the game wants rendered this frame. */
 export interface SokobanView {
     totalLevels: number;
+    /** Highest unlocked level number (1-based) for the progress strip. */
+    unlockedThrough: number;
     /** All levels cleared: show the gold win overlay. */
     won: boolean;
     /** The last push's animation progress (0..1), or null when idle. */

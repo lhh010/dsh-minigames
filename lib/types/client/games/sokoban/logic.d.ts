@@ -1,7 +1,9 @@
 /**
  * 推箱子 (Sokoban) pure logic: grid parsing/validation, player moves with
- * single-box pushes, undo with full state restore, and clear detection.
- * Deterministic functions over a plain state object; no DOM. The game
+ * single-box pushes, undo with full state restore, clear detection, and
+ * reached-level progress helpers (clamp/unlock rules plus a
+ * localStorage-or-session store). Deterministic functions over a plain
+ * state object; no DOM. The game
  * instance in index.ts drives rendering and level flow, and the unit tests
  * drive the logic directly (including a BFS solvability check over the
  * built-in levels).
@@ -53,7 +55,15 @@ export declare const BOX_SCORE = 100;
 /** Score awarded when the level is cleared. */
 export declare const CLEAR_SCORE = 500;
 /**
- * The 10 built-in levels, microban-style, ≤ 12x12, ordered by difficulty.
+ * The 30 built-in levels, microban-style, ≤ 14x14, ordered by difficulty.
+ * Levels 11-20 ramp through narrow corridors and goal rooms with forced
+ * fill ordering (deepest goal first), up to 6 boxes; level 20 funnels six
+ * boxes down a deep two-cell shaft into a wide goal row. Levels 21-30 are
+ * the hard tier (6-8 boxes): goal-column parking order, left-edge shaft
+ * rides, dual shafts into offset goal rows, split goal pockets, deep shafts
+ * with a blocking box, side-chamber shuttles, a single-doorway two-room
+ * shuttle, and a toothed divider column for the finale. Each hard level is
+ * verified solvable by the budgeted solver in the unit tests.
  * Tiles: # wall, space floor, $ box, . goal, * box-on-goal, @ player,
  * + player-on-goal.
  */
@@ -75,6 +85,38 @@ export declare function isCleared(state: SokobanState): boolean;
 export declare function loadLevel(state: SokobanState, levelIndex: number): void;
 /** Restart the current level (rolls the score back to the level entry). */
 export declare function restartLevel(state: SokobanState): void;
+/** localStorage key holding the highest level reached (1-based number). */
+export declare const SOKOBAN_PROGRESS_KEY = "dsh-minigames-sokoban-progress";
+/**
+ * Clamp a reached-level value into the valid 1..total range (non-finite or
+ * non-positive input degrades to 1).
+ * @param reached - raw stored or derived value.
+ * @param total - number of built-in levels.
+ * @returns the clamped 1-based reached level.
+ */
+export declare function clampReached(reached: number, total: number): number;
+/**
+ * Unlock rule: a 1-based level number is playable when it is at most
+ * max(reached, 1) — level 1 is always unlocked.
+ */
+export declare function isLevelUnlocked(level: number, reached: number): boolean;
+/**
+ * Progress after clearing a level: the reached value grows past it, never
+ * shrinks.
+ * @param level - the cleared level, 1-based.
+ */
+export declare function nextReached(reached: number, level: number): number;
+/**
+ * Read the highest level reached, clamped to 1..total. Falls back to the
+ * session-only copy when storage access throws.
+ * @param total - number of built-in levels.
+ */
+export declare function loadReached(total: number): number;
+/**
+ * Persist the highest level reached (localStorage when available, plus the
+ * session-only copy).
+ */
+export declare function saveReached(reached: number): void;
 /**
  * A fresh state on the given level.
  * @param levelIndex - built-in level to load (0-based).

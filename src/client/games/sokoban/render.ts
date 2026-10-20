@@ -30,6 +30,8 @@ let prevFrameMs = 0
 /** What the game wants rendered this frame. */
 export interface SokobanView {
   totalLevels: number
+  /** Highest unlocked level number (1-based) for the progress strip. */
+  unlockedThrough: number
   /** All levels cleared: show the gold win overlay. */
   won: boolean
   /** The last push's animation progress (0..1), or null when idle. */
@@ -123,7 +125,10 @@ export function renderSokoban(
   ctx.fillStyle = THEME.textMuted
   ctx.font = '600 11px system-ui, sans-serif'
   ctx.textAlign = 'left'
-  ctx.fillText('方向键/WASD 移动 · Z 撤销 · R 重开', 12, 36)
+  ctx.fillText('方向键/WASD 移动 · Z 撤销 · R 重开 · [ ] 跳关', 12, 36)
+  // Compact unlocked-range strip, right-aligned on the hint line.
+  ctx.textAlign = 'right'
+  ctx.fillText(`${state.levelIndex + 1}/${view.totalLevels} · 已解锁 1–${view.unlockedThrough}`, LOGICAL_W - 12, 36)
 
   const { ox, oy } = gridOffsets(state)
   const animating = view.push !== null
@@ -178,6 +183,9 @@ export function renderSokoban(
   }
 
   // Burst once on the cleared transition; tick particles every frame.
+  // Reset the observer when not cleared so a stale module-level `true` from a
+  // previous mount (destroyed while cleared) cannot swallow the next burst.
+  if (!state.cleared) prevCleared = false
   if (state.cleared && !prevCleared) {
     particles.burst(ox + state.player.c * CELL + CELL / 2, oy + state.player.r * CELL + CELL / 2, THEME.gold, 26, 180)
   }

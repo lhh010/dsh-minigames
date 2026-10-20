@@ -1,10 +1,11 @@
 /**
  * Sokoban game definition: wires the pure push logic into a
  * {@link MiniGameInstance} — arrows/WASD move, Z undo, R restart, N or a
- * timed auto-advance after a particle-burst clear, and a gold win overlay
- * after the last level. Score (+100 per boxed goal, +500 per clear) is
- * reported through onScore. Turn-based: pausing freezes input and the
- * auto-advance only; there are no gameplay timers.
+ * timed auto-advance after a particle-burst clear, [ / ] to jump between
+ * unlocked levels (progress persists as the highest level reached), and a
+ * gold win overlay after the last level. Score (+100 per boxed goal, +500
+ * per clear) is reported through onScore. Turn-based: pausing freezes input
+ * and the auto-advance only; there are no gameplay timers.
  */
 import type {
   MiniGameDefinition,
@@ -12,7 +13,8 @@ import type {
   MiniGameMountOptions,
 } from '../types.ts'
 import {
-  LEVELS, applyMove, createSokobanState, loadLevel, restartLevel, undoMove,
+  LEVELS, applyMove, createSokobanState, loadLevel, loadReached, nextReached,
+  restartLevel, saveReached, undoMove,
   type SokobanMove, type SokobanState,
 } from './logic.ts'
 import { renderSokoban, LOGICAL_W, LOGICAL_H, type SokobanView } from './render.ts'
@@ -42,7 +44,9 @@ function createSokobanGame(host: HTMLElement, options?: MiniGameMountOptions): M
   if (fit === null) throw new Error('dsh-minigames: sokoban needs a 2d canvas context')
   const ctx = fit.ctx
 
-  let state: SokobanState = createSokobanState()
+  // Highest level reached (1-based); level n is playable when n <= reached.
+  let reached = loadReached(LEVELS.length)
+  let state: SokobanState = createSokobanState(reached - 1)
   let running = false
   let raf = 0
   let last = 0
@@ -52,7 +56,7 @@ function createSokobanGame(host: HTMLElement, options?: MiniGameMountOptions): M
 
   let pushMove: SokobanMove | null = null
   let pushT = 0
-  let clearedAt = 0 // timestamp of the clear, for auto-advance
+  let autoMs = -1 // ms of running time since the clear; -1 = no clear pending
 
   const reportScore = (): void => {
     if (state.score === lastScore) return
@@ -66,7 +70,22 @@ function createSokobanGame(host: HTMLElement, options?: MiniGameMountOptions): M
     if (move === null) return
     pushMove = move
     pushT = 0
-    if (move.cleared) clearedAt = performance.now()
+    if (move.cleared) {
+      autoMs = 0
+      reached = nextReached(reached, state.levelIndex + 1)
+      saveReached(reached)
+    }
+  }
+
+  /** Jump to another unlocked level (fresh load; score carries over). */
+  const jumpLevel = (target: number): void => {
+    if (target < 0 || target > reached - 1 || target >= LEVELS.length) return
+    loadLevel(state, target)
+    won = false
+    pushMove = null
+    pushT = 0
+    autoMs = -1
+    reportScore()
   }
 
   const nextLevel = (): void => {
@@ -79,6 +98,7 @@ function createSokobanGame(host: HTMLElement, options?: MiniGameMountOptions): M
     loadLevel(state, state.levelIndex + 1)
     pushMove = null
     pushT = 0
+    autoMs = -1
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -98,9 +118,18 @@ function createSokobanGame(host: HTMLElement, options?: MiniGameMountOptions): M
       }
       pushMove = null
       pushT = 0
+      autoMs = -1
       reportScore()
       return
     }
+    // Level select: jump to the previous/next unlocked level at any time
+    // (fresh load; the accumulated score carries over like nextLevel).
+    if (event.code === 'BracketLeft' || event.code === 'BracketRight') {
+      event.preventDefault()
+      jumpLevel(state.levelIndex + (event.code === 'BracketRight' ? 1 : -1))
+      return
+    }
+    if (!running) return // paused: gameplay keys are dead (R/P/[ ] stay alive)
     if (event.code === 'KeyN') {
       event.preventDefault()
       nextLevel()
@@ -128,12 +157,13 @@ function createSokobanGame(host: HTMLElement, options?: MiniGameMountOptions): M
         reportScore()
       }
     }
-    // Auto-advance after the burst, unless this was the last level.
+    // Auto-advance after the burst (running-time clock, so pause freezes it),
+    // unless this was the last level.
     if (state.cleared && !won
       && state.levelIndex + 1 < LEVELS.length
-      && clearedAt !== 0
-      && performance.now() - clearedAt >= AUTO_ADVANCE_MS) {
-      nextLevel()
+      && autoMs >= 0) {
+      autoMs += dt * 1000
+      if (autoMs >= AUTO_ADVANCE_MS) nextLevel()
     }
   }
 
@@ -145,6 +175,7 @@ function createSokobanGame(host: HTMLElement, options?: MiniGameMountOptions): M
     advance(dt)
     const view: SokobanView = {
       totalLevels: LEVELS.length,
+      unlockedThrough: Math.min(reached, LEVELS.length),
       won,
       push: pushMove !== null
         ? { playerTo: pushMove.playerTo, boxTo: pushMove.boxTo, t: Math.min(1, pushT / PUSH_MS) }
@@ -180,7 +211,7 @@ function createSokobanGame(host: HTMLElement, options?: MiniGameMountOptions): M
   focusGameHost(host)
   running = true
   startLoop()
-  renderSokoban(ctx, state, { totalLevels: LEVELS.length, won, push: null })
+  renderSokoban(ctx, state, { totalLevels: LEVELS.length, unlockedThrough: Math.min(reached, LEVELS.length), won, push: null })
 
   return {
     start: resume,
@@ -199,7 +230,7 @@ export const sokobanGame: MiniGameDefinition = {
   id: 'sokoban',
   title: '推箱子',
   icon: '📦',
-  description: '经典推箱子（Sokoban）：把所有箱子推到目标点上，10 个关卡，支持撤销。',
-  controls: ['方向键 / WASD：移动推箱', 'Z：撤销 · R：重开', 'N：下一关 · P：暂停'],
+  description: '经典推箱子（Sokoban）：把所有箱子推到目标点上，30 个关卡，支持撤销。',
+  controls: ['方向键 / WASD：移动推箱', 'Z：撤销 · R：重开', 'N：下一关 · [ / ]：跳关（已解锁范围内）', 'P：暂停'],
   create: createSokobanGame,
 }

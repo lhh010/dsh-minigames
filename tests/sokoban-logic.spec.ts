@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  BOX_SCORE, CLEAR_SCORE, LEVELS, applyMove, createSokobanState, isCleared,
-  parseBuiltinLevels, parseLevel, restartLevel, undoMove,
+  BOX_SCORE, CLEAR_SCORE, LEVELS, applyMove, clampReached, createSokobanState,
+  isCleared, isLevelUnlocked, loadReached, nextReached, parseBuiltinLevels,
+  parseLevel, restartLevel, saveReached, undoMove,
   type SokobanLevel, type SokobanState,
 } from '../src/client/games/sokoban/logic.ts'
 
@@ -138,11 +139,11 @@ describe('sokoban logic', () => {
     expect(s.player).toEqual({ r: 1, c: 1 })
   })
 
-  it('all 10 levels parse and are structurally valid', () => {
-    expect(LEVELS).toHaveLength(10)
+  it('all 30 levels parse and are structurally valid', () => {
+    expect(LEVELS).toHaveLength(30)
     for (const level of parseBuiltinLevels()) {
-      expect(level.rows).toBeLessThanOrEqual(12)
-      expect(level.cols).toBeLessThanOrEqual(12)
+      expect(level.rows).toBeLessThanOrEqual(14)
+      expect(level.cols).toBeLessThanOrEqual(14)
       const boxes = level.boxes.flat().filter(Boolean).length
       const goals = level.goals.flat().filter(Boolean).length
       expect(boxes).toBe(goals)
@@ -150,10 +151,45 @@ describe('sokoban logic', () => {
     }
   })
 
-  it('all 10 levels are solvable (BFS over pushes)', () => {
+  it('all 30 levels are solvable within the node budget (A* over pushes)', { timeout: 120_000 }, () => {
     parseBuiltinLevels().forEach((level, i) => {
-      expect(isSolvable(level), `level ${i + 1} should be solvable`).toBe(true)
+      const res = solveLevel(level, SOLVER_NODE_BUDGET)
+      expect(res, `level ${i + 1} should be solvable within ${SOLVER_NODE_BUDGET} expansions`)
+        .toBe(true)
     })
+  })
+
+  it('clampReached bounds the reached level to 1..total', () => {
+    expect(clampReached(5, 30)).toBe(5)
+    expect(clampReached(0, 30)).toBe(1)
+    expect(clampReached(-3, 30)).toBe(1)
+    expect(clampReached(31, 30)).toBe(30)
+    expect(clampReached(Number.NaN, 30)).toBe(1)
+    expect(clampReached(Number.POSITIVE_INFINITY, 30)).toBe(1)
+    expect(clampReached(4.9, 30)).toBe(4)
+  })
+
+  it('level 1 is always unlocked; higher levels need progress', () => {
+    expect(isLevelUnlocked(1, 0)).toBe(true)
+    expect(isLevelUnlocked(1, -1)).toBe(true)
+    expect(isLevelUnlocked(3, 3)).toBe(true)
+    expect(isLevelUnlocked(4, 3)).toBe(false)
+    expect(isLevelUnlocked(0, 3)).toBe(false)
+  })
+
+  it('clearing a level advances reached without ever shrinking it', () => {
+    expect(nextReached(1, 1)).toBe(2)
+    expect(nextReached(5, 2)).toBe(5)
+    expect(nextReached(5, 5)).toBe(6)
+  })
+
+  it('reached level store round-trips and clamps (session-only without storage)', () => {
+    saveReached(7)
+    expect(loadReached(30)).toBe(7)
+    saveReached(99) // overflow clamps to the level count on read
+    expect(loadReached(30)).toBe(30)
+    saveReached(1)
+    expect(loadReached(30)).toBe(1)
   })
 })
 
@@ -178,70 +214,196 @@ function snapshot(s: SokobanState): string {
 }
 
 /**
- * Breadth-first search over push states: a node is (player cell, box set);
- * edges are single pushes the player can walk into position for. Goals do
- * not need to be matched one-to-one, so clearing == all boxes on goals.
+ * Hard cap on A* node expansions per level: a level that exceeds it fails the
+ * solvability test instead of hanging CI on an unbounded (or unsolvable)
+ * search.
  */
-function isSolvable(level: SokobanLevel): boolean {
+const SOLVER_NODE_BUDGET = 300_000
+
+/**
+ * Weighted A* over push states: a node is (player region, box set); edges are
+ * single pushes the player can walk into position for. Prunes corner and 2x2
+ * deadlocks and cells with no goal path. Goals do not need to be matched
+ * one-to-one, so clearing == all boxes on goals.
+ * @returns true when a solution is found within `budget` expansions.
+ */
+function solveLevel(level: SokobanLevel, budget: number): boolean {
   const { rows, cols, walls, goals } = level
-  const boxes0 = new Set<string>()
+  const N = rows * cols
+  const floor = new Uint8Array(N)
+  const goal = new Uint8Array(N)
+  const dead = new Uint8Array(N) // non-goal corner deadlock
   for (let r = 0; r < rows; r += 1) {
-    for (let c = 0; c < cols; c += 1) if (level.boxes[r]![c]!) boxes0.add(`${r},${c}`)
+    for (let c = 0; c < cols; c += 1) {
+      const i = r * cols + c
+      if (!walls[r]![c]!) floor[i] = 1
+      if (goals[r]![c]!) goal[i] = 1
+    }
   }
-  const floor = (r: number, c: number): boolean =>
-    r >= 0 && r < rows && c >= 0 && c < cols && !walls[r]![c]!
-
-  const key = (r: number, c: number): string => `${r},${c}`
-  const goalCount = goals.flat().filter(Boolean).length
-
-  /** Cells the player can reach without pushing anything. */
-  const reach = (pr: number, pc: number, boxes: Set<string>): Set<string> => {
-    const seen = new Set<string>([key(pr, pc)])
-    const queue: [number, number][] = [[pr, pc]]
-    while (queue.length > 0) {
-      const [r, c] = queue.pop()!
-      for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
-        const nr = r + dr
-        const nc = c + dc
-        const k = key(nr, nc)
-        if (floor(nr, nc) && !boxes.has(k) && !seen.has(k)) {
-          seen.add(k)
-          queue.push([nr, nc])
-        }
+  const inFloor = (r: number, c: number): boolean =>
+    r >= 0 && r < rows && c >= 0 && c < cols && floor[r * cols + c] === 1
+  for (let r = 0; r < rows; r += 1) {
+    for (let c = 0; c < cols; c += 1) {
+      const i = r * cols + c
+      if (floor[i] !== 1 || goal[i] === 1) continue
+      const wU = !inFloor(r - 1, c), wD = !inFloor(r + 1, c)
+      const wL = !inFloor(r, c - 1), wR = !inFloor(r, c + 1)
+      if ((wU || wD) && (wL || wR)) dead[i] = 1
+    }
+  }
+  // Neighbor cell ids per cell: up, down, left, right (down/left/right XOR 1).
+  const NB = new Int32Array(N * 4)
+  for (let r = 0; r < rows; r += 1) {
+    for (let c = 0; c < cols; c += 1) {
+      const i = r * cols + c
+      NB[i * 4] = r > 0 ? i - cols : -1
+      NB[i * 4 + 1] = r < rows - 1 ? i + cols : -1
+      NB[i * 4 + 2] = c > 0 ? i - 1 : -1
+      NB[i * 4 + 3] = c < cols - 1 ? i + 1 : -1
+    }
+  }
+  const boxes0: number[] = []
+  for (let r = 0; r < rows; r += 1) {
+    for (let c = 0; c < cols; c += 1) if (level.boxes[r]![c]!) boxes0.push(r * cols + c)
+  }
+  boxes0.sort((a, b) => a - b)
+  const bcount = boxes0.length
+  // Stamped player flood fill avoiding boxes; returns the region's minimum
+  // cell id as the canonical player position.
+  const reachStamp = new Int32Array(N)
+  const regionStamp = new Int32Array(N)
+  let stamp = 0
+  const rq = new Int32Array(N)
+  const reachInto = (stampArr: Int32Array, p0: number, bs: number[]): number => {
+    stamp += 1
+    let head = 0
+    let tail = 0
+    let canon = p0
+    rq[tail++] = p0
+    stampArr[p0] = stamp
+    while (head < tail) {
+      const p = rq[head++]!
+      for (let d = 0; d < 4; d += 1) {
+        const q = NB[p * 4 + d]!
+        if (q < 0 || floor[q] !== 1 || stampArr[q] === stamp) continue
+        if (bs.includes(q)) continue
+        stampArr[q] = stamp
+        if (q < canon) canon = q
+        rq[tail++] = q
       }
     }
-    return seen
+    return canon
   }
-
-  const start = { pr: level.player.r, pc: level.player.c, boxes: boxes0 }
-  const visited = new Set<string>()
-  const queue: { pr: number; pc: number; boxes: Set<string> }[] = [start]
-  visited.add(`${key(start.pr, start.pc)}|${[...boxes0].sort().join(';')}`)
-  while (queue.length > 0) {
-    const node = queue.shift()!
-    let onGoals = 0
-    for (const b of node.boxes) {
-      const [br, bc] = b.split(',').map(Number) as [number, number]
-      if (goals[br]![bc]!) onGoals += 1
+  // Multi-source BFS distance from goal cells over floor geometry (ignoring
+  // boxes): a lower bound on each box's remaining pushes.
+  const dist = new Int32Array(N).fill(-1)
+  {
+    let head = 0
+    const dq: number[] = []
+    for (let i = 0; i < N; i += 1) if (goal[i] === 1) { dist[i] = 0; dq.push(i) }
+    while (head < dq.length) {
+      const p = dq[head++]!
+      for (let d = 0; d < 4; d += 1) {
+        const q = NB[p * 4 + d]!
+        if (q < 0 || floor[q] !== 1 || dist[q] !== -1) continue
+        dist[q] = dist[p]! + 1
+        dq.push(q)
+      }
     }
-    if (onGoals === goalCount) return true
-    const canStand = reach(node.pr, node.pc, node.boxes)
-    for (const b of node.boxes) {
-      const [br, bc] = b.split(',').map(Number) as [number, number]
-      for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
-        const fr = br + dr
-        const fc = bc + dc // box moves here
-        const br2 = br - dr
-        const bc2 = bc - dc // player stands here to push
-        if (!floor(fr, fc) || node.boxes.has(key(fr, fc))) continue
-        if (!canStand.has(key(br2, bc2))) continue
-        const next = new Set(node.boxes)
-        next.delete(b)
-        next.add(key(fr, fc))
-        const vkey = `${key(fr, fc)}|${[...next].sort().join(';')}`
-        if (visited.has(vkey)) continue
-        visited.add(vkey)
-        queue.push({ pr: br, pc: bc, boxes: next })
+  }
+  const h = (bs: number[]): number => {
+    let s = 0
+    for (let k = 0; k < bcount; k += 1) s += dist[bs[k]!] === -1 ? 1000 : dist[bs[k]!]!
+    return s
+  }
+  interface Node { f: number; pc: number; bs: number[]; pushes: number }
+  const visitedExact = new Set<string>()
+  const visitedCanon = new Set<string>()
+  const startPc = level.player.r * cols + level.player.c
+  const heap: Node[] = []
+  const hpush = (node: Node): void => {
+    heap.push(node)
+    let i = heap.length - 1
+    while (i > 0) {
+      const p = (i - 1) >> 1
+      if (heap[p]!.f <= heap[i]!.f) break
+      const t = heap[p]!
+      heap[p] = heap[i]!
+      heap[i] = t
+      i = p
+    }
+  }
+  const hpop = (): Node => {
+    const top = heap[0]!
+    const last = heap.pop()!
+    if (heap.length > 0) {
+      heap[0] = last
+      let i = 0
+      for (;;) {
+        const l = i * 2 + 1
+        const r = l + 1
+        let m = i
+        if (l < heap.length && heap[l]!.f < heap[m]!.f) m = l
+        if (r < heap.length && heap[r]!.f < heap[m]!.f) m = r
+        if (m === i) break
+        const t = heap[m]!
+        heap[m] = heap[i]!
+        heap[i] = t
+        i = m
+      }
+    }
+    return top
+  }
+  hpush({ f: h(boxes0), pc: startPc, bs: boxes0, pushes: 0 })
+  visitedExact.add(`${startPc}|${boxes0.join(',')}`)
+  let expansions = 0
+  while (heap.length > 0) {
+    const node = hpop()
+    const canon = reachInto(reachStamp, node.pc, node.bs)
+    const ckey = `${canon}|${node.bs.join(',')}`
+    if (visitedCanon.has(ckey)) continue
+    visitedCanon.add(ckey)
+    expansions += 1
+    if (expansions > budget) return false
+    let onGoals = 0
+    for (let k = 0; k < bcount; k += 1) if (goal[node.bs[k]!] === 1) onGoals += 1
+    if (onGoals === bcount) return true
+    reachInto(regionStamp, canon, node.bs)
+    const rstamp = stamp
+    for (let k = 0; k < bcount; k += 1) {
+      const b = node.bs[k]!
+      for (let d = 0; d < 4; d += 1) {
+        const f = NB[b * 4 + d]! // box target cell
+        const s = NB[b * 4 + (d ^ 1)]! // player stands here to push
+        if (f < 0 || floor[f] !== 1 || dead[f] === 1) continue
+        if (dist[f] === -1) continue // no goal reachable from f
+        if (node.bs.includes(f)) continue
+        if (s < 0 || regionStamp[s] !== rstamp) continue
+        const next = node.bs.filter(x => x !== b)
+        next.push(f)
+        next.sort((a, b2) => a - b2)
+        // 2x2 square deadlock: a fully solid block with no goal cell.
+        const fr = Math.floor(f / cols)
+        const fc = f % cols
+        let sqDead = false
+        for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]] as const) {
+          let block = true
+          let hasGoal = goal[f] === 1
+          for (const [ar, ac] of [[0, 0], [dr, 0], [0, dc], [dr, dc]] as const) {
+            const rr = fr + ar
+            const cc = fc + ac
+            const ii = rr * cols + cc
+            const solid = !inFloor(rr, cc) || next.includes(ii)
+            if (!solid) { block = false; break }
+            if (inFloor(rr, cc) && goal[ii] === 1) hasGoal = true
+          }
+          if (block && !hasGoal) { sqDead = true; break }
+        }
+        if (sqDead) continue
+        const vkey = `${b}|${next.join(',')}`
+        if (visitedExact.has(vkey)) continue
+        visitedExact.add(vkey)
+        hpush({ f: node.pushes + 1 + 3 * h(next), pc: b, bs: next, pushes: node.pushes + 1 })
       }
     }
   }
