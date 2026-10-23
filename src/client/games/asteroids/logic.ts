@@ -257,6 +257,9 @@ export function updateAsteroids(state: AsteroidsState, dt: number, input: Player
       life: BULLET_LIFE,
     })
     state.fireCooldown = FIRE_INTERVAL
+    // Shots cost one point each (never below zero): blind spam cannot farm
+    // the fire-and-forget cycle, aiming beats spraying.
+    state.score = Math.max(0, state.score - 1)
   }
 
   // Bullets: move, age out, wrap.

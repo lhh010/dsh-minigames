@@ -155,7 +155,7 @@ export const asteroidsGame: MiniGameDefinition = {
   id: 'asteroids',
   title: '小行星',
   icon: '☄️',
-  description: '矢量小行星：惯性驾驶飞船，击碎岩石群，一波接一波地生存下去。',
-  controls: ['A/D 或 ←/→：旋转', 'W 或 ↑：推进', '空格：开火', 'P：暂停', 'R：重开'],
+  description: '矢量小行星：惯性驾驶飞船，击碎岩石群，一波接一波地生存下去。每开一炮 -1 分，瞄准则生。',
+  controls: ['A/D 或 ←/→：旋转', 'W 或 ↑：推进', '空格：开火（每发 -1 分）', 'P：暂停', 'R：重开'],
   create: createAsteroidsGame,
 }

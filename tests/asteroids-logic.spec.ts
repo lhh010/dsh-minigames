@@ -150,7 +150,11 @@ describe('asteroids logic', () => {
         if (state.events.length > 0) sawDestructionEvent = true
       }
       expect(state.rocks.some(rock => rock.size === size)).toBe(false)
-      expect(state.score).toBe(before + (size === 'large' ? 20 : size === 'medium' ? 50 : 100))
+      // Rock score minus the one point the shot itself costs (the cost is
+      // floored at zero, so the first shot from a zero score only pays the
+      // award, not the fee).
+      const fee = before > 0 ? 1 : 0
+      expect(state.score).toBe(before + (size === 'large' ? 20 : size === 'medium' ? 50 : 100) - fee)
     }
     shootAt('large')
     expect(state.rocks).toHaveLength(2)
@@ -230,5 +234,28 @@ describe('asteroids logic', () => {
       })
     }
     expect(run()).toBe(run())
+  })
+
+  it('each shot costs one point (spam cannot farm the fire cycle)', () => {
+    const state = createAsteroids(lcg(1))
+    state.rocks = []
+    state.score = 10
+    updateAsteroids(state, FRAME, { ...idle, fire: true })
+    expect(state.bullets).toHaveLength(1)
+    expect(state.score).toBe(9)
+    // Fire repeatedly while holding a large score: every shot subtracts one,
+    // so the total only ever falls while no rock is hit.
+    const before = state.score
+    for (let i = 0; i < 30; i += 1) updateAsteroids(state, FRAME, { ...idle, fire: true })
+    expect(state.score).toBeLessThan(before)
+    expect(state.score).toBeGreaterThanOrEqual(0)
+  })
+
+  it('the fire cost never drives the score below zero', () => {
+    const state = createAsteroids(lcg(1))
+    state.rocks = []
+    state.score = 2
+    for (let i = 0; i < 60; i += 1) updateAsteroids(state, FRAME, { ...idle, fire: true })
+    expect(state.score).toBe(0)
   })
 })

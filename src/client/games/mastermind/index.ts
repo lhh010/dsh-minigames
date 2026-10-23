@@ -55,7 +55,17 @@ function createMastermindGame(host: HTMLElement, options?: MiniGameMountOptions)
 
   const newRound = (seed: number): void => {
     roundSeed = seed
-    secret = makeSecret(roundSeed, level().pegs, level().colors)
+    let next = makeSecret(roundSeed, level().pegs, level().colors)
+    // Birthday collisions within a 6^4 (or 6^5) code space are mathematically
+    // normal, but an identical code right after the previous round reads as a
+    // generation bug — reroll (deterministically derived seeds) until it differs.
+    if (secret.length === next.length && next.join('') === secret.join('')) {
+      for (let bump = 1; bump <= 32; bump += 1) {
+        next = makeSecret((roundSeed + Math.imul(bump, 0x9e3779b9)) >>> 0, level().pegs, level().colors)
+        if (next.join('') !== secret.join('')) break
+      }
+    }
+    secret = next
     rows = []
     current = []
     status = 'playing'
