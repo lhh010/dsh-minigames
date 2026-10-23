@@ -1,9 +1,11 @@
 /**
  * Lights Out game definition: wires the pure toggle logic into a
  * {@link MiniGameInstance} — click or arrow-navigate + Space/Enter toggles a
- * cell and its neighbors; clearing a level fires onScore, bursts particles,
- * and auto-advances 1.5s later; pause freezes the advance timer via the
- * stored-remainder pattern.
+ * cell and its neighbors; Z/Backspace rewinds the last move; R restarts the
+ * CURRENT level (deterministic per-level scramble, so the initial board is
+ * identical); clearing a level fires onScore, bursts particles, and
+ * auto-advances 1.5s later. Panel-driven pause freezes the advance timer via
+ * the stored-remainder pattern; there is no pause hotkey.
  */
 import type {
   MiniGameDefinition,
@@ -17,6 +19,13 @@ import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { THEME, createParticles } from '../theme.ts'
 
 const ADVANCE_MS = 1500
+/** Undo history cap: rewind stays bounded and cheap. */
+const MAX_HISTORY = 200
+
+interface UndoEntry {
+  board: ReturnType<typeof toggleAt>
+  moves: number
+}
 
 function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -39,6 +48,7 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
   let advanceAt = 0
   let advanceRemaining = 0
   let lastScore = -1
+  const history: UndoEntry[] = []
   const particles = createParticles()
 
   const reportScore = (): void => {
@@ -52,6 +62,7 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
     moves = 0
     board = scramble(level * 0x9e3779b9, scrambleCount(level))
     winText = null
+    history.length = 0
   }
 
   const scheduleAdvance = (delayMs: number): void => {
@@ -64,6 +75,8 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
 
   const move = (r: number, c: number): void => {
     if (winText !== null) return // frozen during the win overlay
+    history.push({ board, moves })
+    if (history.length > MAX_HISTORY) history.shift()
     moves += 1
     board = toggleAt(board, r, c)
     if (isSolved(board)) {
@@ -78,6 +91,15 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
       if (running) scheduleAdvance(ADVANCE_MS)
       else advanceRemaining = ADVANCE_MS // paused mid-burst: arm on resume
     }
+  }
+
+  /** Rewind the last move (board + move counter); no-op at level start. */
+  const undo = (): void => {
+    if (winText !== null) return
+    const entry = history.pop()
+    if (entry === undefined) return
+    board = entry.board
+    moves = entry.moves
   }
 
   const onMouseDown = (event: MouseEvent): void => {
@@ -96,14 +118,16 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
     if (!gameHasFocus(host)) return
     if (event.code === 'KeyR') {
       event.preventDefault()
+      // Restart the CURRENT level: same seed → the same initial board.
       clearTimeout(advanceTimer)
       advanceTimer = 0
       advanceRemaining = 0
-      lastScore = -1
-      startLevel(1)
-    } else if (event.code === 'KeyP') {
+      winText = null
+      startLevel(level)
+    } else if (event.code === 'KeyZ' || event.code === 'Backspace') {
       event.preventDefault()
-      togglePause()
+      if (!running) return
+      undo()
     } else if (event.code.startsWith('Arrow') || event.code === 'Space' || event.code === 'Enter') {
       event.preventDefault()
       if (!running) return
@@ -132,10 +156,6 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
   const stopLoop = (): void => {
     cancelAnimationFrame(raf)
     raf = 0
-  }
-  const togglePause = (): void => {
-    if (running) pause()
-    else resume()
   }
   const pause = (): void => {
     if (!running) return
@@ -186,6 +206,6 @@ export const lightsOutGame: MiniGameDefinition = {
   title: '点灯 Lights Out',
   icon: '💡',
   description: '点亮或熄灭十字形相邻的灯，把整块面板全部熄灭。',
-  controls: ['点击 / 方向键 + 空格或回车：切换', 'R：重开', 'P：暂停'],
+  controls: ['点击 / 方向键 + 空格或回车：切换', 'Z / Backspace：回退一步', 'R：重开本关'],
   create: createLightsOutGame,
 }

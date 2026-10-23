@@ -39,6 +39,11 @@ export interface Tank {
   alive: boolean
   /** Seconds of post-hit invulnerability (player only; enemies die in one hit). */
   invuln: number
+  /**
+   * Per-enemy sidestep chance against an incoming player bullet (0 = never;
+   * the player tank leaves this unset).
+   */
+  dodge?: number
 }
 
 export interface Bullet {
@@ -71,6 +76,8 @@ export interface Effect {
 
 export interface WorldState {
   grid: Tile[][]
+  /** Which battle map the current wave plays on (index into {@link MAPS}). */
+  mapIndex: number
   player: Tank
   enemies: Tank[]
   bullets: Bullet[]
@@ -82,6 +89,11 @@ export interface WorldState {
   spawnTimer: number
   /** Enemy decision accumulator (seconds since last decision). */
   aiTimer: number
+  /**
+   * BFS flow field toward the player's tile, refreshed on each decision tick
+   * (null before the first tick). Enemies chase by walking the gradient.
+   */
+  flow: Int16Array | null
   result: GameResult
   t: number
   rng: () => number
@@ -105,42 +117,87 @@ const ENEMY_FIRE_CD_MIN = 1.2
 const ENEMY_FIRE_CD_MAX = 2.6
 const BULLET_SPEED_PLAYER = 260
 const BULLET_SPEED_ENEMY = 170
-const AI_TICK = 0.7
+export const AI_TICK = 0.45
 const PLAYER_HP = 3
 const PLAYER_INVULN = 1.5
 /** Primary spawn tiles (enemies appear on these). */
-const SPAWN_POINTS: readonly [number, number][] = [[0, 0], [14, 0], [7, 0]]
+export const SPAWN_POINTS: readonly [number, number][] = [[0, 0], [14, 0], [7, 0]]
 /** 2-wide pockets so a spawned tank can actually drive out of the border. */
-const SPAWN_POCKETS: readonly [number, number][] = [[0, 0], [1, 0], [14, 0], [13, 0], [7, 0], [8, 0]]
-const PLAYER_START: [number, number] = [7, 11]
+export const SPAWN_POCKETS: readonly [number, number][] = [[0, 0], [1, 0], [14, 0], [13, 0], [7, 0], [8, 0]]
+export const PLAYER_START: [number, number] = [7, 11]
 
-/** Symmetric field; the three spawn tiles and the player start are cleared below. */
-const BASE_MAP: number[][] = [
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-  [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1],
-  [1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1],
-  [1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1],
-  [1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1],
-  [1, 0, 0, 1, 0, 1, 2, 0, 2, 1, 0, 1, 0, 0, 1],
-  [1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1],
-  [1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1],
-  [1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1],
-  [1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+/** Symmetric fields; the three spawn tiles and the player start are cleared below. */
+const MAPS: number[][][] = [
+  // 经典阵地（原版地图）
+  [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1],
+    [1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1],
+    [1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1],
+    [1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1],
+    [1, 0, 0, 1, 0, 1, 2, 0, 2, 1, 0, 1, 0, 0, 1],
+    [1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1],
+    [1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1],
+    [1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1],
+    [1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  ],
+  // 长廊要塞：纵向走廊 + 中央钢心
+  [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+    [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1],
+    [1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1],
+    [1, 1, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 1, 1, 1],
+    [1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1],
+    [1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1],
+    [1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  ],
+  // 钢角堡垒：四角钢阵 + 中央砖环
+  [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1],
+    [1, 0, 2, 2, 0, 1, 1, 0, 1, 1, 0, 2, 2, 0, 1],
+    [1, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 1],
+    [1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1],
+    [1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 1, 0, 0, 2, 0, 0, 1, 0, 0, 0, 1],
+    [1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1],
+    [1, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 1],
+    [1, 0, 2, 2, 0, 1, 1, 0, 1, 1, 0, 2, 2, 0, 1],
+    [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  ],
 ]
 
-function buildGrid(): Tile[][] {
-  const grid = BASE_MAP.map(row => [...row]) as Tile[][]
+/** Number of battle maps; waves rotate through them in order. */
+export const MAP_COUNT = MAPS.length
+
+/** Map index played by a wave (1-based wave number). */
+export function mapIndexForWave(wave: number): number {
+  return (wave - 1) % MAPS.length
+}
+
+function buildGrid(mapIndex: number): Tile[][] {
+  const grid = MAPS[mapIndex % MAPS.length]!.map(row => [...row]) as Tile[][]
   for (const [tx, ty] of SPAWN_POCKETS) grid[ty]![tx] = 0
   return grid
 }
+export { buildGrid }
 
 /** A fresh world at wave 1. */
 export function createWorld(rng: () => number = Math.random): WorldState {
   return {
-    grid: buildGrid(),
+    grid: buildGrid(0),
+    mapIndex: 0,
     player: {
       id: 0,
       kind: 'player',
@@ -161,6 +218,7 @@ export function createWorld(rng: () => number = Math.random): WorldState {
     spawnQueue: ENEMIES_PER_WAVE,
     spawnTimer: 1.0,
     aiTimer: 0,
+    flow: null,
     result: 'none',
     t: 0,
     rng,
@@ -341,9 +399,85 @@ function losClear(state: WorldState, a: Tank, b: Tank): boolean {
   return true
 }
 
-/** One enemy decision: shoot when aligned with a clear lane, else chase. */
+/** Flow-field distance at tile coords (-1 = wall/unreachable/out of grid). */
+export function flowAt(flow: Int16Array, tx: number, ty: number): number {
+  if (tx < 0 || tx >= GRID_W || ty < 0 || ty >= GRID_H) return -1
+  return flow[ty * GRID_W + tx]!
+}
+
+/**
+ * BFS flow field of walking distances from one tile over open tiles (brick
+ * counts as open: it is shootable, and the field is rebuilt every decision
+ * tick anyway). Used by the enemy AI to route around walls toward the player.
+ */
+export function buildFlowField(grid: Tile[][], tx: number, ty: number): Int16Array {
+  const flow = new Int16Array(GRID_W * GRID_H).fill(-1)
+  if (tileAt(grid, tx, ty) !== 0) return flow
+  flow[ty * GRID_W + tx] = 0
+  const queue: number[] = [ty * GRID_W + tx]
+  for (let qi = 0; qi < queue.length; qi += 1) {
+    const cur = queue[qi]!
+    const cx = cur % GRID_W
+    const cy = (cur / GRID_W) | 0
+    for (let dir = 0 as Dir; dir < 4; dir += 1) {
+      const nx = cx + DIR_DX[dir]!
+      const ny = cy + DIR_DY[dir]!
+      if (nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H) continue
+      const ni = ny * GRID_W + nx
+      if (flow[ni] !== -1 || grid[ny]![nx] !== 0) continue
+      flow[ni] = (flow[cur]! + 1) as number
+      queue.push(ni)
+    }
+  }
+  return flow
+}
+
+/**
+ * Perpendicular escape direction from a player bullet sharing this tank's
+ * lane and approaching within ~4 tiles; null when nothing threatens or both
+ * sides are walled.
+ */
+function incomingBulletSide(state: WorldState, enemy: Tank): Dir | null {
+  const ecx = enemy.x + TILE / 2
+  const ecy = enemy.y + TILE / 2
+  for (const bullet of state.bullets) {
+    if (bullet.owner !== 'player') continue
+    const bcx = bullet.x + 3
+    const bcy = bullet.y + 3
+    if (bullet.dir === 0 || bullet.dir === 2) {
+      if (Math.abs(bcx - ecx) > TILE / 2) continue
+      const approaching = bullet.dir === 2 ? bcy < ecy : bcy > ecy
+      if (!approaching || Math.abs(ecy - bcy) >= TILE * 4) continue
+      // Bullet travels vertically: escape sideways.
+      const leftOk = canAdvance(state, enemy, 3)
+      const rightOk = canAdvance(state, enemy, 1)
+      if (leftOk && rightOk) return state.rng() < 0.5 ? 3 : 1
+      return leftOk ? 3 : rightOk ? 1 : null
+    }
+    if (Math.abs(bcy - ecy) > TILE / 2) continue
+    const approaching = bullet.dir === 1 ? bcx < ecx : bcx > ecx
+    if (!approaching || Math.abs(ecx - bcx) >= TILE * 4) continue
+    // Bullet travels horizontally: escape vertically.
+    const upOk = canAdvance(state, enemy, 0)
+    const downOk = canAdvance(state, enemy, 2)
+    if (upOk && downOk) return state.rng() < 0.5 ? 0 : 2
+    return upOk ? 0 : downOk ? 2 : null
+  }
+  return null
+}
+
+/** One enemy decision: dodge an incoming bullet, shoot when a lane is clear,
+ * else follow the BFS flow field toward the player (greedy as a fallback). */
 function decideEnemy(state: WorldState, enemy: Tank): void {
   const player = state.player
+  const dodge = enemy.dodge ?? 0
+  if (dodge > 0 && state.rng() < dodge) {
+    const side = incomingBulletSide(state, enemy)
+    if (side !== null) {
+      enemy.targetDir = side
+      return
+    }
+  }
   if (losClear(state, enemy, player)) {
     // Face the player and fire down the clear lane: set the heading (and the
     // desired heading) so the bullet leaves toward the player immediately.
@@ -359,8 +493,32 @@ function decideEnemy(state: WorldState, enemy: Tank): void {
     if (enemy.cooldown <= 0) fire(state, enemy, BULLET_SPEED_ENEMY)
     return
   }
-  // Chase: prefer the axis with the larger gap; fall back through the others,
-  // picking the first direction whose way ahead is actually clear.
+  // Flow-field chase: walk the BFS distance gradient toward the player's
+  // tile; prefer continuing straight when it also improves (less jitter).
+  const flow = state.flow
+  if (flow !== null) {
+    const etx = Math.floor((enemy.x + TILE / 2) / TILE)
+    const ety = Math.floor((enemy.y + TILE / 2) / TILE)
+    const here = flowAt(flow, etx, ety)
+    if (here > 0) {
+      let best: Dir | null = null
+      let bestDist = here
+      for (const dir of [enemy.dir, 0, 1, 2, 3] as Dir[]) {
+        if (flowAt(flow, etx + DIR_DX[dir]!, ety + DIR_DY[dir]!) < 0) continue
+        const next = flowAt(flow, etx + DIR_DX[dir]!, ety + DIR_DY[dir]!)!
+        if (next < bestDist && canAdvance(state, enemy, dir)) {
+          best = dir
+          bestDist = next
+        }
+      }
+      if (best !== null) {
+        enemy.targetDir = best
+        return
+      }
+    }
+  }
+  // Greedy fallback: prefer the axis with the larger gap; fall back through
+  // the others, picking the first direction whose way ahead is actually clear.
   const ex = enemy.x + TILE / 2
   const ey = enemy.y + TILE / 2
   const px = player.x + TILE / 2
@@ -397,6 +555,8 @@ function spawnEnemy(state: WorldState): void {
       cooldown: 0.5 + state.rng(),
       alive: true,
       invuln: ENEMY_SPAWN_INVULN,
+      // Per-enemy sidestep personality: some enemies actively dodge.
+      dodge: 0.25 + state.rng() * 0.4,
     })
     state.spawnQueue -= 1
     return
@@ -441,10 +601,16 @@ export function stepWorld(state: WorldState, dt: number, input: PlayerInput): vo
     player.invuln = Math.max(0, player.invuln - dt)
   }
 
-  // Enemies: AI decisions on a fixed tick, movement every frame.
+  // Enemies: AI decisions on a fixed tick, movement every frame. Each tick
+  // also rebuilds the BFS flow field from the player's current tile.
   state.aiTimer += dt
   const decide = state.aiTimer >= AI_TICK
-  if (decide) state.aiTimer = 0
+  if (decide) {
+    state.aiTimer = 0
+    const ptx = Math.floor((state.player.x + TILE / 2) / TILE)
+    const pty = Math.floor((state.player.y + TILE / 2) / TILE)
+    state.flow = buildFlowField(state.grid, ptx, pty)
+  }
   for (const enemy of state.enemies) {
     if (decide) decideEnemy(state, enemy)
     moveTank(state, enemy, enemy.targetDir, ENEMY_SPEED * dt)
@@ -517,8 +683,20 @@ export function stepWorld(state: WorldState, dt: number, input: PlayerInput): vo
   if (state.enemies.length === 0 && state.spawnQueue === 0) {
     if (state.wave < WAVES) {
       state.wave += 1
+      // Rotate to the next battle map: fresh bricks, empty lanes, player
+      // back at the start with a short grace period.
+      state.mapIndex = mapIndexForWave(state.wave)
+      state.grid = buildGrid(state.mapIndex)
+      state.bullets = []
+      state.effects = []
       state.spawnQueue = ENEMIES_PER_WAVE
       state.spawnTimer = 0.8
+      state.flow = null
+      state.player.x = PLAYER_START[0] * TILE
+      state.player.y = PLAYER_START[1] * TILE
+      state.player.dir = 0
+      state.player.targetDir = 0
+      state.player.invuln = Math.max(state.player.invuln, 1.2)
     } else {
       state.result = 'win'
     }

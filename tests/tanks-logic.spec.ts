@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   createWorld, stepWorld, tryMove, tileAt,
   TILE, GRID_W, GRID_H, ENEMIES_PER_WAVE, MAX_ALIVE, WAVES,
+  MAP_COUNT, mapIndexForWave, buildGrid, buildFlowField, flowAt,
+  SPAWN_POINTS, PLAYER_START, AI_TICK as AI_TICK_FOR_TEST,
 } from '../src/client/games/tanks/logic.ts'
+import type { Dir } from '../src/client/games/tanks/logic.ts'
 
 /** Deterministic LCG so enemy decisions and spawns are reproducible. */
 function lcg(seed: number): () => number {
@@ -181,5 +184,70 @@ describe('tank battle logic', () => {
     const x = world.player.x
     stepWorld(world, 1, { ...idle, right: true })
     expect(world.player.x).toBe(x)
+  })
+
+  it('every battle map keeps all spawns and the player start mutually reachable', () => {
+    for (let m = 0; m < MAP_COUNT; m += 1) {
+      const grid = buildGrid(m)
+      const flow = buildFlowField(grid, PLAYER_START[0], PLAYER_START[1])
+      for (const [tx, ty] of SPAWN_POINTS) {
+        expect(flowAt(flow, tx, ty)).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('waves rotate maps and rebuild the destroyed bricks', () => {
+    const world = createWorld(lcg(1))
+    // Carve a hole in wave 1's map, then advance the wave.
+    world.grid[1]![7] = 0
+    expect(world.grid[1]![7]).toBe(0)
+    world.spawnQueue = 0
+    world.enemies = []
+    stepWorld(world, 1 / 60, idle)
+    expect(world.wave).toBe(2)
+    expect(world.mapIndex).toBe(mapIndexForWave(2))
+    // The next map is fresh: (1,4) is a brick again on the corridor map.
+    expect(world.grid[1]![4]).toBe(1)
+    expect(world.bullets).toHaveLength(0)
+    // Player was reset to the start tile.
+    expect(world.player.x).toBe(7 * TILE)
+    expect(world.player.y).toBe(11 * TILE)
+    // Wave 3 rotates to the third map.
+    world.spawnQueue = 0
+    world.enemies = []
+    stepWorld(world, 1 / 60, idle)
+    expect(world.mapIndex).toBe(2)
+  })
+
+  it('the flow field routes around walls (distance decreases along the detour)', () => {
+    const world = createWorld(lcg(1))
+    // Distances flow from the player's tile: the tile nearer the player in
+    // the left spawn column is one step closer than the tile above it.
+    const flow = buildFlowField(world.grid, PLAYER_START[0], PLAYER_START[1])
+    const closerToPlayer = flowAt(flow, 1, 2)
+    const farther = flowAt(flow, 1, 1)
+    expect(closerToPlayer).toBeGreaterThan(0)
+    expect(farther).toBeGreaterThan(0)
+    expect(farther - closerToPlayer).toBe(1)
+  })
+
+  it('a threatening player bullet makes a dodging enemy sidestep', () => {
+    const world = createWorld(lcg(7))
+    world.player.x = 7 * TILE
+    world.player.y = 6 * TILE
+    const enemy = {
+      id: 1, kind: 'enemy' as const,
+      x: 7 * TILE, y: 10 * TILE,
+      dir: 0 as Dir, targetDir: 0 as Dir,
+      hp: 1, cooldown: 5, alive: true, invuln: 0, dodge: 1,
+    }
+    world.enemies.push(enemy)
+    // A player bullet well above the enemy, flying down its lane; prime the
+    // decision timer so the AI reacts on the very first frame, long before
+    // the bullet can reach the enemy.
+    world.bullets.push({ x: 7 * TILE + TILE / 2 - 3, y: 6.5 * TILE, dir: 2, owner: 'player' })
+    world.aiTimer = AI_TICK_FOR_TEST - 1 / 60
+    stepWorld(world, 1 / 60, idle)
+    expect(enemy.targetDir === 1 || enemy.targetDir === 3).toBe(true)
   })
 })
