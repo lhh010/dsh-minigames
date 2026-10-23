@@ -1,0 +1,191 @@
+/**
+ * Lights Out game definition: wires the pure toggle logic into a
+ * {@link MiniGameInstance} — click or arrow-navigate + Space/Enter toggles a
+ * cell and its neighbors; clearing a level fires onScore, bursts particles,
+ * and auto-advances 1.5s later; pause freezes the advance timer via the
+ * stored-remainder pattern.
+ */
+import type {
+  MiniGameDefinition,
+  MiniGameInstance,
+  MiniGameMountOptions,
+} from '../types.ts'
+import { SIZE, isSolved, scramble, scrambleCount, toggleAt } from './logic.ts'
+import { LOGICAL_H, LOGICAL_W, cellAt, cellCenter, renderLights, type Cursor } from './render.ts'
+import { fitCanvas } from '../canvas-fit.ts'
+import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { THEME, createParticles } from '../theme.ts'
+
+const ADVANCE_MS = 1500
+
+function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
+  const canvas = document.createElement('canvas')
+  canvas.className = 'dmg-game-canvas'
+  host.replaceChildren(canvas)
+  const fit = fitCanvas(host, canvas, LOGICAL_W, LOGICAL_H)
+  if (fit === null) throw new Error('dsh-minigames: lightsout needs a 2d canvas context')
+  const ctx = fit.ctx
+
+  let level = 1
+  let moves = 0
+  // Deterministic per-level seed; one seed per level keeps replays identical.
+  let board = scramble(level * 0x9e3779b9, scrambleCount(level))
+  let cursor: Cursor = { r: 2, c: 2 }
+  let winText: string | null = null
+  let running = false
+  let raf = 0
+  let last = 0
+  let advanceTimer = 0
+  let advanceAt = 0
+  let advanceRemaining = 0
+  let lastScore = -1
+  const particles = createParticles()
+
+  const reportScore = (): void => {
+    if (level === lastScore) return
+    lastScore = level
+    options?.onScore?.(level)
+  }
+
+  const startLevel = (next: number): void => {
+    level = next
+    moves = 0
+    board = scramble(level * 0x9e3779b9, scrambleCount(level))
+    winText = null
+  }
+
+  const scheduleAdvance = (delayMs: number): void => {
+    advanceAt = performance.now() + delayMs
+    advanceTimer = window.setTimeout(() => {
+      advanceTimer = 0
+      startLevel(level + 1)
+    }, delayMs)
+  }
+
+  const move = (r: number, c: number): void => {
+    if (winText !== null) return // frozen during the win overlay
+    moves += 1
+    board = toggleAt(board, r, c)
+    if (isSolved(board)) {
+      winText = `第 ${level} 关完成 · ${moves} 步`
+      reportScore()
+      const center = cellCenter(r, c)
+      particles.burst(center.x, center.y, THEME.gold, 14, 150)
+      for (let i = 0; i < SIZE; i += 1) {
+        const edge = cellCenter(i, c)
+        particles.burst(edge.x, edge.y, THEME.good, 3, 90)
+      }
+      if (running) scheduleAdvance(ADVANCE_MS)
+      else advanceRemaining = ADVANCE_MS // paused mid-burst: arm on resume
+    }
+  }
+
+  const onMouseDown = (event: MouseEvent): void => {
+    if (!running) return // paused: freeze input
+    const rect = canvas.getBoundingClientRect()
+    const x = ((event.clientX - rect.left) * LOGICAL_W) / rect.width
+    const y = ((event.clientY - rect.top) * LOGICAL_H) / rect.height
+    const cell = cellAt(x, y)
+    if (cell !== null) {
+      cursor = cell
+      move(cell.r, cell.c)
+    }
+  }
+
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (!gameHasFocus(host)) return
+    if (event.code === 'KeyR') {
+      event.preventDefault()
+      clearTimeout(advanceTimer)
+      advanceTimer = 0
+      advanceRemaining = 0
+      lastScore = -1
+      startLevel(1)
+    } else if (event.code === 'KeyP') {
+      event.preventDefault()
+      togglePause()
+    } else if (event.code.startsWith('Arrow') || event.code === 'Space' || event.code === 'Enter') {
+      event.preventDefault()
+      if (!running) return
+      if (event.code === 'ArrowUp') cursor = { r: Math.max(0, cursor.r - 1), c: cursor.c }
+      else if (event.code === 'ArrowDown') cursor = { r: Math.min(SIZE - 1, cursor.r + 1), c: cursor.c }
+      else if (event.code === 'ArrowLeft') cursor = { r: cursor.r, c: Math.max(0, cursor.c - 1) }
+      else if (event.code === 'ArrowRight') cursor = { r: cursor.r, c: Math.min(SIZE - 1, cursor.c + 1) }
+      else move(cursor.r, cursor.c)
+    }
+  }
+
+  const frame = (now: number): void => {
+    raf = requestAnimationFrame(frame)
+    if (!running) return
+    const dt = Math.min(50, now - last)
+    last = now
+    renderLights(ctx, LOGICAL_W, LOGICAL_H, board, cursor, level, moves, false, winText)
+    particles.tick(ctx, dt)
+  }
+
+  const startLoop = (): void => {
+    if (raf !== 0) return
+    last = performance.now()
+    raf = requestAnimationFrame(frame)
+  }
+  const stopLoop = (): void => {
+    cancelAnimationFrame(raf)
+    raf = 0
+  }
+  const togglePause = (): void => {
+    if (running) pause()
+    else resume()
+  }
+  const pause = (): void => {
+    if (!running) return
+    running = false
+    // Freeze the advance timer: stop it and keep the remainder.
+    if (advanceTimer !== 0) {
+      clearTimeout(advanceTimer)
+      advanceTimer = 0
+      advanceRemaining = Math.max(0, advanceAt - performance.now())
+    }
+    stopLoop()
+    renderLights(ctx, LOGICAL_W, LOGICAL_H, board, cursor, level, moves, true, winText)
+  }
+  const resume = (): void => {
+    if (running) return
+    running = true
+    if (advanceRemaining > 0) {
+      scheduleAdvance(advanceRemaining)
+      advanceRemaining = 0
+    }
+    startLoop()
+  }
+
+  canvas.addEventListener('mousedown', onMouseDown)
+  window.addEventListener('keydown', onKeyDown)
+  focusGameHost(host)
+  running = true
+  startLoop()
+
+  return {
+    start: resume,
+    pause,
+    resume,
+    destroy: () => {
+      running = false
+      stopLoop()
+      clearTimeout(advanceTimer)
+      advanceTimer = 0
+      fit.dispose()
+      canvas.removeEventListener('mousedown', onMouseDown)
+      window.removeEventListener('keydown', onKeyDown)
+    },
+  }
+}
+
+export const lightsOutGame: MiniGameDefinition = {
+  id: 'lightsout',
+  title: '点灯 Lights Out',
+  icon: '💡',
+  description: '点亮或熄灭十字形相邻的灯，把整块面板全部熄灭。',
+  controls: ['点击 / 方向键 + 空格或回车：切换', 'R：重开', 'P：暂停'],
+  create: createLightsOutGame,
+}

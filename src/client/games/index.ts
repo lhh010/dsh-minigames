@@ -30,6 +30,10 @@ import { pipesGame } from './pipes/index.ts'
 import { colorLinesGame } from './colorlines/index.ts'
 import { dodgerGame } from './dodger/index.ts'
 import { typingGame } from './typing/index.ts'
+import { lightsOutGame } from './lightsout/index.ts'
+import { pongGame } from './pong/index.ts'
+import { stackGame } from './stack/index.ts'
+import { wordleGame } from './wordle/index.ts'
 
 export { getGames, getGame } from './registry.ts'
 export { registerGame } from './registry.ts'
@@ -48,6 +52,7 @@ export function registerBuiltinGames(): void {
     whackGame, othelloGame, flappyGame, sudokuGame, pacmanGame, aimTrackGame,
     simonGame, sokobanGame, asteroidsGame,
     pipesGame, colorLinesGame, dodgerGame, typingGame,
+    lightsOutGame, pongGame, stackGame, wordleGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
