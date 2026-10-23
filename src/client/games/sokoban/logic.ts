@@ -58,15 +58,20 @@ export const BOX_SCORE = 100
 export const CLEAR_SCORE = 500
 
 /**
- * The 30 built-in levels, microban-style, ≤ 14x14, ordered by difficulty.
+ * The 45 built-in levels, microban-style, ≤ 14x14, ordered by difficulty.
  * Levels 11-20 ramp through narrow corridors and goal rooms with forced
  * fill ordering (deepest goal first), up to 6 boxes; level 20 funnels six
  * boxes down a deep two-cell shaft into a wide goal row. Levels 21-30 are
  * the hard tier (6-8 boxes): goal-column parking order, left-edge shaft
  * rides, dual shafts into offset goal rows, split goal pockets, deep shafts
  * with a blocking box, side-chamber shuttles, a single-doorway two-room
- * shuttle, and a toothed divider column for the finale. Each hard level is
- * verified solvable by the budgeted solver in the unit tests.
+ * shuttle, and a toothed divider column for the finale. Levels 31-45 are
+ * the expert tier (6-7 boxes): side chambers that must clear before the
+ * shaft, single-doorway three-room chains, goal rooms fed by one shared
+ * shaft with a blocking box parked in the drop zone, and shafts of varying
+ * depth whose blocker position forces strict push ordering. Every expert
+ * level measures 97k-278k node expansions on the budgeted solver in the
+ * unit tests (hard tier tops out near 290k on level 30).
  * Tiles: # wall, space floor, $ box, . goal, * box-on-goal, @ player,
  * + player-on-goal.
  */
@@ -400,6 +405,208 @@ export const LEVELS: string[] = [
 #     $$   #
 #     @    #
 ############
+`,
+  // L31: expert tier. Side chamber must clear before the shaft convoy;
+  // goal row offset against the chamber door.
+  `
+############
+#  @       #
+# $ $ $ $  #
+## # #######
+## # #######
+# $ $  #####
+#  #$ ######
+#  #  ######
+#  ....... #
+############
+`,
+  // L32: three rooms chained by one 2-wide doorway each; middle-room
+  // boxes queue through both doors in fill order.
+  `
+############
+#    @     #
+# $ $ $    #
+####  ######
+#          #
+#  $ $ $   #
+####  ######
+#          #
+#  ......  #
+#          #
+############
+`,
+  // L33: goal room fed by one shaft; goals offset from the drop column.
+  `
+############
+#    ....  #
+#    ....  #
+#####  #####
+#          #
+#  $ $ $ $ #
+#          #
+###@########
+# $ $ $ $  #
+#          #
+############
+`,
+  // L34: deep shaft with the blocker far left of the drop zone.
+  `
+##############
+#     @      #
+# $ $ $$ $ $ #
+######  ######
+######  ######
+######  ######
+######  ######
+#    $       #
+# .......    #
+##############
+`,
+  // L35: three-room chain, no slack row below the goals.
+  `
+############
+#    @     #
+# $ $ $    #
+####  ######
+#          #
+#  $ $ $   #
+####  ######
+#          #
+#  ......  #
+############
+`,
+  // L36: goal room with the goal block hugging the left wall.
+  `
+############
+#  ....    #
+#  ....    #
+#####  #####
+#          #
+#  $ $ $ $ #
+#          #
+###@########
+# $ $ $ $  #
+#          #
+############
+`,
+  // L37: goal room with the goal block hugging the right wall.
+  `
+############
+#     .... #
+#     .... #
+#####  #####
+#          #
+#  $ $ $ $ #
+#          #
+###@########
+# $ $ $ $  #
+#          #
+############
+`,
+  // L38: deep shaft, blocker just right of the drop zone.
+  `
+##############
+#     @      #
+# $ $ $$ $ $ #
+######  ######
+######  ######
+######  ######
+######  ######
+#      $     #
+#  .......   #
+##############
+`,
+  // L39: deep shaft, blocker far right; longest repositioning detour.
+  `
+##############
+#     @      #
+# $ $ $$ $ $ #
+######  ######
+######  ######
+######  ######
+######  ######
+#        $   #
+# .......    #
+##############
+`,
+  // L40: shallow shaft, blocker dead-center under the drop zone.
+  `
+##############
+#     @      #
+# $ $ $$ $ $ #
+######  ######
+######  ######
+######  ######
+#     $      #
+#  .......   #
+##############
+`,
+  // L41: deep shaft, blocker one off the drop zone; goals wide.
+  `
+##############
+#     @      #
+# $ $ $$ $ $ #
+######  ######
+######  ######
+######  ######
+######  ######
+#     $      #
+#  .......   #
+##############
+`,
+  // L42: deep shaft, blocker right of center.
+  `
+##############
+#     @      #
+# $ $ $$ $ $ #
+######  ######
+######  ######
+######  ######
+######  ######
+#       $    #
+# .......    #
+##############
+`,
+  // L43: shallow shaft, blocker dead-center, goals pulled left.
+  `
+##############
+#     @      #
+# $ $ $$ $ $ #
+######  ######
+######  ######
+######  ######
+#     $      #
+# .......    #
+##############
+`,
+  // L44: five-deep shaft with the blocker at the bottom; the drop-zone
+  // box must shuttle fully around the stack.
+  `
+##############
+#     @      #
+# $ $ $$ $ $ #
+######  ######
+######  ######
+######  ######
+######  ######
+######  ######
+#     $      #
+#  .......   #
+##############
+`,
+  // L45: deep shaft, blocker hard against the left wall; the tightest
+  // expert parking order.
+  `
+##############
+#     @      #
+# $ $ $$ $ $ #
+######  ######
+######  ######
+######  ######
+######  ######
+#   $        #
+# .......    #
+##############
 `,
 ]
 

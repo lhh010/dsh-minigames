@@ -55,15 +55,20 @@ export declare const BOX_SCORE = 100;
 /** Score awarded when the level is cleared. */
 export declare const CLEAR_SCORE = 500;
 /**
- * The 30 built-in levels, microban-style, ≤ 14x14, ordered by difficulty.
+ * The 45 built-in levels, microban-style, ≤ 14x14, ordered by difficulty.
  * Levels 11-20 ramp through narrow corridors and goal rooms with forced
  * fill ordering (deepest goal first), up to 6 boxes; level 20 funnels six
  * boxes down a deep two-cell shaft into a wide goal row. Levels 21-30 are
  * the hard tier (6-8 boxes): goal-column parking order, left-edge shaft
  * rides, dual shafts into offset goal rows, split goal pockets, deep shafts
  * with a blocking box, side-chamber shuttles, a single-doorway two-room
- * shuttle, and a toothed divider column for the finale. Each hard level is
- * verified solvable by the budgeted solver in the unit tests.
+ * shuttle, and a toothed divider column for the finale. Levels 31-45 are
+ * the expert tier (6-7 boxes): side chambers that must clear before the
+ * shaft, single-doorway three-room chains, goal rooms fed by one shared
+ * shaft with a blocking box parked in the drop zone, and shafts of varying
+ * depth whose blocker position forces strict push ordering. Every expert
+ * level measures 97k-278k node expansions on the budgeted solver in the
+ * unit tests (hard tier tops out near 290k on level 30).
  * Tiles: # wall, space floor, $ box, . goal, * box-on-goal, @ player,
  * + player-on-goal.
  */

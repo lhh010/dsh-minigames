@@ -1,10 +1,26 @@
 /**
- * Wordle 词表：ANSWERS 是候选答案池，EXTRA_GUESSES 是额外合法猜测词。
- * 一个猜测合法当且仅当它出现在 ANSWERS ∪ EXTRA_GUESSES 中；两表互不重叠。
+ * Wordle 词表：按长度分池的候选答案（ANSWERS_4 / ANSWERS_5 / ANSWERS_6）。
+ * 猜测不再要求在词表内——任意等长纯字母词均合法，词表仅用于选答案。
  */
 
+/** 常见 4 字母候选答案（大写，120 个）。 */
+export const ANSWERS_4 = [
+  'ABLE', 'ACHE', 'ACTS', 'AGED', 'AJAR', 'ALLY', 'ALSO', 'AREA', 'ARMY', 'ATOM',
+  'AWAY', 'BABY', 'BACK', 'BALL', 'BAND', 'BANK', 'BASE', 'BATH', 'BEAN', 'BEAR',
+  'BEAT', 'BELL', 'BELT', 'BEST', 'BILL', 'BIRD', 'BITE', 'BLUE', 'BOAT', 'BODY',
+  'BONE', 'BOOK', 'BOOT', 'BORN', 'BOSS', 'BOTH', 'BOWL', 'BURN', 'BUSY', 'CAFE',
+  'CAGE', 'CALL', 'CALM', 'CAME', 'CAMP', 'CARD', 'CARE', 'CASE', 'CASH', 'CAST',
+  'CELL', 'CHAT', 'CHIP', 'CITY', 'CLUB', 'COAL', 'COAT', 'CODE', 'COOK', 'COOL',
+  'COPY', 'CORE', 'COST', 'CREW', 'CROP', 'CUTE', 'DARK', 'DATA', 'DATE', 'DEAD',
+  'DEAL', 'DEAR', 'DEEP', 'DESK', 'DICE', 'DIRT', 'DISH', 'DOES', 'DONE', 'DOOR',
+  'DOWN', 'DRAW', 'DREW', 'DROP', 'DRUM', 'DUCK', 'DUST', 'DUTY', 'EACH', 'EARN',
+  'EASE', 'EAST', 'EASY', 'EDGE', 'ELSE', 'EVEN', 'EVER', 'EVIL', 'EXIT', 'FACE',
+  'FACT', 'FADE', 'FAIL', 'FAIR', 'FALL', 'FARM', 'FAST', 'FATE', 'FEAR', 'FEED',
+  'FEEL', 'FEET', 'FELL', 'FILM', 'FIND', 'FINE', 'FIRE', 'FISH', 'FIVE', 'FLAG',
+] as const
+
 /** 常见 5 字母候选答案（大写，150 个）。 */
-export const ANSWERS = [
+export const ANSWERS_5 = [
   'ABOUT', 'ABOVE', 'ACTOR', 'ADMIT', 'ADOPT', 'ADULT', 'AFTER', 'AGAIN', 'AGENT', 'AGREE',
   'AHEAD', 'ALARM', 'ALBUM', 'ALERT', 'ALIVE', 'ALLOW', 'ALONE', 'ALONG', 'ANGER', 'ANGLE',
   'APPLE', 'APPLY', 'ARGUE', 'ARISE', 'ARRAY', 'ASIDE', 'ASSET', 'AUDIO', 'AVOID', 'AWARD',
@@ -21,20 +37,18 @@ export const ANSWERS = [
   'FOCUS', 'FORCE', 'FORTY', 'FORUM', 'FOUND', 'FRAME', 'FRESH', 'FRONT', 'FRUIT', 'FUNNY',
 ] as const
 
-/** 额外合法猜测词（大写，150 个，不含 ANSWERS 中的词）。 */
-export const EXTRA_GUESSES = [
-  'GIANT', 'GLASS', 'GLOBE', 'GRACE', 'GRADE', 'GRAND', 'GRANT', 'GRAPE', 'GRASS', 'GREAT',
-  'GREEN', 'GROUP', 'GROWN', 'GUARD', 'GUESS', 'GUEST', 'GUIDE', 'HAPPY', 'HEART', 'HEAVY',
-  'HORSE', 'HOTEL', 'HOUSE', 'HUMAN', 'IDEAL', 'IMAGE', 'INDEX', 'INNER', 'INPUT', 'ISSUE',
-  'JOINT', 'JUDGE', 'JUICE', 'KNIFE', 'KNOWN', 'LABEL', 'LARGE', 'LASER', 'LATER', 'LAUGH',
-  'LAYER', 'LEARN', 'LEAST', 'LEAVE', 'LEGAL', 'LEVEL', 'LIGHT', 'LIMIT', 'LOCAL', 'LOGIC',
-  'LOOSE', 'LOWER', 'LUCKY', 'LUNCH', 'MAGIC', 'MAJOR', 'MAKER', 'MARCH', 'MATCH', 'MAYBE',
-  'MEDIA', 'METAL', 'MIGHT', 'MINOR', 'MODEL', 'MONEY', 'MONTH', 'MORAL', 'MOTOR', 'MOUNT',
-  'MOUSE', 'MOUTH', 'MUSIC', 'NEVER', 'NIGHT', 'NOISE', 'NORTH', 'NOVEL', 'NURSE', 'OCCUR',
-  'OCEAN', 'OFFER', 'OFTEN', 'ORDER', 'OTHER', 'PAINT', 'PANEL', 'PAPER', 'PARTY', 'PEACE',
-  'PHONE', 'PHOTO', 'PIANO', 'PIECE', 'PILOT', 'PITCH', 'PIZZA', 'PLACE', 'PLAIN', 'PLANE',
-  'PLANT', 'PLATE', 'POINT', 'POUND', 'POWER', 'PRESS', 'PRICE', 'PRIDE', 'PRIME', 'PRINT',
-  'PRIZE', 'PROOF', 'PROUD', 'PROVE', 'QUEEN', 'QUICK', 'QUIET', 'QUITE', 'RADIO', 'RAISE',
-  'RANGE', 'RAPID', 'RATIO', 'REACH', 'READY', 'RIGHT', 'RIVAL', 'RIVER', 'ROBOT', 'ROUGH',
-  'ROUND', 'ROUTE', 'ROYAL', 'SALSA', 'SAINT', 'SCALE', 'SCENE', 'SCOPE', 'SCORE', 'SENSE',
+/** 常见 6 字母候选答案（大写，120 个）。 */
+export const ANSWERS_6 = [
+  'ABROAD', 'ACCEPT', 'ACCESS', 'ACROSS', 'ACTION', 'ACTIVE', 'ACTUAL', 'ADVICE', 'AFFECT', 'AFRAID',
+  'ANCHOR', 'ANYWAY', 'AROUND', 'ARTIST', 'ASSUME', 'ATTACK', 'AUGUST', 'AUTHOR', 'AUTUMN', 'AVENUE',
+  'BACKED', 'BAKERY', 'BANKER', 'BARELY', 'BATTLE', 'BEAUTY', 'BECOME', 'BEFORE', 'BEGINS', 'BEHIND',
+  'BELIEF', 'BETTER', 'BEYOND', 'BIGGER', 'BIRTHS', 'BLAMED', 'BOARDS', 'BORROW', 'BOTTLE', 'BOTTOM',
+  'BOUGHT', 'BRANCH', 'BREATH', 'BRIDGE', 'BRIGHT', 'BROKEN', 'BUBBLE', 'BUDGET', 'BUFFER', 'BUNDLE',
+  'BURNER', 'BURDEN', 'BUTTER', 'BUYING', 'CABINS', 'CAMERA', 'CAMPUS', 'CANCEL', 'CANDLE', 'CANVAS',
+  'CARBON', 'CAREER', 'CASTLE', 'CASUAL', 'CATCHY', 'CAUGHT', 'CENTER', 'CHANGE', 'CHARGE', 'CHERRY',
+  'CHOOSE', 'CHOSEN', 'CHURCH', 'CIRCLE', 'CLIENT', 'CLOSED', 'CLOTHS', 'COFFEE', 'COLUMN', 'COMBAT',
+  'COMING', 'COMMIT', 'COMMON', 'CORNER', 'COUPLE', 'COURSE', 'COUSIN', 'CREATE', 'CREDIT',
+  'CRISIS', 'CUSTOM', 'DAMAGE', 'DANGER', 'DEALER', 'DEBATE', 'DECADE', 'DECIDE', 'DEFEAT', 'DEFINE',
+  'DEGREE', 'DEMAND', 'DEPART', 'DEPEND', 'DEPUTY', 'DESIGN', 'DESIRE', 'DETAIL', 'DETECT', 'DEVICE',
+  'DINNER', 'DIRECT', 'DIVIDE', 'DOCTOR', 'DOLLAR', 'DOMAIN', 'DOUBLE', 'DRIVER', 'DURING', 'EARNED', 'EFFECT',
 ] as const

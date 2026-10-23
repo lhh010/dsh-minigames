@@ -1,7 +1,7 @@
 /**
  * Wordle 猜词游戏定义：把纯判定逻辑接成 {@link MiniGameInstance} ——
- * 物理 A–Z/Enter/Backspace 与屏幕键盘点击双输入，无效猜测抖动提示且
- * 不消耗行，胜负后空格/点击换新词再来一局，连胜通过 onScore 上报。
+ * 物理 A–Z/Enter/Backspace 与屏幕键盘点击双输入，任意等长纯字母词均合法，
+ * 无效输入抖动提示且不消耗行；关卡按 4/5/6 字母循环推进，连胜通过 onScore 上报。
  */
 import type {
   MiniGameDefinition,
@@ -9,7 +9,6 @@ import type {
   MiniGameMountOptions,
 } from '../types.ts'
 import { judge, mergeKeyHints, isValidGuess, pickAnswer, type KeyHints, type LetterVerdict } from './logic.ts'
-import { ANSWERS, EXTRA_GUESSES } from './words.ts'
 import { renderWordle, keyAt, LOGICAL_W, LOGICAL_H, type WordleView } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
@@ -17,6 +16,18 @@ import { accent, createParticles } from '../theme.ts'
 
 const SHAKE_MS = 260
 const TOAST_MS = 1300
+
+/** 关卡循环：L1=4 字母/6 次，L2=5 字母/6 次，L3=6 字母/7 次，L4 起循环。 */
+const LEVEL_CYCLE: Array<{ len: number; tries: number }> = [
+  { len: 4, tries: 6 },
+  { len: 5, tries: 6 },
+  { len: 6, tries: 7 },
+]
+
+/** 关卡（1 起）对应的词长与机会数。 */
+function levelConfig(level: number): { len: number; tries: number } {
+  return LEVEL_CYCLE[(level - 1) % LEVEL_CYCLE.length]!
+}
 
 /** 每局新种子的来源：时间戳异或递增计数器。 */
 let restartCounter = 0
@@ -33,6 +44,8 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   if (fit === null) throw new Error('dsh-minigames: wordle needs a 2d canvas context')
   const ctx = fit.ctx
 
+  let level = 1
+  let { len, tries } = levelConfig(level)
   let answer = ''
   let rows: Array<{ guess: string; verdicts: LetterVerdict[] }> = []
   let current = ''
@@ -49,7 +62,8 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   const particles = createParticles()
 
   const newRound = (): void => {
-    answer = pickAnswer(nextSeed())
+    ({ len, tries } = levelConfig(level))
+    answer = pickAnswer(nextSeed(), len)
     rows = []
     current = ''
     keyHints = {}
@@ -74,12 +88,12 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   }
 
   const submit = (): void => {
-    if (current.length < 5) {
-      reject('不足 5 个字母')
+    if (current.length < len) {
+      reject(`不足 ${len} 个字母`)
       return
     }
-    if (!isValidGuess(current, ANSWERS, EXTRA_GUESSES)) {
-      reject('不在词表')
+    if (!isValidGuess(current, len)) {
+      reject('仅限 A–Z 字母')
       return
     }
     const verdicts = judge(current, answer)
@@ -88,12 +102,14 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     if (verdicts.every(v => v === 'green')) {
       status = 'won'
       streak += 1
+      level += 1
       reportScore()
       // 最后一行中央喷粒子庆祝。
       const rowY = 48 + (rows.length - 1) * (56 + 8) + 28
       particles.burst(LOGICAL_W / 2, rowY, accent(2), 26, 170)
-    } else if (rows.length >= 6) {
+    } else if (rows.length >= tries) {
       status = 'lost'
+      level = 1
     }
     current = ''
   }
@@ -105,13 +121,13 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       submit()
     } else if (key === 'BACK') {
       current = current.slice(0, -1)
-    } else if (/^[A-Z]$/.test(key) && current.length < 5) {
+    } else if (/^[A-Z]$/.test(key) && current.length < len) {
       current += key
     }
   }
 
   const restart = (): void => {
-    // 输了清零连胜；赢了保留并继续累积。
+    // 输了清零连胜并回到第 1 关；赢了保留连胜并进入下一关。
     if (status === 'lost' && streak !== 0) {
       streak = 0
       reportScore()
@@ -144,6 +160,7 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     if (event.code === 'KeyR') {
       event.preventDefault()
       streak = 0
+      level = 1
       reportScore()
       newRound()
       return
@@ -173,7 +190,7 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   }
 
   const view = (): WordleView => ({
-    rows, current, keyHints, status, answer, streak, toast, paused: !running,
+    rows, current, keyHints, status, answer, len, tries, level, streak, toast, paused: !running,
   })
 
   const frame = (now: number): void => {
@@ -238,7 +255,7 @@ export const wordleGame: MiniGameDefinition = {
   id: 'wordle',
   title: 'Wordle 猜词',
   icon: '🔤',
-  description: '6 次机会猜出 5 字母英文单词，绿=位置对，黄=字母对，灰=没有。',
+  description: '按关卡猜 4/5/6 字母单词，任意等长字母词都可提交，绿=位置对，黄=字母对，灰=没有。',
   controls: ['键盘 / 点击屏幕键盘：输入', 'Enter：提交 · Backspace：删除', '空格 / 点击：再来一局', 'R：重开 · P：暂停'],
   create: createWordleGame,
 }

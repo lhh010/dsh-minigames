@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   judge, mergeKeyHints, isValidGuess, mulberry32, pickAnswer, type KeyHints,
 } from '../src/client/games/wordle/logic.ts'
-import { ANSWERS, EXTRA_GUESSES } from '../src/client/games/wordle/words.ts'
+import { ANSWERS_4, ANSWERS_5, ANSWERS_6 } from '../src/client/games/wordle/words.ts'
 
 describe('wordle judge', () => {
   it('all green on an exact match', () => {
@@ -35,8 +35,10 @@ describe('wordle judge', () => {
     expect(judge('PAPAL', 'APPLE')).toEqual(['yellow', 'yellow', 'green', 'gray', 'yellow'])
   })
 
-  it('always returns five verdicts', () => {
+  it('always returns one verdict per letter at any length', () => {
     expect(judge('BLIMP', 'QUART')).toHaveLength(5)
+    expect(judge('BACK', 'CAFE')).toHaveLength(4)
+    expect(judge('CASTLE', 'CANDLE')).toHaveLength(6)
   })
 })
 
@@ -71,37 +73,39 @@ describe('wordle mergeKeyHints', () => {
 })
 
 describe('wordle isValidGuess', () => {
-  const answers = ['CRANE', 'BRAIN']
-  const extras = ['SALSA', 'TENET']
-  it('accepts words from either list', () => {
-    expect(isValidGuess('CRANE', answers, extras)).toBe(true)
-    expect(isValidGuess('SALSA', answers, extras)).toBe(true)
+  it('accepts any word of the exact length with letters only — no dictionary required', () => {
+    expect(isValidGuess('CRANE', 5)).toBe(true)
+    expect(isValidGuess('QQQQQ', 5)).toBe(true)
+    expect(isValidGuess('ZZQQ', 4)).toBe(true)
+    expect(isValidGuess('XZZQQX', 6)).toBe(true)
   })
-  it('rejects unknown words, lowercase, and wrong lengths', () => {
-    expect(isValidGuess('QQQQQ', answers, extras)).toBe(false)
-    expect(isValidGuess('crane', answers, extras)).toBe(false)
-    expect(isValidGuess('CRAN', answers, extras)).toBe(false)
-    expect(isValidGuess('CRANES', answers, extras)).toBe(false)
-    expect(isValidGuess('', answers, extras)).toBe(false)
+  it('rejects wrong lengths, lowercase, non-letters, and empty', () => {
+    expect(isValidGuess('CRAN', 5)).toBe(false)
+    expect(isValidGuess('CRANES', 5)).toBe(false)
+    expect(isValidGuess('CRANE', 4)).toBe(false)
+    expect(isValidGuess('crane', 5)).toBe(false)
+    expect(isValidGuess('CR-NE', 5)).toBe(false)
+    expect(isValidGuess('', 5)).toBe(false)
   })
 })
 
 describe('wordle pickAnswer', () => {
   it('is deterministic for a given seed', () => {
-    expect(pickAnswer(12345)).toBe(pickAnswer(12345))
-    expect(pickAnswer(0)).toBe(pickAnswer(0))
+    expect(pickAnswer(12345, 5)).toBe(pickAnswer(12345, 5))
+    expect(pickAnswer(0, 4)).toBe(pickAnswer(0, 4))
   })
 
-  it('always lands inside the answer list (bounds)', () => {
+  it('always lands inside the matching answer list (bounds)', () => {
+    const lists: Record<number, readonly string[]> = { 4: ANSWERS_4, 5: ANSWERS_5, 6: ANSWERS_6 }
     for (const seed of [0, 1, 7, 42, 99, 1_000_003, 0xffff_ffff]) {
-      expect(ANSWERS).toContain(pickAnswer(seed))
+      for (const len of [4, 5, 6]) expect(lists[len]).toContain(pickAnswer(seed, len))
     }
-    for (let i = 0; i < 200; i += 1) expect(ANSWERS).toContain(pickAnswer(i))
+    for (let i = 0; i < 200; i += 1) expect(ANSWERS_5).toContain(pickAnswer(i, 5))
   })
 
   it('different seeds sweep a real share of the pool', () => {
     const seen = new Set<string>()
-    for (let i = 0; i < 150; i += 1) seen.add(pickAnswer(i))
+    for (let i = 0; i < 150; i += 1) seen.add(pickAnswer(i, 5))
     expect(seen.size).toBeGreaterThan(20)
   })
 
@@ -113,11 +117,15 @@ describe('wordle pickAnswer', () => {
 })
 
 describe('wordle word lists', () => {
-  it('hold ~150 five-letter uppercase words each, disjoint', () => {
-    expect(ANSWERS.length).toBeGreaterThanOrEqual(140)
-    expect(EXTRA_GUESSES.length).toBeGreaterThanOrEqual(140)
-    for (const w of [...ANSWERS, ...EXTRA_GUESSES]) expect(w).toMatch(/^[A-Z]{5}$/)
-    const extras: readonly string[] = EXTRA_GUESSES
-    expect(ANSWERS.filter(w => extras.includes(w))).toEqual([])
+  it('hold ~120+ uppercase words of exactly the declared length, disjoint across lengths', () => {
+    expect(ANSWERS_4.length).toBeGreaterThanOrEqual(110)
+    expect(ANSWERS_5.length).toBeGreaterThanOrEqual(140)
+    expect(ANSWERS_6.length).toBeGreaterThanOrEqual(110)
+    expect([...ANSWERS_4].every(w => /^[A-Z]{4}$/.test(w))).toBe(true)
+    expect([...ANSWERS_5].every(w => /^[A-Z]{5}$/.test(w))).toBe(true)
+    expect([...ANSWERS_6].every(w => /^[A-Z]{6}$/.test(w))).toBe(true)
+    for (const list of [ANSWERS_4, ANSWERS_5, ANSWERS_6]) {
+      expect(new Set(list).size).toBe(list.length)
+    }
   })
 })

@@ -1,6 +1,7 @@
 /**
- * Wordle 画布渲染：6x5 猜测格子、屏幕 QWERTY 键盘（可点击命中检测）、
- * HUD（连胜 / 行）、无效猜测提示与胜负覆盖层。共享 theme 视觉件；无状态。
+ * Wordle 画布渲染：按关卡词长/次数自适应的猜测格子、屏幕 QWERTY 键盘
+ * （可点击命中检测）、HUD（关卡 / 连胜 / 行）、无效猜测提示与胜负覆盖层。
+ * 共享 theme 视觉件；无状态。
  */
 import type { KeyHints, LetterVerdict } from './logic.ts'
 import { THEME, drawBackground, drawOverlay, glow, hudPair, noGlow, roundRectPath } from '../theme.ts'
@@ -16,10 +17,12 @@ const KEY_ROWS: string[][] = [
   ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'BACK'],
 ]
 
-const TILE = 56
 const TILE_GAP = 8
-const GRID_X0 = (LOGICAL_W - (5 * TILE + 4 * TILE_GAP)) / 2
 const GRID_Y0 = 48
+/** 6 列或 7 行时缩小格子，避免与键盘重叠。 */
+const TILE_LARGE = 56
+const TILE_SMALL = 48
+const GAP_SMALL = 6
 
 const KB_MARGIN = 10
 const KB_GAP = 6
@@ -58,13 +61,18 @@ export function keyAt(x: number, y: number): string | null {
 export interface WordleView {
   /** 已提交的行：猜测词 + 判定。 */
   rows: Array<{ guess: string; verdicts: LetterVerdict[] }>
-  /** 当前行已输入的字母（最多 5 个）。 */
+  /** 当前行已输入的字母（最多 len 个）。 */
   current: string
   keyHints: KeyHints
   status: 'playing' | 'won' | 'lost'
   answer: string
+  /** 本关词长（4 / 5 / 6），决定格子列数。 */
+  len: number
+  /** 本关机会数（6 或 7），决定格子行数。 */
+  tries: number
+  level: number
   streak: number
-  /** 临时提示文本（如「不在词表」），空串表示无。 */
+  /** 临时提示文本（如「不足 N 个字母」），空串表示无。 */
   toast: string
   paused: boolean
 }
@@ -80,9 +88,9 @@ const VERDICT_FILL: Record<LetterVerdict, string> = {
 }
 
 function drawTile(
-  ctx: CanvasRenderingContext2D, x: number, y: number, letter: string, fill: string | null,
+  ctx: CanvasRenderingContext2D, x: number, y: number, tile: number, letter: string, fill: string | null,
 ): void {
-  roundRectPath(ctx, x, y, TILE, TILE, 8)
+  roundRectPath(ctx, x, y, tile, tile, 8)
   if (fill === null) {
     ctx.fillStyle = THEME.panel
     ctx.fill()
@@ -98,7 +106,7 @@ function drawTile(
     ctx.font = TILE_FONT
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(letter, x + TILE / 2, y + TILE / 2 + 2)
+    ctx.fillText(letter, x + tile / 2, y + tile / 2 + 2)
   }
 }
 
@@ -128,42 +136,48 @@ export function renderWordle(ctx: CanvasRenderingContext2D, view: WordleView, sh
   ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H)
   drawBackground(ctx, LOGICAL_W, LOGICAL_H)
 
-  // HUD 条：连胜 / 行。
+  const compact = view.len >= 6 || view.tries >= 7
+  const tile = compact ? TILE_SMALL : TILE_LARGE
+  const gap = compact ? GAP_SMALL : TILE_GAP
+  const gridX0 = (LOGICAL_W - (view.len * tile + (view.len - 1) * gap)) / 2
+
+  // HUD 条：关卡 / 连胜 / 行。
   ctx.fillStyle = THEME.panel
   ctx.fillRect(0, 0, LOGICAL_W, HUD_H)
   ctx.strokeStyle = THEME.panelEdge
   ctx.lineWidth = 1
   ctx.strokeRect(0.5, 0.5, LOGICAL_W - 1, HUD_H - 1)
-  hudPair(ctx, 10, 20, '连胜 ', String(view.streak), 'left', view.streak > 0 ? THEME.gold : THEME.text)
-  hudPair(ctx, LOGICAL_W - 10, 20, '行 ', `${Math.min(view.rows.length + 1, 6)}/6`, 'right')
+  hudPair(ctx, 10, 20, '关卡 ', String(view.level), 'left')
+  hudPair(ctx, LOGICAL_W / 2 - 26, 20, '连胜 ', String(view.streak), 'left', view.streak > 0 ? THEME.gold : THEME.text)
+  hudPair(ctx, LOGICAL_W - 10, 20, '行 ', `${Math.min(view.rows.length + 1, view.tries)}/${view.tries}`, 'right')
 
   ctx.save()
   ctx.translate(shakeDx, 0)
 
   // 猜测格子：已判定行着色，当前行显示已输入字母，其余为空框。
-  for (let r = 0; r < 6; r += 1) {
-    const y = GRID_Y0 + r * (TILE + TILE_GAP)
+  for (let r = 0; r < view.tries; r += 1) {
+    const y = GRID_Y0 + r * (tile + gap)
     const done = view.rows[r]
     if (done !== undefined) {
-      for (let c = 0; c < 5; c += 1) {
-        const x = GRID_X0 + c * (TILE + TILE_GAP)
-        drawTile(ctx, x, y, done.guess[c] ?? '', VERDICT_FILL[done.verdicts[c] ?? 'gray'])
+      for (let c = 0; c < view.len; c += 1) {
+        const x = gridX0 + c * (tile + gap)
+        drawTile(ctx, x, y, tile, done.guess[c] ?? '', VERDICT_FILL[done.verdicts[c] ?? 'gray'])
       }
     } else if (r === view.rows.length && view.status === 'playing') {
-      for (let c = 0; c < 5; c += 1) {
-        const x = GRID_X0 + c * (TILE + TILE_GAP)
+      for (let c = 0; c < view.len; c += 1) {
+        const x = gridX0 + c * (tile + gap)
         const ch = view.current[c] ?? ''
         if (ch !== '') {
           glow(ctx, THEME.accents[1], 8)
-          drawTile(ctx, x, y, ch, THEME.panel)
+          drawTile(ctx, x, y, tile, ch, THEME.panel)
           noGlow(ctx)
         } else {
-          drawTile(ctx, x, y, '', null)
+          drawTile(ctx, x, y, tile, '', null)
         }
       }
     } else {
-      for (let c = 0; c < 5; c += 1) {
-        drawTile(ctx, GRID_X0 + c * (TILE + TILE_GAP), y, '', null)
+      for (let c = 0; c < view.len; c += 1) {
+        drawTile(ctx, gridX0 + c * (tile + gap), y, tile, '', null)
       }
     }
   }
@@ -182,7 +196,7 @@ export function renderWordle(ctx: CanvasRenderingContext2D, view: WordleView, sh
   }
 
   if (view.status === 'won') {
-    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '猜对了！', `${view.rows.length}/6 · 空格 / 点击再来一局`, THEME.good)
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '猜对了！', `${view.rows.length}/${view.tries} · 空格 / 点击再来一局`, THEME.good)
   } else if (view.status === 'lost') {
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, `答案是 ${view.answer}`, '空格 / 点击再来一局', THEME.bad)
   } else if (view.paused) {

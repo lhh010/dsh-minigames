@@ -34,6 +34,12 @@ import { lightsOutGame } from './lightsout/index.ts'
 import { pongGame } from './pong/index.ts'
 import { stackGame } from './stack/index.ts'
 import { wordleGame } from './wordle/index.ts'
+import { nonogramGame } from './nonogram/index.ts'
+import { pegGame } from './peg/index.ts'
+import { hanoiGame } from './hanoi/index.ts'
+import { fifteenGame } from './fifteen/index.ts'
+import { mastermindGame } from './mastermind/index.ts'
+import { mazeGame } from './maze/index.ts'
 
 export { getGames, getGame } from './registry.ts'
 export { registerGame } from './registry.ts'
@@ -53,6 +59,7 @@ export function registerBuiltinGames(): void {
     simonGame, sokobanGame, asteroidsGame,
     pipesGame, colorLinesGame, dodgerGame, typingGame,
     lightsOutGame, pongGame, stackGame, wordleGame,
+    nonogramGame, pegGame, hanoiGame, fifteenGame, mastermindGame, mazeGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
