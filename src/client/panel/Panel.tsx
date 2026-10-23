@@ -442,6 +442,10 @@ function GameArea({ game, onScore }: GameAreaProps): ReactNode {
   const hostRef = useRef<HTMLDivElement>(null)
   const instanceRef = useRef<ReturnType<MiniGameDefinition['create']> | null>(null)
   const [userPaused, setUserPaused] = useState(false)
+  // Entry announcement: shows the game's description + controls INSIDE the
+  // game area on entry; the instance stays paused until dismissed (click,
+  // any key, or the 10s auto-dismiss).
+  const [announcing, setAnnouncing] = useState(true)
 
   // Create/destroy the game instance per game.
   useEffect(() => {
@@ -457,18 +461,39 @@ function GameArea({ game, onScore }: GameAreaProps): ReactNode {
     }
   }, [game])
 
-  // Pause/resume on visibility and user pause.
+  // Reset the announcement when switching games.
+  useEffect(() => {
+    setAnnouncing(true)
+  }, [game.id])
+
+  // Auto-dismiss the announcement after 10 seconds.
+  useEffect(() => {
+    if (!announcing) return undefined
+    const timer = window.setTimeout(() => { setAnnouncing(false) }, 10_000)
+    return () => { window.clearTimeout(timer) }
+  }, [announcing])
+
+  // Any key dismisses the announcement (the click handler lives on the
+  // overlay itself).
+  useEffect(() => {
+    if (!announcing) return undefined
+    const onKey = (): void => { setAnnouncing(false) }
+    window.addEventListener('keydown', onKey)
+    return () => { window.removeEventListener('keydown', onKey) }
+  }, [announcing])
+
+  // Pause/resume on visibility, user pause, and the announcement.
   useEffect(() => {
     const apply = (): void => {
       const instance = instanceRef.current
       if (instance === null) return
-      if (userPaused || document.hidden) instance.pause()
+      if (userPaused || document.hidden || announcing) instance.pause()
       else instance.resume()
     }
     apply()
     document.addEventListener('visibilitychange', apply)
     return () => document.removeEventListener('visibilitychange', apply)
-  }, [userPaused])
+  }, [userPaused, announcing, game.id])
 
   return (
     <div className="dmg-game-area">
@@ -482,7 +507,26 @@ function GameArea({ game, onScore }: GameAreaProps): ReactNode {
           {userPaused ? '继续 ▶' : '暂停 ⏸'}
         </button>
       </div>
-      <div ref={hostRef} className="dmg-game-host" tabIndex={0} data-dmg-host />
+      <div className="dmg-game-host-wrap">
+        <div ref={hostRef} className="dmg-game-host" tabIndex={0} data-dmg-host />
+        {announcing && (
+          <div
+            className="dmg-announce"
+            onClick={() => { setAnnouncing(false); hostRef.current?.focus({ preventScroll: true }) }}
+          >
+            <div className="dmg-announce-card">
+              <div className="dmg-announce-title">{game.icon} {game.title}</div>
+              <div className="dmg-announce-desc">{game.description}</div>
+              <div className="dmg-announce-controls">
+                {game.controls.map(control => (
+                  <span key={control} className="dmg-control-tag">{control}</span>
+                ))}
+              </div>
+              <div className="dmg-announce-hint">点击此处或按任意键开始</div>
+            </div>
+          </div>
+        )}
+      </div>
       <div className="dmg-game-controls">
         {game.controls.map(control => (
           <span key={control} className="dmg-control-tag">{control}</span>

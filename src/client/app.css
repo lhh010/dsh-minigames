@@ -295,3 +295,67 @@
   color: #7a7a8a;
   border-style: dashed;
 }
+
+/* Entry announcement: covers the game host until dismissed. */
+.dmg-game-host-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  width: 100%;
+  min-height: 0;
+}
+
+.dmg-game-host-wrap .dmg-game-host {
+  flex: 1;
+}
+
+.dmg-announce {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 14, 0.72);
+  backdrop-filter: blur(2px);
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 5;
+}
+
+.dmg-announce-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: min(420px, 88%);
+  background: #1b1b22;
+  border: 1px solid #3a3a46;
+  border-radius: 10px;
+  padding: 18px 22px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+.dmg-announce-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.dmg-announce-desc {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #b8b8c2;
+  text-align: center;
+}
+
+.dmg-announce-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  max-width: 100%;
+}
+
+.dmg-announce-hint {
+  font-size: 11px;
+  color: #7a7a8a;
+}
