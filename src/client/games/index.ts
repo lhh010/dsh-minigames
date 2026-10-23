@@ -9,7 +9,6 @@ import { dinoGame } from './dino/index.ts'
 import { tetrisGame } from './tetris/index.ts'
 import { tanksGame } from './tanks/index.ts'
 import { match3Game } from './match3/index.ts'
-import { huarongGame } from './huarong/index.ts'
 import { snakeGame } from './snake/index.ts'
 import { game2048 } from './game2048/index.ts'
 import { minesweeperGame } from './minesweeper/index.ts'
@@ -53,7 +52,7 @@ export function registerBuiltinGames(): void {
   // Idempotent: the bundle factory re-executes on client-plugin HMR reloads,
   // so a second pass must not trip the registry's duplicate guard.
   for (const game of [
-    dinoGame, tetrisGame, tanksGame, match3Game, huarongGame, snakeGame,
+    dinoGame, tetrisGame, tanksGame, match3Game, snakeGame,
     game2048, minesweeperGame, memoryGame, gomokuGame, hopGame, breakoutGame,
     whackGame, othelloGame, flappyGame, sudokuGame, pacmanGame, aimTrackGame,
     simonGame, sokobanGame, asteroidsGame,

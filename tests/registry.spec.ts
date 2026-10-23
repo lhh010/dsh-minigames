@@ -31,13 +31,14 @@ describe('game registry', () => {
     expect(() => registerGame({ ...dummy, id: 'dummy' })).toThrow(/already registered/)
   })
 
-  it('registers the thirty-five built-in games', () => {
+  it('registers the thirty-four built-in games', () => {
     registerBuiltinGames()
     const ids = getGames().map(game => game.id)
-    for (const id of ['dino', 'tanks', 'tetris', 'match3', 'huarong', 'snake', '2048', 'minesweeper', 'memory', 'gomoku', 'hop', 'breakout', 'whack', 'othello', 'flappy', 'sudoku', 'pacman', 'aimtrack', 'simon', 'sokoban', 'asteroids', 'pipes', 'colorlines', 'dodger', 'typing', 'lightsout', 'pong', 'stack', 'wordle', 'nonogram', 'peg', 'hanoi', 'fifteen', 'mastermind', 'maze']) {
+    for (const id of ['dino', 'tanks', 'tetris', 'match3', 'snake', '2048', 'minesweeper', 'memory', 'gomoku', 'hop', 'breakout', 'whack', 'othello', 'flappy', 'sudoku', 'pacman', 'aimtrack', 'simon', 'sokoban', 'asteroids', 'pipes', 'colorlines', 'dodger', 'typing', 'lightsout', 'pong', 'stack', 'wordle', 'nonogram', 'peg', 'hanoi', 'fifteen', 'mastermind', 'maze']) {
       expect(ids).toContain(id)
     }
-    expect(ids.filter(id => id !== 'dummy')).toHaveLength(35)
+    expect(ids.filter(id => id !== 'dummy')).toHaveLength(34)
+    expect(ids).not.toContain('huarong')
   })
 
   it('getGame returns the registered definition', () => {
@@ -45,7 +46,7 @@ describe('game registry', () => {
     expect(getGame('tanks')?.title).toBe('坦克大战')
     expect(getGame('tetris')?.title).toBe('俄罗斯方块')
     expect(getGame('match3')?.title).toBe('消消乐')
-    expect(getGame('huarong')?.title).toBe('华容道')
+    expect(getGame('fifteen')?.title).toBe('数字华容道 15-Puzzle')
     expect(getGame('snake')?.title).toBe('贪吃蛇')
     expect(getGame('2048')?.title).toBe('2048')
     expect(getGame('minesweeper')?.title).toBe('扫雷')
