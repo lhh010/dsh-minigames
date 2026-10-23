@@ -1,5 +1,5 @@
 /**
- * Mastermind 画布渲染：历史行（色钉 + 黑白钉标记）、调色盘与操作键
+ * Mastermind 画布渲染：历史行（色钉 + 绿/黄反馈钉标记）、调色盘与操作键
  * （可点击命中检测）、当前行光标、胜负/暂停覆盖层。共享 theme 视觉件；无状态。
  */
 import type { LevelConfig } from './logic.ts'
@@ -36,7 +36,7 @@ export interface MastermindView {
   level: LevelConfig
   /** 关卡下标（HUD 显示）。 */
   levelIdx: number
-  /** 已提交的行：色号 + 黑白钉数。 */
+  /** 已提交的行：色号 + 绿/黄反馈钉数（绿=位置对，黄=颜色对位置不对）。 */
   rows: Array<{ guess: number[]; black: number; white: number }>
   /** 当前行已填的色号。 */
   current: number[]
@@ -92,18 +92,20 @@ function drawDot(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: numbe
   }
 }
 
-/** 一行的黑白钉标记：黑钉在前、白钉补后，最多两列小圆。 */
+/** 一行的反馈钉标记：绿钉（颜色与位置都对）在前、黄钉（颜色对位置
+ * 不对）补后，最多两列小圆——配色与 wordle 的绿/黄一致。 */
 function drawMarkers(ctx: CanvasRenderingContext2D, x0: number, cy: number, black: number, white: number): void {
   for (let i = 0; i < black + white; i += 1) {
     const col = Math.floor(i / 3)
     const row = i % 3
     const cx = x0 + col * (PIN_R * 2 + 4) + PIN_R
     const cyy = cy - (3 - 1) * (PIN_R + 3) / 2 + row * (PIN_R * 2 + 3)
+    const exact = i < black
     ctx.beginPath()
     ctx.arc(cx, cyy, PIN_R, 0, Math.PI * 2)
-    ctx.fillStyle = i < black ? '#0a0a10' : '#e8e8f2'
+    ctx.fillStyle = exact ? '#3ecf6e' : '#e7c94f'
     ctx.fill()
-    ctx.strokeStyle = i < black ? '#5a5a70' : 'rgba(0,0,0,0.4)'
+    ctx.strokeStyle = exact ? '#1d7a3f' : '#8a7222'
     ctx.lineWidth = 1
     ctx.stroke()
   }

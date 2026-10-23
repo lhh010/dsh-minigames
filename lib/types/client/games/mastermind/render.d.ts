@@ -1,5 +1,5 @@
 /**
- * Mastermind 画布渲染：历史行（色钉 + 黑白钉标记）、调色盘与操作键
+ * Mastermind 画布渲染：历史行（色钉 + 绿/黄反馈钉标记）、调色盘与操作键
  * （可点击命中检测）、当前行光标、胜负/暂停覆盖层。共享 theme 视觉件；无状态。
  */
 import type { LevelConfig } from './logic.ts';
@@ -12,7 +12,7 @@ export interface MastermindView {
     level: LevelConfig;
     /** 关卡下标（HUD 显示）。 */
     levelIdx: number;
-    /** 已提交的行：色号 + 黑白钉数。 */
+    /** 已提交的行：色号 + 绿/黄反馈钉数（绿=位置对，黄=颜色对位置不对）。 */
     rows: Array<{
         guess: number[];
         black: number;
