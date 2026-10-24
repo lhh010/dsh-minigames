@@ -127,9 +127,13 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     }
   }
 
-  /** Rewind the last jump; no-op at level start or behind an overlay. */
+  /**
+   * Rewind the last jump. A STUCK (dead-end) board is rewindable — that is
+   * the whole point of undo after a dead end. A WIN is final (reverting it
+   * would let the player re-play the winning move for score).
+   */
   const undo = (): void => {
-    if (won() || stuck()) return
+    if (won()) return
     const entry = history.pop()
     if (entry === undefined) return
     board = entry.board

@@ -3,7 +3,7 @@
  * states, the hover highlight, HUD, and the win overlay. Edges are drawn as
  * segments between lattice dots. Uses the shared visual kit (../theme.ts).
  */
-import { cellEdges, edgeCount, hEdgeIndex, vEdgeIndex, type Clue, type EdgeState } from './logic.ts'
+import { cellEdges, checkClues, edgeCount, hEdgeIndex, vEdgeIndex, type Clue, type EdgeState } from './logic.ts'
 import { THEME, drawBackground, glow, noGlow, hudPair, drawOverlay } from '../theme.ts'
 
 const HUD_H = 40
@@ -22,6 +22,8 @@ export interface SlitherlinkView {
   elapsed: string
   solved: boolean
   paused: boolean
+  /** Every clue cell exactly satisfied (drives the "close the loop" hint). */
+  cluesAllSatisfied: boolean
 }
 
 export function logicalW(w: number): number {
@@ -86,6 +88,22 @@ function edgeEnds(w: number, h: number, i: number): [number, number, number, num
   const row = Math.floor(j / (w + 1))
   const col = j % (w + 1)
   return [dotX(col), dotY(row), dotX(col), dotY(row + 1)]
+}
+
+/** The two dot indices an edge index connects (render-side twin of logic's edgeDots). */
+function edgeDotsOf(w: number, h: number, i: number): [number, number] {
+  const hCount = w * (h + 1)
+  if (i < hCount) {
+    const row = Math.floor(i / w)
+    const col = i % w
+    const a = row * (w + 1) + col
+    return [a, a + 1]
+  }
+  const j = i - hCount
+  const row = Math.floor(j / (w + 1))
+  const col = j % (w + 1)
+  const a = row * (w + 1) + col
+  return [a, a + (w + 1)]
 }
 
 export function renderSlitherlink(ctx: CanvasRenderingContext2D, view: SlitherlinkView): void {
@@ -165,6 +183,32 @@ export function renderSlitherlink(ctx: CanvasRenderingContext2D, view: Slitherli
       }
       ctx.stroke()
     }
+  }
+
+  // Open-endpoint markers: dots with line-degree ≠ 2 pulse gold. This is the
+  // "not a single closed loop yet" tell — even when every clue is green.
+  const dotDegree = new Map<number, number>()
+  for (let i = 0; i < edges.length; i += 1) {
+    if (edges[i] !== 1) continue
+    for (const d of edgeDotsOf(w, h, i)) dotDegree.set(d, (dotDegree.get(d) ?? 0) + 1)
+  }
+  for (const [dot, deg] of dotDegree) {
+    if (deg === 2) continue
+    const col = dot % (w + 1)
+    const row = Math.floor(dot / (w + 1))
+    ctx.beginPath()
+    ctx.arc(dotX(col), dotY(row), 5, 0, Math.PI * 2)
+    ctx.fillStyle = deg === 1 ? THEME.gold : THEME.bad
+    ctx.globalAlpha = 0.85
+    ctx.fill()
+    ctx.globalAlpha = 1
+  }
+  // Non-solved hint in the HUD when all clues are green but the loop is open.
+  if (!view.solved && view.cluesAllSatisfied && dotDegree.size > 0) {
+    ctx.textAlign = 'center'
+    ctx.font = '600 12px system-ui, sans-serif'
+    ctx.fillStyle = THEME.gold
+    ctx.fillText('线索已全部满足——还需闭合成一个环', logicalW(w) / 2, logicalH(h) - 8)
   }
 
   hudPair(ctx, logicalW(w) - MARGIN, 22, `${view.levelLabel} `, `${view.unique ? '唯一解' : '多解'} · ${view.elapsed}`, 'right', THEME.gold)

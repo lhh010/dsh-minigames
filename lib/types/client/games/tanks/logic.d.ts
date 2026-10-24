@@ -40,6 +40,14 @@ export interface Tank {
      * the player tank leaves this unset).
      */
     dodge?: number;
+    /**
+     * Remaining decision ticks the enemy stays on its chosen chase direction.
+     * Anti-oscillation: mid-lane tile flips and near-equal flow distances used
+     * to make the heading flip every tick (visual jitter / corner stuck).
+     */
+    commitTicks?: number;
+    /** Ticks spent stuck (no position change) while chasing; forces a re-plan. */
+    stuckTicks?: number;
 }
 export interface Bullet {
     x: number;

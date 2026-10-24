@@ -16,6 +16,8 @@ export interface SlitherlinkView {
     elapsed: string;
     solved: boolean;
     paused: boolean;
+    /** Every clue cell exactly satisfied (drives the "close the loop" hint). */
+    cluesAllSatisfied: boolean;
 }
 export declare function logicalW(w: number): number;
 export declare function logicalH(h: number): number;

@@ -351,7 +351,33 @@ function tryGenerate(seed: number, w: number, h: number): SlitherlinkPuzzle | nu
     if (!checkClues(solution, clues, w, h)) continue
     const { singleCycle, degreeOk } = cycleCheck(solution, w, h)
     if (!singleCycle || !degreeOk) continue
-    return { w, h, clues, solution, unique: false }
+    // Difficulty: blank out clues (seeded order), one at a time, reverting
+    // any blank that lets line logic derive a WRONG conclusion. This keeps
+    // the solver's soundness invariant (derived lines always match the true
+    // cycle) while removing up to the level's blank budget: ~10% of cells at
+    // 5×5 up to ~45% at 9×9, least-informative clues (0s and 1s) first.
+    const cells = w * h
+    const blankBudget = Math.floor(cells * (0.10 + 0.0875 * (w - 5)))
+    const order: number[] = []
+    for (let i = 0; i < cells; i += 1) order.push(i)
+    for (let i = order.length - 1; i > 0; i -= 1) {
+      const j = (rng() * (i + 1)) | 0
+      ;[order[i], order[j]] = [order[j]!, order[i]!]
+    }
+    order.sort((a, b) => clues[a]! - clues[b]!)
+    const hardClues = clues.slice()
+    let blanks = 0
+    for (const cell of order) {
+      if (blanks >= blankBudget) break
+      const saved = hardClues[cell]!
+      hardClues[cell] = -1
+      const probe = lineSolve(hardClues, new Array<EdgeState>(edgeCount(w, h)).fill(0), w, h)
+      const wrong = probe.some((v, i) =>
+        (v === 1 && solution[i] !== 1) || (v === 2 && solution[i] === 1))
+      if (wrong) hardClues[cell] = saved // this blank breaks soundness: keep the clue
+      else blanks += 1
+    }
+    return { w, h, clues: hardClues, solution, unique: false }
   }
   return null
 }

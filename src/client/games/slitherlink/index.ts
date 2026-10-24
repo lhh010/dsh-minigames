@@ -14,7 +14,7 @@ import type {
   MiniGameMountOptions,
 } from '../types.ts'
 import {
-  LEVEL_SIZES, edgeCount, isSolved, puzzleFromSeed, type EdgeState, type SlitherlinkPuzzle,
+  LEVEL_SIZES, checkClues, edgeCount, isSolved, puzzleFromSeed, type EdgeState, type SlitherlinkPuzzle,
 } from './logic.ts'
 import { renderSlitherlink, logicalW, logicalH, edgeAt } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
@@ -152,6 +152,7 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
       w: puzzle.w, h: puzzle.h, clues: puzzle.clues, edges, hover,
       levelLabel: `第 ${level + 1} 关`, unique: puzzle.unique, elapsed,
       solved, paused: false,
+      cluesAllSatisfied: checkClues(edges, puzzle.clues, puzzle.w, puzzle.h),
     })
     particles.tick(ctx, dt)
   }
@@ -175,6 +176,7 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
       w: puzzle.w, h: puzzle.h, clues: puzzle.clues, edges, hover,
       levelLabel: `第 ${level + 1} 关`, unique: puzzle.unique, elapsed,
       solved, paused: true,
+      cluesAllSatisfied: checkClues(edges, puzzle.clues, puzzle.w, puzzle.h),
     })
   }
   const resume = (): void => {

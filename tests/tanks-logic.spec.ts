@@ -75,6 +75,9 @@ describe('tank battle logic', () => {
   it('a tank cannot enter a lane its body overlaps (no wedging)', () => {
     // The inset body spans both lanes at x = 340; a wall in either lane must
     // block the climb — free turning must not teleport the tank into a wall.
+    // Turn-in-place alignment slides the perpendicular axis onto the nearest
+    // WALKABLE lane centre first, so the tank ends up in the open lane and
+    // still stops at the wall row instead of passing through it.
     const world = createWorld(lcg(1))
     world.player.x = 340
     world.player.y = 352
@@ -85,9 +88,12 @@ describe('tank battle logic', () => {
     for (let i = 0; i < 60; i += 1) {
       stepWorld(world, 1 / 60, { ...idle, up: true })
     }
-    // Climbed a little, then stopped at the wall instead of passing through.
-    expect(world.player.y).toBeGreaterThan(288)
-    expect(world.player.y).toBeLessThan(352)
+    // Turn-in-place alignment slides the tank into the OPEN lane (x snaps to
+    // the lane-11 centre), so it climbs until the NEXT wall row above and
+    // stops there — never passing through the wall it overlapped.
+    expect(world.player.x).toBe(352) // aligned into the open lane
+    expect(world.player.y).toBeLessThan(352) // climbed
+    expect(world.player.y).toBeGreaterThan(224) // stopped at a wall row, not the map edge
   })
 
   it('a player bullet destroys brick and dies on steel', () => {

@@ -44,6 +44,14 @@ export interface Tank {
    * the player tank leaves this unset).
    */
   dodge?: number
+  /**
+   * Remaining decision ticks the enemy stays on its chosen chase direction.
+   * Anti-oscillation: mid-lane tile flips and near-equal flow distances used
+   * to make the heading flip every tick (visual jitter / corner stuck).
+   */
+  commitTicks?: number
+  /** Ticks spent stuck (no position change) while chasing; forces a re-plan. */
+  stuckTicks?: number
 }
 
 export interface Bullet {
@@ -341,6 +349,21 @@ function canAdvance(state: WorldState, tank: Tank, dir: Dir): boolean {
  */
 function moveTank(state: WorldState, tank: Tank, targetDir: Dir, dist: number): boolean {
   const turning = targetDir !== tank.dir
+  if (turning) {
+    // Turn-in-place alignment: a body straddling two lanes cannot enter a
+    // perpendicular lane (the far half pokes into the neighbouring wall), so
+    // the tank used to stall at an offset and the AI paced forever. Before
+    // stepping, slide the perpendicular axis onto the nearest lane centre
+    // when that position is walkable; only then attempt the turn.
+    const vertical = targetDir === 0 || targetDir === 2
+    if (vertical) {
+      const gx = Math.round(tank.x / TILE) * TILE
+      if (rectWalkable(state.grid, gx, tank.y)) tank.x = gx
+    } else {
+      const gy = Math.round(tank.y / TILE) * TILE
+      if (rectWalkable(state.grid, tank.x, gy)) tank.y = gy
+    }
+  }
   const moved = tryMove(state, tank, targetDir, dist)
   if (turning && moved) snapPerpendicularIfClose(tank, targetDir)
   return moved
@@ -466,6 +489,18 @@ function incomingBulletSide(state: WorldState, enemy: Tank): Dir | null {
   return null
 }
 
+/** A perpendicular direction that actually advances (used for un-sticking). */
+function perpendicularEscape(state: WorldState, enemy: Tank): Dir | null {
+  const perpendicular: Dir[] = (enemy.dir === 0 || enemy.dir === 2) ? [3, 1] : [0, 2]
+  for (const dir of perpendicular) {
+    if (canAdvance(state, enemy, dir)) return dir
+  }
+  // Also allow reversing out.
+  const back = ((enemy.dir + 2) % 4) as Dir
+  if (canAdvance(state, enemy, back)) return back
+  return null
+}
+
 /** One enemy decision: dodge an incoming bullet, shoot when a lane is clear,
  * else follow the BFS flow field toward the player (greedy as a fallback). */
 function decideEnemy(state: WorldState, enemy: Tank): void {
@@ -475,6 +510,21 @@ function decideEnemy(state: WorldState, enemy: Tank): void {
     const side = incomingBulletSide(state, enemy)
     if (side !== null) {
       enemy.targetDir = side
+      enemy.commitTicks = 0
+      return
+    }
+  }
+  // Stuck detection: the AI picked a heading but the tank has not actually
+  // moved for several decision ticks (wall-grazed body, tank gridlock, or a
+  // commitment that outlived its usefulness). Force a re-plan and prefer a
+  // perpendicular escape so it never wedges against geometry forever.
+  if ((enemy.stuckTicks ?? 0) >= 3) {
+    enemy.stuckTicks = 0
+    enemy.commitTicks = 0
+    const escape = perpendicularEscape(state, enemy)
+    if (escape !== null) {
+      enemy.targetDir = escape
+      enemy.commitTicks = 2
       return
     }
   }
@@ -501,18 +551,85 @@ function decideEnemy(state: WorldState, enemy: Tank): void {
     const ety = Math.floor((enemy.y + TILE / 2) / TILE)
     const here = flowAt(flow, etx, ety)
     if (here > 0) {
-      let best: Dir | null = null
-      let bestDist = here
-      for (const dir of [enemy.dir, 0, 1, 2, 3] as Dir[]) {
-        if (flowAt(flow, etx + DIR_DX[dir]!, ety + DIR_DY[dir]!) < 0) continue
-        const next = flowAt(flow, etx + DIR_DX[dir]!, ety + DIR_DY[dir]!)!
-        if (next < bestDist && canAdvance(state, enemy, dir)) {
-          best = dir
-          bestDist = next
+      // Commitment: keep the heading while it does not make the flow
+      // distance WORSE (equal is fine — corridor flats); a strictly worse
+      // step ends the commitment so the tank never runs past a junction
+      // into a dead-end spur. Physically blocked headings always end it.
+      const commit = enemy.commitTicks ?? 0
+      if (commit > 0) {
+        const ndx = etx + DIR_DX[enemy.targetDir]!
+        const ndy = ety + DIR_DY[enemy.targetDir]!
+        const ahead = flowAt(flow, ndx, ndy)
+        const passable = ahead >= 0 && ahead <= here && canAdvance(state, enemy, enemy.targetDir)
+        if (passable) {
+          enemy.commitTicks = commit - 1
+          return
         }
+        enemy.commitTicks = 0 // worse or blocked: re-plan now
+      }
+      let best: Dir | null = null
+      let bestKey = ''
+      // Two-step lookahead: raw one-step flow distance is locally noisy in
+      // corridors (BFS distance can decrease by moving "away" first), which
+      // made the tank pace between neighbours. Score each candidate by the
+      // distance two tiles ahead along that heading (plus the one-step
+      // distance as a tie-break), so the plan follows the real corridor.
+      // A candidate that only fits after the perpendicular axis snaps to the
+      // lane centre is judged on the SNAPPED position: a tank straddling two
+      // lanes physically cannot enter a perpendicular lane, and ignoring
+      // that made the planner reject the correct turn and pace forever.
+      const ex = enemy.x + TILE / 2
+      const ey = enemy.y + TILE / 2
+      const px = player.x + TILE / 2
+      const py = player.y + TILE / 2
+      const gapX = Math.abs(px - ex)
+      const gapY = Math.abs(py - ey)
+      const preferAxis: 'x' | 'y' = gapX >= gapY ? 'x' : 'y'
+      const axisRank = (dir: Dir): number => {
+        const horizontal = dir === 1 || dir === 3
+        return (preferAxis === 'x') === horizontal ? 0 : 1
+      }
+      const bias = (dir: Dir): number => {
+        if (dir === 1) return px - ex
+        if (dir === 3) return ex - px
+        if (dir === 2) return py - ey
+        return ey - py
+      }
+      // Alignment probe: where the tank would sit after snapping the
+      // perpendicular axis to the nearest lane centre.
+      const gx = Math.round(enemy.x / TILE) * TILE
+      const gy = Math.round(enemy.y / TILE) * TILE
+      const aligned: Tank = {
+        ...enemy,
+        x: rectWalkable(state.grid, gx, enemy.y) ? gx : enemy.x,
+        y: rectWalkable(state.grid, enemy.x, gy) ? gy : enemy.y,
+      }
+      for (const dir of [enemy.dir, 0, 1, 2, 3] as Dir[]) {
+        const nx1 = etx + DIR_DX[dir]!
+        const ny1 = ety + DIR_DY[dir]!
+        if (flowAt(flow, nx1, ny1) < 0) continue
+        if (!canAdvance(state, aligned, dir)) continue
+        const d1 = flowAt(flow, nx1, ny1)!
+        // Look one more tile along the same heading.
+        let d2 = d1
+        const nx2 = nx1 + DIR_DX[dir]!
+        const ny2 = ny1 + DIR_DY[dir]!
+        const ahead2 = flowAt(flow, nx2, ny2)
+        if (ahead2 >= 0) d2 = ahead2
+        // Flow distance leads; the axis preference and the player-side bias
+        // are tie-breaks only (they used to outrank the distance and trap the
+        // tank pacing in dead-end shafts).
+        const key = `${String(d2).padStart(4, '0')}|${String(d1).padStart(4, '0')}|${axisRank(dir)}|${String(Math.round(bias(dir))).padStart(5, '0')}`
+        if (best === null || key < bestKey) { best = dir; bestKey = key }
       }
       if (best !== null) {
         enemy.targetDir = best
+        // Hold the plan for a couple of decision ticks (~0.9s): long enough
+        // to cross a tile boundary so per-tile flow noise cannot flip the
+        // plan, short enough that a junction appears before the tank runs
+        // past it into a dead-end spur. Turn-in-place alignment (moveTank)
+        // keeps the body from wedging when the plan changes mid-lane.
+        enemy.commitTicks = 2
         return
       }
     }
@@ -557,6 +674,8 @@ function spawnEnemy(state: WorldState): void {
       invuln: ENEMY_SPAWN_INVULN,
       // Per-enemy sidestep personality: some enemies actively dodge.
       dodge: 0.25 + state.rng() * 0.4,
+      commitTicks: 0,
+      stuckTicks: 0,
     })
     state.spawnQueue -= 1
     return
@@ -613,7 +732,43 @@ export function stepWorld(state: WorldState, dt: number, input: PlayerInput): vo
   }
   for (const enemy of state.enemies) {
     if (decide) decideEnemy(state, enemy)
+    const bx = enemy.x
+    const by = enemy.y
     moveTank(state, enemy, enemy.targetDir, ENEMY_SPEED * dt)
+    // Lane-centring for AI tanks: a body straddling two lanes grazes the
+    // neighbouring wall and wedges. Gently pull the perpendicular axis onto
+    // the lane centre (bounded so it never tunnels through a wall).
+    if (enemy.kind === 'enemy') {
+      const vertical = enemy.dir === 0 || enemy.dir === 2
+      if (vertical) {
+        const gx = Math.round(enemy.x / TILE) * TILE
+        const dx = gx - enemy.x
+        if (Math.abs(dx) > 0.5) {
+          const pull = Math.sign(dx) * Math.min(Math.abs(dx), ENEMY_SPEED * dt * 0.5)
+          if (rectWalkable(state.grid, enemy.x + pull, enemy.y)) enemy.x += pull
+        }
+      } else {
+        const gy = Math.round(enemy.y / TILE) * TILE
+        const dy = gy - enemy.y
+        if (Math.abs(dy) > 0.5) {
+          const pull = Math.sign(dy) * Math.min(Math.abs(dy), ENEMY_SPEED * dt * 0.5)
+          if (rectWalkable(state.grid, enemy.x, enemy.y + pull)) enemy.y += pull
+        }
+      }
+    }
+    // Stuck tracking: no meaningful movement since the last decision tick
+    // means the chosen heading is geometrically impossible — the AI must
+    // re-plan (see decideEnemy's stuck branch).
+    const moved = Math.abs(enemy.x - bx) + Math.abs(enemy.y - by) > 0.5
+    if (decide || moved) enemy.stuckTicks = moved ? 0 : (enemy.stuckTicks ?? 0) + 1
+    // Grid re-alignment: a tank whose body straddles two lanes cannot turn
+    // (any step pokes the body into the neighbouring wall). After a couple of
+    // stuck ticks, hard-align it to the nearest lane so the chase can resume.
+    if ((enemy.stuckTicks ?? 0) >= 2 && !moved) {
+      const gx = Math.round(enemy.x / TILE) * TILE
+      const gy = Math.round(enemy.y / TILE) * TILE
+      if (rectWalkable(state.grid, gx, gy)) { enemy.x = gx; enemy.y = gy }
+    }
     enemy.cooldown = Math.max(0, enemy.cooldown - dt)
     enemy.invuln = Math.max(0, enemy.invuln - dt)
   }
