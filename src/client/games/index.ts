@@ -44,6 +44,7 @@ import { hashiGame } from './hashi/index.ts'
 import { miniGoGame } from './minigo/index.ts'
 import { connect4Game } from './connect4/index.ts'
 import { slitherlinkGame } from './slitherlink/index.ts'
+import { racingGame } from './racing/index.ts'
 
 export { getGames, getGame } from './registry.ts'
 export { registerGame } from './registry.ts'
@@ -66,6 +67,7 @@ export function registerBuiltinGames(): void {
     nonogramGame, pegGame, hanoiGame, fifteenGame, mastermindGame, mazeGame,
     schulteGame,
     hashiGame, miniGoGame, connect4Game, slitherlinkGame,
+    racingGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
