@@ -46,15 +46,19 @@ export function edgeAt(w: number, h: number, x: number, y: number): number {
   if (y < HUD_H) return -1
   const fx = (x - MARGIN) / CELL
   const fy = (y - HUD_H - MARGIN) / CELL
+  // Reject outside the lattice rectangle in FLOAT space: rounding first would
+  // admit points just past the last row/column into the boundary bands.
+  if (fx < -0.25 || fx > w + 0.25 || fy < -0.25 || fy > h + 0.25) return -1
   const col = Math.floor(fx)
   const row = Math.floor(fy)
-  if (col < 0 || col > w || row < 0 || row > h) return -1
   const dx = fx - col
   const dy = fy - row
   const nearH = Math.abs(dy) < 0.25
   const nearV = Math.abs(dx) < 0.25
-  if (nearH && !nearV && row >= 0 && row < h) return hEdgeIndex(w, h, col, row)
-  if (nearV && !nearH && col >= 0 && col < w) return vEdgeIndex(w, h, col, row)
+  // Horizontal edges live between dot rows (0..h); vertical edges between dot
+  // columns (0..w).
+  if (nearH && !nearV && row >= 0 && row <= h && col >= 0 && col < w) return hEdgeIndex(w, h, col, row)
+  if (nearV && !nearH && col >= 0 && col <= w && row >= 0 && row < h) return vEdgeIndex(w, h, col, row)
   return -1
 }
 
