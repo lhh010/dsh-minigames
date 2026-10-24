@@ -41,38 +41,50 @@ export function dotY(row: number): number {
   return HUD_H + MARGIN + row * CELL
 }
 
-/** Edge index under the pointer, or -1. */
+/** Edge index under the pointer, or -1.
+ *
+ * Nearest-edge matching: convert the pointer to lattice-float coordinates,
+ * then pick the closest edge element (horizontal or vertical) within
+ * HIT_CELLS of a cell; ties break toward the closer axis. This is robust
+ * against small coordinate drift (CSS border, subpixel scaling) that a
+ * fixed-band test can miss near the outer rows. */
 export function edgeAt(w: number, h: number, x: number, y: number): number {
   if (y < HUD_H) return -1
   const fx = (x - MARGIN) / CELL
   const fy = (y - HUD_H - MARGIN) / CELL
-  // Reject outside the lattice rectangle in FLOAT space: rounding first would
-  // admit points just past the last row/column into the boundary bands.
-  if (fx < -0.25 || fx > w + 0.25 || fy < -0.25 || fy > h + 0.25) return -1
-  const col = Math.floor(fx)
-  const row = Math.floor(fy)
-  const dx = fx - col
-  const dy = fy - row
-  const nearH = Math.abs(dy) < 0.25
-  const nearV = Math.abs(dx) < 0.25
-  // Horizontal edges live between dot rows (0..h); vertical edges between dot
-  // columns (0..w).
-  if (nearH && !nearV && row >= 0 && row <= h && col >= 0 && col < w) return hEdgeIndex(w, h, col, row)
-  if (nearV && !nearH && col >= 0 && col <= w && row >= 0 && row < h) return vEdgeIndex(w, h, col, row)
+  // Outside the lattice rectangle (with the same tolerance): nothing.
+  if (fx < -HIT_CELLS || fx > w + HIT_CELLS || fy < -HIT_CELLS || fy > h + HIT_CELLS) return -1
+  // Candidate horizontal edge: dot row round(fy), column floor(fx).
+  const hRow = Math.round(fy)
+  const hCol = Math.floor(fx)
+  // Candidate vertical edge: dot column round(fx), row floor(fy).
+  const vCol = Math.round(fx)
+  const vRow = Math.floor(fy)
+  const distH = hRow >= 0 && hRow <= h && hCol >= 0 && hCol < w ? Math.abs(fy - hRow) : Infinity
+  const distV = vCol >= 0 && vCol <= w && vRow >= 0 && vRow < h ? Math.abs(fx - vCol) : Infinity
+  // Prefer the closer candidate; a strict tie prefers horizontal.
+  if (distH <= distV) {
+    if (distH <= HIT_CELLS) return hEdgeIndex(w, h, hCol, hRow)
+  } else if (distV <= HIT_CELLS) {
+    return vEdgeIndex(w, h, vCol, vRow)
+  }
   return -1
 }
 
+/** Hit tolerance in cell units (0.30 of a cell ≈ 14 px at CELL 46). */
+const HIT_CELLS = 0.30
+
 /** Endpoints of an edge index. */
 function edgeEnds(w: number, h: number, i: number): [number, number, number, number] {
-  const hCount = (w + 1) * h
+  const hCount = w * (h + 1)
   if (i < hCount) {
-    const row = Math.floor(i / (w + 1))
-    const col = i % (w + 1)
+    const row = Math.floor(i / w)
+    const col = i % w
     return [dotX(col), dotY(row), dotX(col + 1), dotY(row)]
   }
   const j = i - hCount
-  const row = Math.floor(j / w)
-  const col = j % w
+  const row = Math.floor(j / (w + 1))
+  const col = j % (w + 1)
   return [dotX(col), dotY(row), dotX(col), dotY(row + 1)]
 }
 

@@ -15,8 +15,10 @@ export interface SlitherlinkPuzzle {
     solution: EdgeState[];
     unique: boolean;
 }
-export declare function hEdgeIndex(w: number, _h: number, col: number, row: number): number;
-export declare function vEdgeIndex(w: number, _h: number, col: number, row: number): number;
+export declare function hEdgeIndex(w: number, h: number, col: number, row: number): number;
+export declare function vEdgeIndex(w: number, h: number, col: number, row: number): number;
+/** Horizontal edge count: w edges on each of the (h+1) dot-rows. */
+export declare function hEdgeCount(w: number, h: number): number;
 export declare function edgeCount(w: number, h: number): number;
 /** The four edge indices around cell (c, r): [N, E, S, W]. */
 export declare function cellEdges(w: number, h: number, c: number, r: number): [number, number, number, number];

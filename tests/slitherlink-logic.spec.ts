@@ -64,11 +64,16 @@ describe('slitherlink logic', () => {
     const edges = unknown(edgeCount(w, h))
     const e0 = cellEdges(w, h, 0, 0)
     const e1 = cellEdges(w, h, 1, 0)
-    // Cell 0 gets 2 lines; cell 1 shares one and needs one more.
-    edges[e0[0]!] = 1 // top of cell 0
-    edges[e0[3]!] = 1 // left of cell 0
+    // Cell 0 needs 2, cell 1 needs 1: nothing placed yet → both unsatisfied.
     expect(checkClues(edges, clues, w, h)).toBe(false)
-    edges[e1[2]!] = 1 // bottom of cell 1 (shared with nothing)
+    edges[e0[0]!] = 1 // top of cell 0
+    // Cell 0 now has 1 of 2 → still false.
+    expect(checkClues(edges, clues, w, h)).toBe(false)
+    edges[e0[1]!] = 1 // east of cell 0 = west of cell 1 (the shared edge)
+    // Cell 0 satisfied (2/2); cell 1 counts the shared edge (1/1) → true.
+    expect(checkClues(edges, clues, w, h)).toBe(true)
+    // Over-satisfying cell 1 breaks it again.
+    edges[e1[2]!] = 1 // south of cell 1
     expect(checkClues(edges, clues, w, h)).toBe(false)
   })
 

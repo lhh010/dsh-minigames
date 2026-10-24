@@ -18,16 +18,26 @@ export interface SlitherlinkPuzzle {
   unique: boolean
 }
 
-export function hEdgeIndex(w: number, _h: number, col: number, row: number): number {
-  return row * (w + 1) + col
+export function hEdgeIndex(w: number, h: number, col: number, row: number): number {
+  // Horizontal edges: w per dot-row across (h+1) dot-rows — INCLUDING the
+  // bottom row. col ∈ [0, w), row ∈ [0, h].
+  void h
+  return row * w + col
 }
 
-export function vEdgeIndex(w: number, _h: number, col: number, row: number): number {
-  return (w + 1) * _h + row * w + col
+export function vEdgeIndex(w: number, h: number, col: number, row: number): number {
+  // Vertical edges: (w+1) per dot-row across h dot-rows, AFTER the horizontal
+  // block. col ∈ [0, w], row ∈ [0, h).
+  return hEdgeCount(w, h) + row * (w + 1) + col
+}
+
+/** Horizontal edge count: w edges on each of the (h+1) dot-rows. */
+export function hEdgeCount(w: number, h: number): number {
+  return w * (h + 1)
 }
 
 export function edgeCount(w: number, h: number): number {
-  return (w + 1) * h + w * (h + 1)
+  return hEdgeCount(w, h) + (w + 1) * h
 }
 
 /** The four edge indices around cell (c, r): [N, E, S, W]. */
@@ -106,16 +116,18 @@ export function cycleCheck(edges: EdgeState[], w: number, h: number): { singleCy
 
 /** The two dot indices an edge connects. */
 function edgeDots(w: number, h: number, i: number): [number, number] {
-  const hCount = (w + 1) * h
+  const hCount = hEdgeCount(w, h)
   if (i < hCount) {
-    const row = Math.floor(i / (w + 1))
-    const col = i % (w + 1)
+    // Horizontal edge: w per dot-row, dots (col,row)→(col+1,row).
+    const row = Math.floor(i / w)
+    const col = i % w
     const a = row * (w + 1) + col
     return [a, a + 1]
   }
+  // Vertical edge: (w+1) per dot-row, dots (col,row)→(col,row+1).
   const j = i - hCount
-  const row = Math.floor(j / w)
-  const col = j % w
+  const row = Math.floor(j / (w + 1))
+  const col = j % (w + 1)
   const a = row * (w + 1) + col
   return [a, a + (w + 1)]
 }
