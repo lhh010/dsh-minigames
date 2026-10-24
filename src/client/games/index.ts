@@ -40,6 +40,10 @@ import { fifteenGame } from './fifteen/index.ts'
 import { mastermindGame } from './mastermind/index.ts'
 import { mazeGame } from './maze/index.ts'
 import { schulteGame } from './schulte/index.ts'
+import { hashiGame } from './hashi/index.ts'
+import { miniGoGame } from './minigo/index.ts'
+import { connect4Game } from './connect4/index.ts'
+import { slitherlinkGame } from './slitherlink/index.ts'
 
 export { getGames, getGame } from './registry.ts'
 export { registerGame } from './registry.ts'
@@ -61,6 +65,7 @@ export function registerBuiltinGames(): void {
     lightsOutGame, pongGame, stackGame, wordleGame,
     nonogramGame, pegGame, hanoiGame, fifteenGame, mastermindGame, mazeGame,
     schulteGame,
+    hashiGame, miniGoGame, connect4Game, slitherlinkGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }

@@ -31,13 +31,13 @@ describe('game registry', () => {
     expect(() => registerGame({ ...dummy, id: 'dummy' })).toThrow(/already registered/)
   })
 
-  it('registers the thirty-five built-in games', () => {
+  it('registers the thirty-nine built-in games', () => {
     registerBuiltinGames()
     const ids = getGames().map(game => game.id)
-    for (const id of ['dino', 'tanks', 'tetris', 'match3', 'snake', '2048', 'minesweeper', 'memory', 'gomoku', 'hop', 'breakout', 'whack', 'othello', 'flappy', 'sudoku', 'pacman', 'aimtrack', 'simon', 'sokoban', 'asteroids', 'pipes', 'colorlines', 'dodger', 'typing', 'lightsout', 'pong', 'stack', 'wordle', 'nonogram', 'peg', 'hanoi', 'fifteen', 'mastermind', 'maze', 'schulte']) {
+    for (const id of ['dino', 'tanks', 'tetris', 'match3', 'snake', '2048', 'minesweeper', 'memory', 'gomoku', 'hop', 'breakout', 'whack', 'othello', 'flappy', 'sudoku', 'pacman', 'aimtrack', 'simon', 'sokoban', 'asteroids', 'pipes', 'colorlines', 'dodger', 'typing', 'lightsout', 'pong', 'stack', 'wordle', 'nonogram', 'peg', 'hanoi', 'fifteen', 'mastermind', 'maze', 'schulte', 'hashi', 'minigo', 'connect4', 'slitherlink']) {
       expect(ids).toContain(id)
     }
-    expect(ids.filter(id => id !== 'dummy')).toHaveLength(35)
+    expect(ids.filter(id => id !== 'dummy')).toHaveLength(39)
     expect(ids).not.toContain('huarong')
   })
 
