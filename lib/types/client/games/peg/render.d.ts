@@ -27,6 +27,8 @@ export interface PegRenderState {
     /** 1-based level number for the HUD. */
     levelDisplay: number;
     levelName: string;
+    /** Pegs cleared so far this round (start − remaining); drives the stuck overlay. */
+    cleared: number;
     toast: string | null;
     win: boolean;
     stuck: boolean;

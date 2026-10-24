@@ -35,7 +35,25 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
   if (fit === null) throw new Error('dsh-minigames: lightsout needs a 2d canvas context')
   const ctx = fit.ctx
 
-  let level = 1
+  // Level memory: the highest level reached persists in localStorage, so
+  // re-entering the game resumes where the player left off instead of
+  // restarting at level 1 every mount (per-level seeds stay deterministic).
+  const LS_REACHED = 'dsh-minigames:lightsout:reached'
+  const readReached = (): number => {
+    try {
+      const saved = window.localStorage.getItem(LS_REACHED)
+      if (saved !== null) {
+        const n = Number(saved)
+        if (Number.isFinite(n) && n >= 1) return Math.floor(n)
+      }
+    } catch { /* storage unavailable */ }
+    return 1
+  }
+  const saveReached = (lv: number): void => {
+    try { window.localStorage.setItem(LS_REACHED, String(lv)) } catch { /* storage unavailable */ }
+  }
+
+  let level = readReached()
   let moves = 0
   // Deterministic per-level seed; one seed per level keeps replays identical.
   let board = scramble(level * 0x9e3779b9, scrambleCount(level))
@@ -81,6 +99,7 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
     board = toggleAt(board, r, c)
     if (isSolved(board)) {
       winText = `第 ${level} 关完成 · ${moves} 步`
+      saveReached(level + 1)
       reportScore()
       const center = cellCenter(r, c)
       particles.burst(center.x, center.y, THEME.gold, 14, 150)

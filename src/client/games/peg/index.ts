@@ -54,10 +54,16 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
   const won = (): boolean => isWin(board, level)
   const stuck = (): boolean => !won() && pegCount(board) > 1 && legalMoves(board).length === 0
 
+  // Scoring: the fewer pegs remain, the better. The panel keeps the HIGHEST
+  // score, so report cleared pegs (start − remaining); both a win and a
+  // deadlock settle the round and bank the cleared count.
+  const clearedPegs = (): number => pegCount(START_BOARDS[level]!) - pegCount(board)
+
   const reportScore = (): void => {
-    if (level + 1 === lastScore) return
-    lastScore = level + 1
-    options?.onScore?.(lastScore)
+    const score = clearedPegs()
+    if (score <= lastScore) return
+    lastScore = score
+    options?.onScore?.(score)
   }
 
   const showToast = (text: string): void => {
@@ -113,8 +119,8 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     board = next
     selected = null
     cursor = index
+    if (won() || stuck()) reportScore()
     if (won()) {
-      reportScore()
       particles.burst(center.x, center.y, THEME.gold, 16, 150)
       if (running) scheduleAdvance(ADVANCE_MS)
       else advanceRemaining = ADVANCE_MS // paused mid-burst: arm on resume
@@ -197,6 +203,7 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     renderPeg(ctx, {
       board, cursor, selected, hints: hints(), levelDisplay: level + 1,
       levelName: LEVELS[level]!.name, toast, win: won(), stuck: stuck(),
+      cleared: clearedPegs(),
     }, false)
     particles.tick(ctx, dt)
   }
@@ -223,6 +230,7 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     renderPeg(ctx, {
       board, cursor, selected, hints: [], levelDisplay: level + 1,
       levelName: LEVELS[level]!.name, toast, win: won(), stuck: stuck(),
+      cleared: clearedPegs(),
     }, true)
   }
   const resume = (): void => {
@@ -262,7 +270,7 @@ export const pegGame: MiniGameDefinition = {
   id: 'peg',
   title: '孔明棋 Peg Solitaire',
   icon: '🔻',
-  description: '跳过相邻棋子落入空位并吃掉它，把满盘棋子下到只剩一枚。',
+  description: '跳过相邻棋子落入空位并吃掉它——清掉的棋子越多得分越高，满盘下到只剩一枚为完美。',
   controls: ['点击 / 方向键 + 回车：选子并落子', 'Z / Backspace：回退一步', 'R：重开本关'],
   create: createPegGame,
 }

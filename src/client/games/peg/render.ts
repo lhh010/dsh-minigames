@@ -41,6 +41,8 @@ export interface PegRenderState {
   /** 1-based level number for the HUD. */
   levelDisplay: number
   levelName: string
+  /** Pegs cleared so far this round (start − remaining); drives the stuck overlay. */
+  cleared: number
   toast: string | null
   win: boolean
   stuck: boolean
@@ -108,7 +110,7 @@ export function renderPeg(ctx: CanvasRenderingContext2D, state: PegRenderState, 
   if (state.win) {
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '完美！', '剩 1 子 · 即将进入下一关 · R 重开本关', THEME.gold)
   } else if (state.stuck) {
-    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '无路可走', 'Z 回退 · R 重开', THEME.bad)
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '无路可走', `清掉 ${String(state.cleared)} 子 · Z 回退 · R 重开`, THEME.bad)
   } else if (paused) {
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '面板继续', THEME.text)
   }

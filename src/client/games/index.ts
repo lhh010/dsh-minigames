@@ -39,6 +39,7 @@ import { hanoiGame } from './hanoi/index.ts'
 import { fifteenGame } from './fifteen/index.ts'
 import { mastermindGame } from './mastermind/index.ts'
 import { mazeGame } from './maze/index.ts'
+import { schulteGame } from './schulte/index.ts'
 
 export { getGames, getGame } from './registry.ts'
 export { registerGame } from './registry.ts'
@@ -59,6 +60,7 @@ export function registerBuiltinGames(): void {
     pipesGame, colorLinesGame, dodgerGame, typingGame,
     lightsOutGame, pongGame, stackGame, wordleGame,
     nonogramGame, pegGame, hanoiGame, fifteenGame, mastermindGame, mazeGame,
+    schulteGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
