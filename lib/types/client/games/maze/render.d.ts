@@ -1,7 +1,8 @@
 /**
  * Maze canvas renderer: neon wall segments on a dark grid, a glowing player
- * dot with a fading trail, a pulsing exit marker at the far corner, and the
- * 关卡/步数 HUD. Uses the shared visual kit (../theme.ts).
+ * dot with a fading trail, a pulsing exit marker at the far corner, a
+ * 关卡/步数 HUD, and the shared pause / level-clear overlays. Uses the shared
+ * visual kit (../theme.ts).
  */
 import { type Maze } from './logic.ts';
 export declare const CELL = 34;
@@ -33,6 +34,8 @@ export interface MazeView {
     shortest: number;
     /** Level-complete overlay text (null while playing). */
     winText: string | null;
+    /** Show the pause overlay (the win overlay wins when both apply). */
+    paused: boolean;
 }
 /** Top-left pixel of the maze grid region for a w×h maze. */
 export declare function gridOffset(maze: Maze): {

@@ -128,7 +128,7 @@ function createTetrisGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
         gravityAcc = 0
         reportScore()
       }
-      renderTetris(ctx, state)
+      renderTetris(ctx, state, false)
       return
     }
     landedAt = null
@@ -143,7 +143,7 @@ function createTetrisGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
         if (state.over) break
       }
     }
-    renderTetris(ctx, state)
+    renderTetris(ctx, state, false)
   }
 
   const startLoop = (): void => {
@@ -171,8 +171,10 @@ function createTetrisGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
+    renderTetris(ctx, state, true)
   }
   const resume = (): void => {
     if (running) return
@@ -184,7 +186,7 @@ function createTetrisGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   focusGameHost(host)
   running = true
   startLoop()
-  renderTetris(ctx, state)
+  renderTetris(ctx, state, false)
 
   return {
     start: resume,

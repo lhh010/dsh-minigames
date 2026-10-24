@@ -27,8 +27,11 @@ let prevOver = false
 let prevWon = false
 let prevFrameMs = 0
 
-/** Draw one frame. */
-export function renderMinesweeper(ctx: CanvasRenderingContext2D, state: MinesweeperState): void {
+/**
+ * Draw one frame.
+ * @param paused - show the pause overlay.
+ */
+export function renderMinesweeper(ctx: CanvasRenderingContext2D, state: MinesweeperState, paused: boolean): void {
   const nowMs = performance.now()
   const dtMs = prevFrameMs === 0 ? 16 : Math.min(50, nowMs - prevFrameMs)
   prevFrameMs = nowMs
@@ -108,5 +111,7 @@ export function renderMinesweeper(ctx: CanvasRenderingContext2D, state: Mineswee
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '踩雷了', '按 R 重新开始', THEME.bad)
   } else if (state.won) {
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '全部排雷！', `用时 ${formatTime(state.elapsed)} · 按 R 重新开始`, THEME.gold)
+  } else if (paused) {
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '面板继续', THEME.text)
   }
 }

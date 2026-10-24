@@ -34,6 +34,8 @@ export interface SokobanView {
   unlockedThrough: number
   /** All levels cleared: show the gold win overlay. */
   won: boolean
+  /** Paused: veil the scene with the shared pause overlay. */
+  paused: boolean
   /** The last push's animation progress (0..1), or null when idle. */
   push: { playerTo: { r: number; c: number }; boxTo: { r: number; c: number } | null; t: number } | null
 }
@@ -196,5 +198,7 @@ export function renderSokoban(
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '全部通关', `总分 ${state.score} · 按 R 重新开始`, THEME.gold)
   } else if (state.cleared) {
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '过关', '按 N 或稍后进入下一关', THEME.good)
+  } else if (view.paused) {
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '面板继续', THEME.text)
   }
 }

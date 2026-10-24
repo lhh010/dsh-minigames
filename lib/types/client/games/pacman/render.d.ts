@@ -8,5 +8,6 @@ import type { PacmanState } from './logic.ts';
 export declare const HUD_H = 30;
 export declare const LOGICAL_W: number;
 export declare const LOGICAL_H: number;
-/** Draw one frame; `t` is a running seconds counter for flicker effects. */
-export declare function renderPacman(ctx: CanvasRenderingContext2D, state: PacmanState, t: number): void;
+/** Draw one frame; `t` is a running seconds counter for flicker effects.
+ * @param paused - show the pause overlay. */
+export declare function renderPacman(ctx: CanvasRenderingContext2D, state: PacmanState, t: number, paused: boolean): void;

@@ -21,8 +21,12 @@ const particles = createParticles()
 let prevScore = -1
 let prevNow = 0
 
-/** Draw one frame. */
-export function renderFlappy(ctx: CanvasRenderingContext2D, state: FlappyState, wingT: number): void {
+/**
+ * Draw one frame.
+ * @param wingT - running seconds counter driving the wing flap.
+ * @param paused - show the pause overlay.
+ */
+export function renderFlappy(ctx: CanvasRenderingContext2D, state: FlappyState, wingT: number, paused: boolean): void {
   const now = performance.now()
   const dt = Math.min(50, Math.max(0, now - prevNow))
   prevNow = now
@@ -85,6 +89,8 @@ export function renderFlappy(ctx: CanvasRenderingContext2D, state: FlappyState, 
 
   if (state.over) {
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '撞到了', `得分 ${state.score} · 按 R 重新开始`, THEME.gold)
+  } else if (paused) {
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '面板继续', THEME.text)
   }
 }
 

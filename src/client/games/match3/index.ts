@@ -169,6 +169,7 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
         }
         : null,
       result: phase === 'win' || phase === 'lose' ? state.result : 'none',
+      paused: false,
     }
     renderMatch3(ctx, state, displayGrid, view)
   }
@@ -187,8 +188,15 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
+    renderMatch3(ctx, state, displayGrid, {
+      cursor,
+      clear: null,
+      result: phase === 'win' || phase === 'lose' ? state.result : 'none',
+      paused: true,
+    })
   }
   const resume = (): void => {
     if (running) return
@@ -202,7 +210,7 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
   running = true
   startLoop()
   renderMatch3(ctx, state, state.grid, {
-    cursor, clear: null, result: 'none',
+    cursor, clear: null, result: 'none', paused: false,
   })
 
   return {

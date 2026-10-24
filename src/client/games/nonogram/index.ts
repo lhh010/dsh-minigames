@@ -4,7 +4,9 @@
  * right-click / Shift+Space crosses (X), arrow keys move the cursor; filled
  * cells matching the pattern win, onScore fires, and the next level starts
  * 1.5s later (stored-remainder pattern keeps the advance timer paused-safe).
- * R restarts the CURRENT level (same seed → same pattern).
+ * The highest level reached persists through the shared level-progress
+ * helper, so a remount resumes there instead of restarting at level 1.
+ * P toggles pause; R restarts the CURRENT level (same seed → same pattern).
  */
 import type {
   MiniGameDefinition,
@@ -17,6 +19,7 @@ import {
 import { LOGICAL_H, LOGICAL_W, cellAt, renderNonogram, type Cursor } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { readLevel, saveLevel } from '../level-progress.ts'
 
 const ADVANCE_MS = 1500
 
@@ -37,7 +40,7 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
   if (fit === null) throw new Error('dsh-minigames: nonogram needs a 2d canvas context')
   const ctx = fit.ctx
 
-  let level = 1
+  let level = readLevel('nonogram')
   let pattern = makePattern(levelSeed(level))
   let clues: Clues = cluesFrom(pattern)
   let cells = emptyCells()
@@ -73,7 +76,9 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
     advanceTimer = window.setTimeout(() => {
       advanceTimer = 0
       // Level 6 completes the set; loop back to a fresh round.
-      startLevel(level % LEVELS + 1)
+      const next = level % LEVELS + 1
+      saveLevel('nonogram', next)
+      startLevel(next)
     }, delayMs)
   }
 
@@ -122,6 +127,11 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
       startLevel(level) // same seed → same pattern
       return
     }
+    if (event.code === 'KeyP') {
+      event.preventDefault()
+      togglePause()
+      return
+    }
     if (!running || winText !== null) return
     if (event.code.startsWith('Arrow')) {
       event.preventDefault()
@@ -153,6 +163,10 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
   const stopLoop = (): void => {
     cancelAnimationFrame(raf)
     raf = 0
+  }
+  const togglePause = (): void => {
+    if (running) pause()
+    else resume()
   }
   const pause = (): void => {
     if (!running) return
@@ -209,6 +223,7 @@ export const nonogramGame: MiniGameDefinition = {
     '右键 / Shift+空格：标记 ✗',
     '方向键：移动光标',
     'R：重开本关',
+    'P：暂停',
   ],
   create: createNonogramGame,
 }

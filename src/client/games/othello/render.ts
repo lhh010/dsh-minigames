@@ -45,8 +45,11 @@ function canFlipFrom(state: OthelloState, r: number, c: number): boolean {
   return false
 }
 
-/** Draw one frame. */
-export function renderOthello(ctx: CanvasRenderingContext2D, state: OthelloState): void {
+/**
+ * Draw one frame.
+ * @param paused - show the pause overlay.
+ */
+export function renderOthello(ctx: CanvasRenderingContext2D, state: OthelloState, paused: boolean): void {
   const nowMs = performance.now()
   const dtMs = prevFrameMs === 0 ? 16 : Math.min(50, nowMs - prevFrameMs)
   prevFrameMs = nowMs
@@ -130,5 +133,7 @@ export function renderOthello(ctx: CanvasRenderingContext2D, state: OthelloState
     const title = state.winner === 1 ? '你赢了！' : state.winner === 2 ? 'AI 赢了' : '平局'
     const color = state.winner === 1 ? THEME.good : state.winner === 2 ? THEME.bad : THEME.text
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, title, `○ ${countDiscs(state, 1)} : ${countDiscs(state, 2)} ● · 按 R 重新开始`, color)
+  } else if (paused) {
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '面板继续', THEME.text)
   }
 }

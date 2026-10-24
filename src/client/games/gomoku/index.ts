@@ -84,7 +84,7 @@ function createGomokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       reportScore()
     }
     void dt
-    renderGomoku(ctx, state)
+    renderGomoku(ctx, state, false)
   }
 
   const startLoop = (): void => {
@@ -101,8 +101,10 @@ function createGomokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
+    renderGomoku(ctx, state, true)
   }
   const resume = (): void => {
     if (running) return
@@ -115,7 +117,7 @@ function createGomokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   focusGameHost(host)
   running = true
   startLoop()
-  renderGomoku(ctx, state)
+  renderGomoku(ctx, state, false)
 
   return {
     start: resume,

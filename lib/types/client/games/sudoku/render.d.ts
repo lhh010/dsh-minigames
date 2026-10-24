@@ -11,8 +11,9 @@ export declare const BOARD_W: number;
 export declare const BOARD_H: number;
 export declare const LOGICAL_W: number;
 export declare const LOGICAL_H: number;
-/** Draw one frame; cursor is the selected cell or null. */
+/** Draw one frame; cursor is the selected cell or null.
+ * @param paused - show the pause overlay. */
 export declare function renderSudoku(ctx: CanvasRenderingContext2D, state: SudokuState, difficulty: Difficulty, cursor: {
     r: number;
     c: number;
-} | null): void;
+} | null, paused: boolean): void;

@@ -26,8 +26,11 @@ const STAR_POINTS: ReadonlyArray<readonly [number, number]> = [
   [3, 3], [3, 11], [11, 3], [11, 11], [7, 7],
 ]
 
-/** Draw one frame. */
-export function renderGomoku(ctx: CanvasRenderingContext2D, state: GomokuState): void {
+/**
+ * Draw one frame.
+ * @param paused - show the pause overlay.
+ */
+export function renderGomoku(ctx: CanvasRenderingContext2D, state: GomokuState, paused: boolean): void {
   const nowMs = performance.now()
   const dtMs = prevFrameMs === 0 ? 16 : Math.min(50, nowMs - prevFrameMs)
   prevFrameMs = nowMs
@@ -108,5 +111,7 @@ export function renderGomoku(ctx: CanvasRenderingContext2D, state: GomokuState):
       state.winner === 1 ? THEME.good : state.winner === 2 ? THEME.bad : THEME.gold,
     )
     ctx.restore()
+  } else if (paused) {
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '面板继续', THEME.text)
   }
 }

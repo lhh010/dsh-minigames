@@ -39,6 +39,8 @@ export interface Match3View {
     scoreText: string
   } | null
   result: Match3State['result']
+  /** Show the pause overlay (result overlays take precedence). */
+  paused: boolean
 }
 
 /** The grid the renderer draws (the pre-removal grid during the clear phase). */
@@ -239,5 +241,7 @@ export function renderMatch3(
       drawOverlay(ctx, BOARD_W, BOARD_H, '游戏结束', `得分 ${state.score} / 目标 ${state.target} · 按 R 重新开始`, THEME.bad)
     }
     ctx.restore()
+  } else if (view.paused) {
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '面板继续', THEME.text)
   }
 }

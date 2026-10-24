@@ -108,7 +108,7 @@ function createDodgerGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     last = now
     stepDodger(state, dt, input)
     reportScore()
-    renderDodger(ctx, state)
+    renderDodger(ctx, state, false)
   }
 
   const startLoop = (): void => {
@@ -133,8 +133,10 @@ function createDodgerGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
+    renderDodger(ctx, state, true)
   }
   const resume = (): void => {
     if (running) return
@@ -148,7 +150,7 @@ function createDodgerGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   focusGameHost(host)
   running = true
   startLoop()
-  renderDodger(ctx, state)
+  renderDodger(ctx, state, false)
 
   return {
     start: resume,

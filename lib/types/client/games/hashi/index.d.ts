@@ -7,7 +7,8 @@
  * bridge ends, all islands form one connected group and no bridges cross;
  * the win overlay, a particle burst and onScore(level) fire, and the next
  * level starts 1.5s later (stored-remainder pattern keeps that timer
- * pause-safe).
+ * pause-safe); P toggles pause. The highest level reached persists per game
+ * id, so re-entering resumes where the player left off.
  */
 import type { MiniGameDefinition } from '../types.ts';
 export declare const hashiGame: MiniGameDefinition;

@@ -22,8 +22,9 @@ const particles = createParticles()
 let prevScore = 0
 let prevFrameMs = 0
 
-/** Draw one frame; `t` is a running seconds counter for flicker effects. */
-export function renderPacman(ctx: CanvasRenderingContext2D, state: PacmanState, t: number): void {
+/** Draw one frame; `t` is a running seconds counter for flicker effects.
+ * @param paused - show the pause overlay. */
+export function renderPacman(ctx: CanvasRenderingContext2D, state: PacmanState, t: number, paused: boolean): void {
   const nowMs = performance.now()
   const dtMs = prevFrameMs === 0 ? 16 : Math.min(50, nowMs - prevFrameMs)
   prevFrameMs = nowMs
@@ -143,5 +144,7 @@ export function renderPacman(ctx: CanvasRenderingContext2D, state: PacmanState, 
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '游戏结束', `得分 ${state.score} · 按 R 重新开始`, THEME.bad)
   } else if (state.won) {
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '过关啦！', `得分 ${state.score} · 按 R 重新开始`, THEME.gold)
+  } else if (paused) {
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '面板继续', THEME.text)
   }
 }

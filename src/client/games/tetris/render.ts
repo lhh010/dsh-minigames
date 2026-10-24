@@ -112,8 +112,8 @@ function drawNextQueue(ctx: CanvasRenderingContext2D, state: TetrisState): void 
   }
 }
 
-/** Draw one frame of the game. */
-export function renderTetris(ctx: CanvasRenderingContext2D, state: TetrisState): void {
+/** Draw one frame of the game; `paused` veils the board. */
+export function renderTetris(ctx: CanvasRenderingContext2D, state: TetrisState, paused: boolean): void {
   const width = LOGICAL_W
   ctx.clearRect(0, 0, width, BOARD_H + 8)
   const now = performance.now()
@@ -180,5 +180,7 @@ export function renderTetris(ctx: CanvasRenderingContext2D, state: TetrisState):
 
   if (state.over) {
     drawOverlay(ctx, BOARD_W, BOARD_H, 'GAME OVER', `得分 ${state.score} · R 重新开始`, THEME.bad)
+  } else if (paused) {
+    drawOverlay(ctx, BOARD_W, BOARD_H, '已暂停', '面板继续', THEME.text)
   }
 }

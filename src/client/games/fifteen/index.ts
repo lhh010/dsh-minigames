@@ -4,7 +4,8 @@
  * in the pressed direction, clicking an adjacent tile slides it; Z/Backspace
  * undoes, R restarts the CURRENT level (same seed → same scramble); levels
  * grow 3×3 → 4×4 → 5×5 and auto-advance 1.5s after the win overlay via the
- * stored-remainder pattern; there is no pause hotkey.
+ * stored-remainder pattern; P toggles pause. The highest level reached
+ * persists per game id, so re-entering resumes where the player left off.
  */
 import type {
   MiniGameDefinition,
@@ -17,6 +18,7 @@ import {
 import { LOGICAL_H, LOGICAL_W, renderFifteen, tileAt } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { readLevel, saveLevel } from '../level-progress.ts'
 import { THEME, createParticles } from '../theme.ts'
 
 const ADVANCE_MS = 1500
@@ -38,11 +40,13 @@ function createFifteenGame(host: HTMLElement, options?: MiniGameMountOptions): M
   if (fit === null) throw new Error('dsh-minigames: fifteen needs a 2d canvas context')
   const ctx = fit.ctx
 
-  let level = 1
+  // Level memory: resume at the highest level reached (persisted per game id).
+  let level = readLevel('fifteen')
   let moves = 0
   let par = 0
+  const firstSize = SIZES[(level - 1) % SIZES.length]!
   // Deterministic per-level seed; one seed per level keeps replays identical.
-  let board = scrambleFrom(createSolved(SIZES[0]!), level * 0x9e3779b9, scrambleMovesFor(SIZES[0]!)).board
+  let board = scrambleFrom(createSolved(firstSize), level * 0x9e3779b9, scrambleMovesFor(firstSize)).board
   let winText: string | null = null
   let running = false
   let raf = 0
@@ -64,6 +68,7 @@ function createFifteenGame(host: HTMLElement, options?: MiniGameMountOptions): M
 
   const startLevel = (next: number): void => {
     level = next
+    saveLevel('fifteen', level) // progress memory: never regresses
     moves = 0
     const s = size()
     par = scrambleMovesFor(s)
@@ -126,6 +131,9 @@ function createFifteenGame(host: HTMLElement, options?: MiniGameMountOptions): M
       advanceRemaining = 0
       winText = null
       startLevel(level)
+    } else if (event.code === 'KeyP') {
+      event.preventDefault()
+      togglePause()
     } else if (event.code === 'KeyZ' || event.code === 'Backspace') {
       event.preventDefault()
       if (!running) return
@@ -157,6 +165,10 @@ function createFifteenGame(host: HTMLElement, options?: MiniGameMountOptions): M
   const stopLoop = (): void => {
     cancelAnimationFrame(raf)
     raf = 0
+  }
+  const togglePause = (): void => {
+    if (running) pause()
+    else resume()
   }
   const pause = (): void => {
     if (!running) return
@@ -207,6 +219,6 @@ export const fifteenGame: MiniGameDefinition = {
   title: '数字华容道 15-Puzzle',
   icon: '🔢',
   description: '滑动数字方块，把打乱的盘面恢复成 1 到 N 的顺序，关卡从 3×3 递进到 5×5。',
-  controls: ['方向键：向该方向滑动紧邻空格的方块（也可点击）', 'Z / Backspace：撤销一步', 'R：重开本关'],
+  controls: ['方向键：向该方向滑动紧邻空格的方块（也可点击）', 'Z / Backspace：撤销一步', 'R：重开本关', 'P：暂停'],
   create: createFifteenGame,
 }

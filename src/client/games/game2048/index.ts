@@ -45,6 +45,7 @@ function create2048Game(host: HTMLElement, options?: MiniGameMountOptions): Mini
     const dir = DIR_KEYS[event.code]
     if (dir !== undefined) {
       event.preventDefault()
+      if (!running) return // paused: freeze the board
       if (move2048(state, dir)) reportScore()
       return
     }
@@ -65,7 +66,7 @@ function create2048Game(host: HTMLElement, options?: MiniGameMountOptions): Mini
     const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
     last = now
     void dt
-    render2048(ctx, state)
+    render2048(ctx, state, false)
   }
 
   const startLoop = (): void => {
@@ -82,8 +83,10 @@ function create2048Game(host: HTMLElement, options?: MiniGameMountOptions): Mini
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
+    render2048(ctx, state, true)
   }
   const resume = (): void => {
     if (running) return
@@ -95,7 +98,7 @@ function create2048Game(host: HTMLElement, options?: MiniGameMountOptions): Mini
   focusGameHost(host)
   running = true
   startLoop()
-  render2048(ctx, state)
+  render2048(ctx, state, false)
 
   return {
     start: resume,

@@ -7,5 +7,5 @@
 import { type AsteroidsState } from './logic.ts';
 export declare const AST_W = 960;
 export declare const AST_H = 600;
-/** Draw one frame of the asteroid field. */
-export declare function renderAsteroids(ctx: CanvasRenderingContext2D, state: AsteroidsState): void;
+/** Draw one frame of the asteroid field; `paused` veils the scene. */
+export declare function renderAsteroids(ctx: CanvasRenderingContext2D, state: AsteroidsState, paused: boolean): void;

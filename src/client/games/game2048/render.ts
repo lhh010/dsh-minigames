@@ -30,8 +30,11 @@ function tilePos(i: number): number {
   return GAP + i * (CELL + GAP)
 }
 
-/** Draw one frame. */
-export function render2048(ctx: CanvasRenderingContext2D, state: Game2048State): void {
+/**
+ * Draw one frame.
+ * @param paused - show the pause overlay.
+ */
+export function render2048(ctx: CanvasRenderingContext2D, state: Game2048State, paused: boolean): void {
   const now = performance.now()
   const dt = Math.min(50, Math.max(0, now - prevNow))
   prevNow = now
@@ -93,5 +96,7 @@ export function render2048(ctx: CanvasRenderingContext2D, state: Game2048State):
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '达成 2048！', '继续挑战更高分 · R 重新开始', THEME.gold)
   } else if (state.over) {
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '游戏结束', `得分 ${state.score} · 按 R 重新开始`, THEME.bad)
+  } else if (paused) {
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '面板继续', THEME.text)
   }
 }

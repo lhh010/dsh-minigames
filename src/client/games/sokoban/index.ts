@@ -177,6 +177,7 @@ function createSokobanGame(host: HTMLElement, options?: MiniGameMountOptions): M
       totalLevels: LEVELS.length,
       unlockedThrough: Math.min(reached, LEVELS.length),
       won,
+      paused: false,
       push: pushMove !== null
         ? { playerTo: pushMove.playerTo, boxTo: pushMove.boxTo, t: Math.min(1, pushT / PUSH_MS) }
         : null,
@@ -198,8 +199,12 @@ function createSokobanGame(host: HTMLElement, options?: MiniGameMountOptions): M
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
+    renderSokoban(ctx, state, {
+      totalLevels: LEVELS.length, unlockedThrough: Math.min(reached, LEVELS.length), won, paused: true, push: null,
+    })
   }
   const resume = (): void => {
     if (running) return
@@ -211,7 +216,7 @@ function createSokobanGame(host: HTMLElement, options?: MiniGameMountOptions): M
   focusGameHost(host)
   running = true
   startLoop()
-  renderSokoban(ctx, state, { totalLevels: LEVELS.length, unlockedThrough: Math.min(reached, LEVELS.length), won, push: null })
+  renderSokoban(ctx, state, { totalLevels: LEVELS.length, unlockedThrough: Math.min(reached, LEVELS.length), won, paused: false, push: null })
 
   return {
     start: resume,

@@ -46,6 +46,7 @@ function createMinesweeperGame(host: HTMLElement, options?: MiniGameMountOptions
   }
 
   const onMouseDown = (event: MouseEvent): void => {
+    if (!running) return // paused: freeze the grid
     const cell = cellFromEvent(event)
     if (cell === null) return
     if (event.button === 2) {
@@ -62,6 +63,7 @@ function createMinesweeperGame(host: HTMLElement, options?: MiniGameMountOptions
   }
 
   const onDoubleClick = (event: MouseEvent): void => {
+    if (!running) return // paused: freeze the grid
     const cell = cellFromEvent(event)
     if (cell === null) return
     chord(state, cell.r, cell.c)
@@ -90,7 +92,7 @@ function createMinesweeperGame(host: HTMLElement, options?: MiniGameMountOptions
       reported = true
       options?.onScore?.(solveScore(state.elapsed))
     }
-    renderMinesweeper(ctx, state)
+    renderMinesweeper(ctx, state, false)
   }
 
   const startLoop = (): void => {
@@ -107,8 +109,10 @@ function createMinesweeperGame(host: HTMLElement, options?: MiniGameMountOptions
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
+    renderMinesweeper(ctx, state, true)
   }
   const resume = (): void => {
     if (running) return
@@ -123,7 +127,7 @@ function createMinesweeperGame(host: HTMLElement, options?: MiniGameMountOptions
   focusGameHost(host)
   running = true
   startLoop()
-  renderMinesweeper(ctx, state)
+  renderMinesweeper(ctx, state, false)
 
   return {
     start: resume,

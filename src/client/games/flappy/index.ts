@@ -62,7 +62,7 @@ function createFlappyGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     wingT += dt
     stepFlappy(state, dt)
     reportScore()
-    renderFlappy(ctx, state, wingT)
+    renderFlappy(ctx, state, wingT, false)
   }
 
   const startLoop = (): void => {
@@ -79,8 +79,10 @@ function createFlappyGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
+    renderFlappy(ctx, state, wingT, true)
   }
   const resume = (): void => {
     if (running) return
@@ -93,7 +95,7 @@ function createFlappyGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   focusGameHost(host)
   running = true
   startLoop()
-  renderFlappy(ctx, state, 0)
+  renderFlappy(ctx, state, 0, false)
 
   return {
     start: resume,

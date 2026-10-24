@@ -11,5 +11,8 @@ export declare const BOARD_W: number;
 export declare const BOARD_H: number;
 export declare const LOGICAL_W: number;
 export declare const LOGICAL_H: number;
-/** Draw one frame. */
-export declare function render2048(ctx: CanvasRenderingContext2D, state: Game2048State): void;
+/**
+ * Draw one frame.
+ * @param paused - show the pause overlay.
+ */
+export declare function render2048(ctx: CanvasRenderingContext2D, state: Game2048State, paused: boolean): void;

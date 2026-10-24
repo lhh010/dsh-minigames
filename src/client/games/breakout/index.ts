@@ -76,7 +76,7 @@ function createBreakoutGame(host: HTMLElement, options?: MiniGameMountOptions): 
       stepBreakout(state, dt)
       reportScore()
     }
-    renderBreakout(ctx, state)
+    renderBreakout(ctx, state, false)
   }
 
   const startLoop = (): void => {
@@ -93,8 +93,10 @@ function createBreakoutGame(host: HTMLElement, options?: MiniGameMountOptions): 
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
+    renderBreakout(ctx, state, true)
   }
   const resume = (): void => {
     if (running) return
@@ -108,7 +110,7 @@ function createBreakoutGame(host: HTMLElement, options?: MiniGameMountOptions): 
   focusGameHost(host)
   running = true
   startLoop()
-  renderBreakout(ctx, state)
+  renderBreakout(ctx, state, false)
 
   return {
     start: resume,

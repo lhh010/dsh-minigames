@@ -113,7 +113,7 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       reported = true
       options?.onScore?.(solveScore(state.elapsed))
     }
-    renderSudoku(ctx, state, difficulty, cursor)
+    renderSudoku(ctx, state, difficulty, cursor, false)
   }
 
   const startLoop = (): void => {
@@ -130,8 +130,10 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
+    renderSudoku(ctx, state, difficulty, cursor, true)
   }
   const resume = (): void => {
     if (running) return
@@ -144,7 +146,7 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   focusGameHost(host)
   running = true
   startLoop()
-  renderSudoku(ctx, state, difficulty, cursor)
+  renderSudoku(ctx, state, difficulty, cursor, false)
 
   return {
     start: resume,

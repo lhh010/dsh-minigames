@@ -19,8 +19,11 @@ const particles = createParticles()
 let prevScore = 0
 let prevFrameMs = 0
 
-/** Draw one frame. */
-export function renderSnake(ctx: CanvasRenderingContext2D, state: SnakeState): void {
+/**
+ * Draw one frame.
+ * @param paused - show the pause overlay.
+ */
+export function renderSnake(ctx: CanvasRenderingContext2D, state: SnakeState, paused: boolean): void {
   const nowMs = performance.now()
   const dtMs = prevFrameMs === 0 ? 16 : Math.min(50, nowMs - prevFrameMs)
   prevFrameMs = nowMs
@@ -77,5 +80,7 @@ export function renderSnake(ctx: CanvasRenderingContext2D, state: SnakeState): v
 
   if (state.over) {
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '游戏结束', `得分 ${state.score} · 按 R 重新开始`, THEME.bad)
+  } else if (paused) {
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '面板继续', THEME.text)
   }
 }

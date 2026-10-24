@@ -10,5 +10,8 @@ export declare const BOARD_W: number;
 export declare const BOARD_H: number;
 export declare const LOGICAL_W: number;
 export declare const LOGICAL_H: number;
-/** Draw one frame. */
-export declare function renderOthello(ctx: CanvasRenderingContext2D, state: OthelloState): void;
+/**
+ * Draw one frame.
+ * @param paused - show the pause overlay.
+ */
+export declare function renderOthello(ctx: CanvasRenderingContext2D, state: OthelloState, paused: boolean): void;

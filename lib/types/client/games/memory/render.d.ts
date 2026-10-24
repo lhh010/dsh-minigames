@@ -11,5 +11,8 @@ export declare const BOARD_W: number;
 export declare const BOARD_H: number;
 export declare const LOGICAL_W: number;
 export declare const LOGICAL_H: number;
-/** Draw one frame. */
-export declare function renderMemory(ctx: CanvasRenderingContext2D, state: MemoryState): void;
+/**
+ * Draw one frame.
+ * @param paused - show the pause overlay.
+ */
+export declare function renderMemory(ctx: CanvasRenderingContext2D, state: MemoryState, paused: boolean): void;

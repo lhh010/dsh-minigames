@@ -5,7 +5,8 @@
  * shake the board with a toast. Z/Backspace rewinds the last move; R restarts
  * the CURRENT level; completing a level (all discs on the rightmost rod)
  * fires onScore and auto-advances 1.5s later via the stored-remainder pause
- * pattern. There is no pause hotkey.
+ * pattern; P toggles pause. The highest level reached persists per game id,
+ * so re-entering resumes where the player left off.
  */
 import type { MiniGameDefinition } from '../types.ts';
 export declare const hanoiGame: MiniGameDefinition;

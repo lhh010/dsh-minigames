@@ -5,7 +5,8 @@
  * shake the board with a toast. Z/Backspace rewinds the last move; R restarts
  * the CURRENT level; completing a level (all discs on the rightmost rod)
  * fires onScore and auto-advances 1.5s later via the stored-remainder pause
- * pattern. There is no pause hotkey.
+ * pattern; P toggles pause. The highest level reached persists per game id,
+ * so re-entering resumes where the player left off.
  */
 import type {
   MiniGameDefinition,
@@ -16,6 +17,7 @@ import { applyMove, createStart, isWin, optimalFor, perfectSoFar, type HanoiStat
 import { LOGICAL_H, LOGICAL_W, renderHanoi, rodAt } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { readLevel, saveLevel } from '../level-progress.ts'
 import { THEME, createParticles } from '../theme.ts'
 
 const ADVANCE_MS = 1500
@@ -38,7 +40,8 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   if (fit === null) throw new Error('dsh-minigames: hanoi needs a 2d canvas context')
   const ctx = fit.ctx
 
-  let level = 1
+  // Level memory: resume at the highest level reached (persisted per game id).
+  let level = Math.min(readLevel('hanoi'), LEVEL_DISCS.length)
   let discs = LEVEL_DISCS[level - 1]!
   let state = createStart(discs)
   let selected = 0
@@ -65,6 +68,7 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
 
   const startLevel = (next: number): void => {
     level = next
+    saveLevel('hanoi', level) // progress memory: never regresses
     discs = LEVEL_DISCS[Math.min(next, LEVEL_DISCS.length) - 1]!
     state = createStart(discs)
     selected = 0
@@ -161,6 +165,9 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       advanceTimer = 0
       advanceRemaining = 0
       startLevel(level)
+    } else if (event.code === 'KeyP') {
+      event.preventDefault()
+      togglePause()
     } else if (event.code === 'KeyZ' || event.code === 'Backspace') {
       event.preventDefault()
       if (!running) return
@@ -199,6 +206,10 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   const stopLoop = (): void => {
     cancelAnimationFrame(raf)
     raf = 0
+  }
+  const togglePause = (): void => {
+    if (running) pause()
+    else resume()
   }
   const pause = (): void => {
     if (!running) return
@@ -252,6 +263,6 @@ export const hanoiGame: MiniGameDefinition = {
   title: '河内塔 Tower of Hanoi',
   icon: '🗼',
   description: '在三根柱子间搬圆盘，大盘不压小盘，把整座塔移到最右侧。',
-  controls: ['←→ / AD：选柱 · 点击或 ↑/空格/回车：拿起 / 落下', 'Z / Backspace：回退一步', 'R：重开本关'],
+  controls: ['←→ / AD：选柱 · 点击或 ↑/空格/回车：拿起 / 落下', 'Z / Backspace：回退一步', 'R：重开本关', 'P：暂停'],
   create: createHanoiGame,
 }

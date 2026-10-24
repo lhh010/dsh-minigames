@@ -95,7 +95,7 @@ function createAsteroidsGame(host: HTMLElement, options?: MiniGameMountOptions):
     last = now
     updateAsteroids(world, dt, input)
     reportScore()
-    renderAsteroids(ctx, world)
+    renderAsteroids(ctx, world, false)
   }
 
   const startLoop = (): void => {
@@ -121,8 +121,10 @@ function createAsteroidsGame(host: HTMLElement, options?: MiniGameMountOptions):
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
+    renderAsteroids(ctx, world, true)
   }
   const resume = (): void => {
     if (running) return
@@ -135,7 +137,7 @@ function createAsteroidsGame(host: HTMLElement, options?: MiniGameMountOptions):
   focusGameHost(host)
   running = true
   startLoop()
-  renderAsteroids(ctx, world)
+  renderAsteroids(ctx, world, false)
 
   return {
     start: resume,

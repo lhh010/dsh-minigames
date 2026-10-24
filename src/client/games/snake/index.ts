@@ -89,7 +89,7 @@ function createSnakeGame(host: HTMLElement, options?: MiniGameMountOptions): Min
         reportScore()
       }
     }
-    renderSnake(ctx, state)
+    renderSnake(ctx, state, false)
   }
 
   const startLoop = (): void => {
@@ -106,8 +106,10 @@ function createSnakeGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
+    renderSnake(ctx, state, true)
   }
   const resume = (): void => {
     if (running) return
@@ -119,7 +121,7 @@ function createSnakeGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   focusGameHost(host)
   running = true
   startLoop()
-  renderSnake(ctx, state)
+  renderSnake(ctx, state, false)
 
   return {
     start: resume,

@@ -26,8 +26,9 @@ const particles = createParticles()
 let prevWon = false
 let lastFrame = 0
 
-/** Draw one frame; cursor is the selected cell or null. */
-export function renderSudoku(ctx: CanvasRenderingContext2D, state: SudokuState, difficulty: Difficulty, cursor: { r: number; c: number } | null): void {
+/** Draw one frame; cursor is the selected cell or null.
+ * @param paused - show the pause overlay. */
+export function renderSudoku(ctx: CanvasRenderingContext2D, state: SudokuState, difficulty: Difficulty, cursor: { r: number; c: number } | null, paused: boolean): void {
   ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H)
   const now = performance.now()
   const dt = Math.min(50, lastFrame === 0 ? 16 : now - lastFrame)
@@ -118,5 +119,7 @@ export function renderSudoku(ctx: CanvasRenderingContext2D, state: SudokuState, 
     ctx.translate(0, HUD_H)
     drawOverlay(ctx, BOARD_W, BOARD_H, '解决！', `用时 ${clock} · 按 R 开新题`, THEME.gold)
     ctx.restore()
+  } else if (paused) {
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '面板继续', THEME.text)
   }
 }

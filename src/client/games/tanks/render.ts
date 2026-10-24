@@ -121,8 +121,8 @@ function drawBullet(ctx: CanvasRenderingContext2D, bullet: WorldState['bullets']
   ctx.fillRect(bullet.x, bullet.y, 6, 6)
 }
 
-/** Draw one frame of the battle. */
-export function renderTanks(ctx: CanvasRenderingContext2D, state: WorldState): void {
+/** Draw one frame of the battle; `paused` veils the scene. */
+export function renderTanks(ctx: CanvasRenderingContext2D, state: WorldState, paused: boolean): void {
   ctx.clearRect(0, 0, TANK_W, TANK_H)
   const now = performance.now()
   const dt = Math.min(50, lastFrame === 0 ? 16 : now - lastFrame)
@@ -180,5 +180,7 @@ export function renderTanks(ctx: CanvasRenderingContext2D, state: WorldState): v
       `得分 ${state.score} · 按 R 重新开始`,
       state.result === 'win' ? THEME.good : THEME.bad,
     )
+  } else if (paused) {
+    drawOverlay(ctx, TANK_W, TANK_H, '已暂停', '面板继续', THEME.text)
   }
 }

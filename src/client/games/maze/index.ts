@@ -5,8 +5,9 @@
  * (same seed per level → identical maze on R restart); after L5 the run wraps
  * back to L1. On win: overlay 「第 X 关完成 · Y 步（最短 Z 步）」+ particles +
  * onScore(level), auto-advance 1.5s later. Turn-based; no undo (movement is
- * free) and no pause hotkey — panel-driven pause freezes the auto-advance via
- * the stored-remainder pattern.
+ * free) and P toggles pause — panel-driven pause freezes the auto-advance via
+ * the stored-remainder pattern. The highest level reached persists per game
+ * id, so re-entering resumes where the player left off.
  */
 import type {
   MiniGameDefinition,
@@ -17,6 +18,7 @@ import { canMove, generateMaze, solveLength, type Maze, type MazeDir } from './l
 import { LOGICAL_H, LOGICAL_W, TRAIL_MAX, renderMaze } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { readLevel, saveLevel } from '../level-progress.ts'
 
 const ADVANCE_MS = 1500
 /** Cell grid size per level: L1 11×9, +2×2 per level up to L5 19×17. */
@@ -49,8 +51,10 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
   if (fit === null) throw new Error('dsh-minigames: maze needs a 2d canvas context')
   const ctx = fit.ctx
 
-  let level = 1
-  let maze: Maze = generateMaze(levelSeed(1), 11, 9)
+  // Level memory: resume at the highest level reached (persisted per game id).
+  let level = Math.min(readLevel('maze'), 5)
+  const startSize = levelSize(level)
+  let maze: Maze = generateMaze(levelSeed(level), startSize.w, startSize.h)
   let shortest = solveLength(maze)
   let player = { x: 0, y: 0 }
   const trail: { x: number; y: number }[] = []
@@ -72,6 +76,7 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
 
   const startLevel = (next: number): void => {
     level = next > 5 ? 1 : next // wrap after L5
+    saveLevel('maze', level) // progress memory: never regresses
     const { w, h } = levelSize(level)
     maze = generateMaze(levelSeed(level), w, h)
     shortest = solveLength(maze)
@@ -123,6 +128,11 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
       winText = null
       return
     }
+    if (event.code === 'KeyP') {
+      event.preventDefault()
+      togglePause()
+      return
+    }
     if (!running) return // paused: gameplay keys are dead (R stays alive)
     const dir = KEY_DIR[event.code]
     if (dir === undefined) return
@@ -134,7 +144,7 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     raf = requestAnimationFrame(frame)
     if (!running) return
     last = now
-    renderMaze(ctx, maze, { player, trail, level, moves, shortest, winText })
+    renderMaze(ctx, maze, { player, trail, level, moves, shortest, winText, paused: false })
   }
 
   const startLoop = (): void => {
@@ -146,7 +156,12 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     cancelAnimationFrame(raf)
     raf = 0
   }
+  const togglePause = (): void => {
+    if (running) pause()
+    else resume()
+  }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
     if (advanceTimer !== 0) {
@@ -155,6 +170,7 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
       window.clearTimeout(advanceTimer)
       advanceTimer = 0
     }
+    renderMaze(ctx, maze, { player, trail, level, moves, shortest, winText, paused: true })
   }
   const resume = (): void => {
     if (running) return
@@ -170,7 +186,7 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
   focusGameHost(host)
   running = true
   startLoop()
-  renderMaze(ctx, maze, { player, trail, level, moves, shortest, winText })
+  renderMaze(ctx, maze, { player, trail, level, moves, shortest, winText, paused: false })
 
   return {
     start: resume,
@@ -191,6 +207,6 @@ export const mazeGame: MiniGameDefinition = {
   title: '迷宫',
   icon: '🌀',
   description: '随机完美迷宫：穿过唯一通路走到右下角出口，5 关逐渐变大。',
-  controls: ['方向键 / WASD：移动', 'R：重开本关（同一迷宫）'],
+  controls: ['方向键 / WASD：移动', 'R：重开本关（同一迷宫）', 'P：暂停'],
   create: createMazeGame,
 }

@@ -9,5 +9,8 @@
 import type { DodgerState } from './logic.ts';
 export declare const DODGER_W = 480;
 export declare const DODGER_H = 600;
-/** Draw one frame. */
-export declare function renderDodger(ctx: CanvasRenderingContext2D, state: DodgerState): void;
+/**
+ * Draw one frame.
+ * @param paused - show the pause overlay.
+ */
+export declare function renderDodger(ctx: CanvasRenderingContext2D, state: DodgerState, paused: boolean): void;

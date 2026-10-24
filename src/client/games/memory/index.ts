@@ -92,7 +92,7 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
     last = now
     void dt
-    renderMemory(ctx, state)
+    renderMemory(ctx, state, false)
   }
 
   const startLoop = (): void => {
@@ -109,6 +109,7 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     // Freeze the mismatch reveal: stop the timer and keep the remainder.
     if (flipTimer !== 0) {
@@ -117,6 +118,7 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       revealRemaining = Math.max(0, lockUntil - performance.now())
     }
     stopLoop()
+    renderMemory(ctx, state, true)
   }
   const resume = (): void => {
     if (running) return
@@ -138,7 +140,7 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   focusGameHost(host)
   running = true
   startLoop()
-  renderMemory(ctx, state)
+  renderMemory(ctx, state, false)
 
   return {
     start: resume,

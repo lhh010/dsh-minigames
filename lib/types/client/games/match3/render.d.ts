@@ -30,6 +30,8 @@ export interface Match3View {
         scoreText: string;
     } | null;
     result: Match3State['result'];
+    /** Show the pause overlay (result overlays take precedence). */
+    paused: boolean;
 }
 /** The grid the renderer draws (the pre-removal grid during the clear phase). */
 export type DisplayGrid = number[][];

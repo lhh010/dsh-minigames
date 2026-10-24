@@ -2,6 +2,11 @@
  * Slitherlink game definition: wires the pure puzzle logic into a
  * {@link MiniGameInstance} — left-click toggles an edge line, right-click or
  * Shift+click marks a cross; solving a level fires onScore and auto-advances.
+ * The internal level index is 0-based while the displayed and persisted
+ * level is 1-based; the highest level reached persists through the shared
+ * level-progress helper, so a remount resumes there instead of restarting
+ * at the first puzzle. P toggles pause (run clock and advance timer freeze
+ * via the stored-remainder pattern); R restarts the CURRENT level.
  */
 import type {
   MiniGameDefinition,
@@ -14,6 +19,7 @@ import {
 import { renderSlitherlink, logicalW, logicalH, edgeAt } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { readLevel, saveLevel } from '../level-progress.ts'
 import { THEME, createParticles } from '../theme.ts'
 
 const ADVANCE_MS = 1500
@@ -22,8 +28,9 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
   const canvas = document.createElement('canvas')
   canvas.className = 'dmg-game-canvas'
   host.replaceChildren(canvas)
-  let level = 0
-  let puzzle: SlitherlinkPuzzle = puzzleFromSeed(1, ...LEVEL_SIZES[0]!)
+  // Persisted level is 1-based; this game's level index is 0-based.
+  let level = readLevel('slitherlink') - 1
+  let puzzle: SlitherlinkPuzzle = puzzleFromSeed((level + 1) * 0x9e3779b9, ...LEVEL_SIZES[level % LEVEL_SIZES.length]!)
   let edges: EdgeState[] = new Array<EdgeState>(edgeCount(puzzle.w, puzzle.h)).fill(0)
   let hover = -1
   let solved = false
@@ -31,8 +38,10 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
   let raf = 0
   let last = 0
   let startedAt = 0
+  let pausedAt = 0
   let elapsed = '0:00'
   let advanceTimer = 0
+  let advanceAt = 0
   let advanceRemaining = 0
   let lastScore = -1
   const particles = createParticles()
@@ -62,9 +71,12 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
   }
 
   const scheduleAdvance = (delayMs: number): void => {
+    advanceAt = performance.now() + delayMs
     advanceTimer = window.setTimeout(() => {
       advanceTimer = 0
-      startLevel(level + 1)
+      const next = level + 1
+      saveLevel('slitherlink', next + 1) // persisted 1-based; `level` is 0-based
+      startLevel(next)
     }, delayMs)
   }
 
@@ -115,7 +127,15 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
     if (!gameHasFocus(host)) return
     if (event.code === 'KeyR') {
       event.preventDefault()
+      // Restart the CURRENT level; drop any pending auto-advance first so
+      // the win overlay cannot skip straight to the next level.
+      clearTimeout(advanceTimer)
+      advanceTimer = 0
+      advanceRemaining = 0
       startLevel(level)
+    } else if (event.code === 'KeyP') {
+      event.preventDefault()
+      togglePause()
     }
   }
 
@@ -136,23 +156,20 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
     particles.tick(ctx, dt)
   }
 
-  canvas.addEventListener('mousedown', onMouseDown)
-  canvas.addEventListener('contextmenu', onContextMenu)
-  canvas.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('keydown', onKeyDown)
-  focusGameHost(host)
-  running = true
-  startedAt = performance.now()
-  last = performance.now()
-  raf = requestAnimationFrame(frame)
-
+  const togglePause = (): void => {
+    if (running) pause()
+    else resume()
+  }
   const pause = (): void => {
     if (!running) return
     running = false
+    // Freeze the run clock: shift startedAt forward by the paused span on resume.
+    pausedAt = performance.now()
+    // Freeze the advance timer: stop it and keep the remainder.
     if (advanceTimer !== 0) {
       clearTimeout(advanceTimer)
       advanceTimer = 0
-      advanceRemaining = ADVANCE_MS
+      advanceRemaining = Math.max(0, advanceAt - performance.now())
     }
     renderSlitherlink(ctx, {
       w: puzzle.w, h: puzzle.h, clues: puzzle.clues, edges, hover,
@@ -163,6 +180,10 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
   const resume = (): void => {
     if (running) return
     running = true
+    if (pausedAt > 0) {
+      startedAt += performance.now() - pausedAt
+      pausedAt = 0
+    }
     last = performance.now()
     if (advanceRemaining > 0) {
       scheduleAdvance(advanceRemaining)
@@ -170,6 +191,16 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
     }
     raf = requestAnimationFrame(frame)
   }
+
+  canvas.addEventListener('mousedown', onMouseDown)
+  canvas.addEventListener('contextmenu', onContextMenu)
+  canvas.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('keydown', onKeyDown)
+  focusGameHost(host)
+  running = true
+  startedAt = performance.now()
+  last = performance.now()
+  raf = requestAnimationFrame(frame)
 
   return {
     start: resume,
@@ -193,6 +224,6 @@ export const slitherlinkGame: MiniGameDefinition = {
   title: '数回 Slitherlink',
   icon: '⭕',
   description: '画一条闭合线圈：每个数字表示它四周边线的条数，5×5 起步逐关变大。',
-  controls: ['左键：画线/取消', '右键或 Shift+左键：标记叉', 'R：重开本关'],
+  controls: ['左键：画线/取消', '右键或 Shift+左键：标记叉', 'R：重开本关', 'P：暂停'],
   create: createSlitherlinkGame,
 }

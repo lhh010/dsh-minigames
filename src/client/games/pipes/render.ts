@@ -174,7 +174,7 @@ export function renderPipes(ctx: CanvasRenderingContext2D, state: PipesState, vi
   particles.tick(ctx, dtMs)
 
   if (view.paused) {
-    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '按 P 继续')
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '面板继续', THEME.text)
   } else if (state.status === 'won') {
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '接通！', `+${WIN_SCORE} · 按 N 或稍后进入下一关`, THEME.good)
   } else if (state.status === 'over') {

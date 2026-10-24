@@ -7,5 +7,5 @@
 import type { BreakoutState } from './logic.ts';
 export declare const LOGICAL_W = 480;
 export declare const LOGICAL_H = 320;
-/** Draw one frame. */
-export declare function renderBreakout(ctx: CanvasRenderingContext2D, state: BreakoutState): void;
+/** Draw one frame; `paused` veils the scene. */
+export declare function renderBreakout(ctx: CanvasRenderingContext2D, state: BreakoutState, paused: boolean): void;

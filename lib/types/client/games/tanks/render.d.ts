@@ -7,5 +7,5 @@
 import { type WorldState } from './logic.ts';
 export declare const TANK_W: number;
 export declare const TANK_H: number;
-/** Draw one frame of the battle. */
-export declare function renderTanks(ctx: CanvasRenderingContext2D, state: WorldState): void;
+/** Draw one frame of the battle; `paused` veils the scene. */
+export declare function renderTanks(ctx: CanvasRenderingContext2D, state: WorldState, paused: boolean): void;

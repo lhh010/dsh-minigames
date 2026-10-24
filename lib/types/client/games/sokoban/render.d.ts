@@ -16,6 +16,8 @@ export interface SokobanView {
     unlockedThrough: number;
     /** All levels cleared: show the gold win overlay. */
     won: boolean;
+    /** Paused: veil the scene with the shared pause overlay. */
+    paused: boolean;
     /** The last push's animation progress (0..1), or null when idle. */
     push: {
         playerTo: {

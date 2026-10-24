@@ -5,14 +5,17 @@
  * click; finishing fires onScore with a faster-is-higher time score, bursts
  * particles, and auto-advances 1.5s later. R restarts the CURRENT level
  * (deterministic per-level seed → the same shuffle). Panel-driven pause
- * freezes both the run clock and the advance timer via the
- * stored-remainder pattern; there is no pause hotkey.
+ * and the P hotkey freeze both the run clock and the advance timer via
+ * the stored-remainder pattern. The highest level reached persists through
+ * the shared level-progress helper, so a remount resumes there instead of
+ * restarting at level 1.
  */
 import type { MiniGameDefinition, MiniGameInstance, MiniGameMountOptions } from '../types.ts'
 import { WRONG_PENALTY_MS, gridSizeFor, isCorrectClick, makeGrid, scoreFor } from './logic.ts'
 import { LOGICAL_H, LOGICAL_W, cellAt, cellCenter, renderSchulte, type WrongFlash } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { readLevel, saveLevel } from '../level-progress.ts'
 import { THEME, createParticles } from '../theme.ts'
 
 const ADVANCE_MS = 1500
@@ -25,7 +28,7 @@ function createSchulteGame(host: HTMLElement, options?: MiniGameMountOptions): M
   if (fit === null) throw new Error('dsh-minigames: schulte needs a 2d canvas context')
   const ctx = fit.ctx
 
-  let level = 1
+  let level = readLevel('schulte')
   // Deterministic per-level seed: one seed per level keeps R-replays identical.
   const seedFor = (lv: number): number => lv * 0x9e3779b9
   let grid = makeGrid(seedFor(level), gridSizeFor(level))
@@ -89,7 +92,9 @@ function createSchulteGame(host: HTMLElement, options?: MiniGameMountOptions): M
     advanceAt = performance.now() + delayMs
     advanceTimer = window.setTimeout(() => {
       advanceTimer = 0
-      startLevel(level + 1)
+      const next = level + 1
+      saveLevel('schulte', next)
+      startLevel(next)
     }, delayMs)
   }
 
@@ -111,6 +116,9 @@ function createSchulteGame(host: HTMLElement, options?: MiniGameMountOptions): M
       advanceTimer = 0
       advanceRemaining = 0
       startLevel(level)
+    } else if (event.code === 'KeyP') {
+      event.preventDefault()
+      togglePause()
     }
   }
 
@@ -135,6 +143,10 @@ function createSchulteGame(host: HTMLElement, options?: MiniGameMountOptions): M
   const stopLoop = (): void => {
     cancelAnimationFrame(raf)
     raf = 0
+  }
+  const togglePause = (): void => {
+    if (running) pause()
+    else resume()
   }
   const pause = (): void => {
     if (!running) return
@@ -188,6 +200,6 @@ export const schulteGame: MiniGameDefinition = {
   title: '舒尔特方格 Schulte Grid',
   icon: '🔲',
   description: '按 1 到 N² 的顺序依次点击打乱数字，越快越好。',
-  controls: ['点击 / 触摸：按顺序点数字', 'R：重开本关'],
+  controls: ['点击 / 触摸：按顺序点数字', 'R：重开本关', 'P：暂停'],
   create: createSchulteGame,
 }

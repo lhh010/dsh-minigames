@@ -104,7 +104,7 @@ function createTanksGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     last = now
     stepWorld(world, dt, input)
     reportScore()
-    renderTanks(ctx, world)
+    renderTanks(ctx, world, false)
   }
 
   const startLoop = (): void => {
@@ -130,8 +130,10 @@ function createTanksGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
+    renderTanks(ctx, world, true)
   }
   const resume = (): void => {
     if (running) return
@@ -144,7 +146,7 @@ function createTanksGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   focusGameHost(host)
   running = true
   startLoop()
-  renderTanks(ctx, world)
+  renderTanks(ctx, world, false)
 
   return {
     start: resume,

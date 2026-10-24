@@ -1,7 +1,8 @@
 /**
  * Maze canvas renderer: neon wall segments on a dark grid, a glowing player
- * dot with a fading trail, a pulsing exit marker at the far corner, and the
- * 关卡/步数 HUD. Uses the shared visual kit (../theme.ts).
+ * dot with a fading trail, a pulsing exit marker at the far corner, a
+ * 关卡/步数 HUD, and the shared pause / level-clear overlays. Uses the shared
+ * visual kit (../theme.ts).
  */
 import { E, N, S, W, type Maze } from './logic.ts'
 import { THEME, accent, createParticles, drawBackground, drawOverlay, glow, hudPair, noGlow } from '../theme.ts'
@@ -36,6 +37,8 @@ export interface MazeView {
   shortest: number
   /** Level-complete overlay text (null while playing). */
   winText: string | null
+  /** Show the pause overlay (the win overlay wins when both apply). */
+  paused: boolean
 }
 
 /** Top-left pixel of the maze grid region for a w×h maze. */
@@ -76,7 +79,7 @@ export function renderMaze(ctx: CanvasRenderingContext2D, maze: Maze, view: Maze
   ctx.fillStyle = THEME.textMuted
   ctx.font = '600 11px system-ui, sans-serif'
   ctx.textAlign = 'left'
-  ctx.fillText('方向键/WASD 移动 · R 重开本关', 12, 36)
+  ctx.fillText('方向键/WASD 移动 · R 重开本关 · P 暂停', 12, 36)
 
   // Faint cell floor.
   ctx.fillStyle = 'rgba(255,255,255,0.02)'
@@ -163,5 +166,7 @@ export function renderMaze(ctx: CanvasRenderingContext2D, maze: Maze, view: Maze
 
   if (view.winText !== null) {
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '过关', view.winText, THEME.good)
+  } else if (view.paused) {
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '按 P 继续', THEME.text)
   }
 }

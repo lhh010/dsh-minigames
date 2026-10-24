@@ -49,6 +49,7 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
   }
 
   const onMouseDown = (event: MouseEvent): void => {
+    if (!running) return // paused: freeze the board
     if (state.over || state.turn !== 1) return
     const cell = cellFromEvent(event)
     if (cell === null) return
@@ -83,7 +84,7 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
       reportScore()
     }
     void dt
-    renderOthello(ctx, state)
+    renderOthello(ctx, state, false)
   }
 
   const startLoop = (): void => {
@@ -100,8 +101,10 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
+    renderOthello(ctx, state, true)
   }
   const resume = (): void => {
     if (running) return
@@ -114,7 +117,7 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
   focusGameHost(host)
   running = true
   startLoop()
-  renderOthello(ctx, state)
+  renderOthello(ctx, state, false)
 
   return {
     start: resume,

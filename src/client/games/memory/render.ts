@@ -32,8 +32,11 @@ function cellCenter(i: number): { x: number; y: number } {
   return { x: c * CELL + CELL / 2, y: HUD_H + r * CELL + CELL / 2 }
 }
 
-/** Draw one frame. */
-export function renderMemory(ctx: CanvasRenderingContext2D, state: MemoryState): void {
+/**
+ * Draw one frame.
+ * @param paused - show the pause overlay.
+ */
+export function renderMemory(ctx: CanvasRenderingContext2D, state: MemoryState, paused: boolean): void {
   const nowMs = performance.now()
   const dtMs = prevFrameMs === 0 ? 16 : Math.min(50, nowMs - prevFrameMs)
   prevFrameMs = nowMs
@@ -98,5 +101,7 @@ export function renderMemory(ctx: CanvasRenderingContext2D, state: MemoryState):
     ctx.translate(0, HUD_H)
     drawOverlay(ctx, BOARD_W, BOARD_H, '全部配对！', `${state.moves} 步完成 · 按 R 重新开始`, THEME.gold)
     ctx.restore()
+  } else if (paused) {
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '面板继续', THEME.text)
   }
 }

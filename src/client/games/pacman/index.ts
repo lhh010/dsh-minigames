@@ -71,7 +71,7 @@ function createPacmanGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     t += dt
     stepPacman(state, dt)
     reportScore()
-    renderPacman(ctx, state, t)
+    renderPacman(ctx, state, t, false)
   }
 
   const startLoop = (): void => {
@@ -88,8 +88,10 @@ function createPacmanGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     else resume()
   }
   const pause = (): void => {
+    if (!running) return
     running = false
     stopLoop()
+    renderPacman(ctx, state, t, true)
   }
   const resume = (): void => {
     if (running) return
@@ -101,7 +103,7 @@ function createPacmanGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   focusGameHost(host)
   running = true
   startLoop()
-  renderPacman(ctx, state, 0)
+  renderPacman(ctx, state, 0, false)
 
   return {
     start: resume,

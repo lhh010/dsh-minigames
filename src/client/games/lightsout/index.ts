@@ -4,8 +4,8 @@
  * cell and its neighbors; Z/Backspace rewinds the last move; R restarts the
  * CURRENT level (deterministic per-level scramble, so the initial board is
  * identical); clearing a level fires onScore, bursts particles, and
- * auto-advances 1.5s later. Panel-driven pause freezes the advance timer via
- * the stored-remainder pattern; there is no pause hotkey.
+ * auto-advances 1.5s later. Panel-driven pause (and the P hotkey) freezes
+ * the advance timer via the stored-remainder pattern.
  */
 import type {
   MiniGameDefinition,
@@ -143,6 +143,9 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
       advanceRemaining = 0
       winText = null
       startLevel(level)
+    } else if (event.code === 'KeyP') {
+      event.preventDefault()
+      togglePause()
     } else if (event.code === 'KeyZ' || event.code === 'Backspace') {
       event.preventDefault()
       if (!running) return
@@ -197,6 +200,10 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
     }
     startLoop()
   }
+  const togglePause = (): void => {
+    if (running) pause()
+    else resume()
+  }
 
   canvas.addEventListener('mousedown', onMouseDown)
   window.addEventListener('keydown', onKeyDown)
@@ -225,6 +232,6 @@ export const lightsOutGame: MiniGameDefinition = {
   title: '点灯 Lights Out',
   icon: '💡',
   description: '点亮或熄灭十字形相邻的灯，把整块面板全部熄灭。',
-  controls: ['点击 / 方向键 + 空格或回车：切换', 'Z / Backspace：回退一步', 'R：重开本关'],
+  controls: ['点击 / 方向键 + 空格或回车：切换', 'Z / Backspace：回退一步', 'R：重开本关', 'P：暂停'],
   create: createLightsOutGame,
 }

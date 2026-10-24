@@ -5,8 +5,10 @@
  * click; finishing fires onScore with a faster-is-higher time score, bursts
  * particles, and auto-advances 1.5s later. R restarts the CURRENT level
  * (deterministic per-level seed → the same shuffle). Panel-driven pause
- * freezes both the run clock and the advance timer via the
- * stored-remainder pattern; there is no pause hotkey.
+ * and the P hotkey freeze both the run clock and the advance timer via
+ * the stored-remainder pattern. The highest level reached persists through
+ * the shared level-progress helper, so a remount resumes there instead of
+ * restarting at level 1.
  */
 import type { MiniGameDefinition } from '../types.ts';
 export declare const schulteGame: MiniGameDefinition;

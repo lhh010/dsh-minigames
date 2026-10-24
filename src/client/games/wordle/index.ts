@@ -2,6 +2,7 @@
  * Wordle 猜词游戏定义：把纯判定逻辑接成 {@link MiniGameInstance} ——
  * 物理 A–Z/Enter/Backspace 与屏幕键盘点击双输入，任意等长纯字母词均合法，
  * 无效输入抖动提示且不消耗行；关卡按 4/5/6 字母循环推进，连胜通过 onScore 上报。
+ * 关卡进度经共享 level-progress 助手持久化，重进从最高关继续；P 暂停 / 继续。
  */
 import type {
   MiniGameDefinition,
@@ -12,6 +13,7 @@ import { judge, mergeKeyHints, isValidGuess, pickAnswer, type KeyHints, type Let
 import { renderWordle, keyAt, LOGICAL_W, LOGICAL_H, type WordleView } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { readLevel, saveLevel } from '../level-progress.ts'
 import { accent, createParticles } from '../theme.ts'
 
 const SHAKE_MS = 260
@@ -44,7 +46,7 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   if (fit === null) throw new Error('dsh-minigames: wordle needs a 2d canvas context')
   const ctx = fit.ctx
 
-  let level = 1
+  let level = readLevel('wordle')
   let { len, tries } = levelConfig(level)
   let answer = ''
   let rows: Array<{ guess: string; verdicts: LetterVerdict[] }> = []
@@ -103,6 +105,7 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       status = 'won'
       streak += 1
       level += 1
+      saveLevel('wordle', level)
       reportScore()
       // 最后一行中央喷粒子庆祝。
       const rowY = 48 + (rows.length - 1) * (56 + 8) + 28
@@ -159,9 +162,7 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     }
     if (event.code === 'KeyR') {
       event.preventDefault()
-      streak = 0
-      level = 1
-      reportScore()
+      // 重开本关：当前关卡重新开局，关卡与连胜保持，不回第 1 关。
       newRound()
       return
     }
@@ -256,6 +257,6 @@ export const wordleGame: MiniGameDefinition = {
   title: 'Wordle 猜词',
   icon: '🔤',
   description: '按关卡猜 4/5/6 字母单词，任意等长字母词都可提交，绿=位置对，黄=字母对，灰=没有。',
-  controls: ['键盘 / 点击屏幕键盘：输入', 'Enter：提交 · Backspace：删除', '空格 / 点击：再来一局', 'R：重开 · P：暂停'],
+  controls: ['键盘 / 点击屏幕键盘：输入', 'Enter：提交 · Backspace：删除', '空格 / 点击：再来一局', 'R：重开本关 · P：暂停'],
   create: createWordleGame,
 }

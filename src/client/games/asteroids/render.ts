@@ -94,8 +94,8 @@ function drawBullet(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   noGlow(ctx)
 }
 
-/** Draw one frame of the asteroid field. */
-export function renderAsteroids(ctx: CanvasRenderingContext2D, state: AsteroidsState): void {
+/** Draw one frame of the asteroid field; `paused` veils the scene. */
+export function renderAsteroids(ctx: CanvasRenderingContext2D, state: AsteroidsState, paused: boolean): void {
   ctx.clearRect(0, 0, W, H)
   const now = performance.now()
   const dt = Math.min(50, lastFrame === 0 ? 16 : now - lastFrame)
@@ -124,5 +124,7 @@ export function renderAsteroids(ctx: CanvasRenderingContext2D, state: AsteroidsS
 
   if (state.result === 'lose') {
     drawOverlay(ctx, W, H, 'GAME OVER', `得分 ${state.score} · 按 R 重新开始`, THEME.bad)
+  } else if (paused) {
+    drawOverlay(ctx, W, H, '已暂停', '面板继续', THEME.text)
   }
 }

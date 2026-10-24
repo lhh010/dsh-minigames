@@ -10,5 +10,8 @@ export declare const BOARD_W: number;
 export declare const BOARD_H: number;
 export declare const LOGICAL_W: number;
 export declare const LOGICAL_H: number;
-/** Draw one frame. */
-export declare function renderSnake(ctx: CanvasRenderingContext2D, state: SnakeState): void;
+/**
+ * Draw one frame.
+ * @param paused - show the pause overlay.
+ */
+export declare function renderSnake(ctx: CanvasRenderingContext2D, state: SnakeState, paused: boolean): void;

@@ -4,8 +4,8 @@
  * cell and its neighbors; Z/Backspace rewinds the last move; R restarts the
  * CURRENT level (deterministic per-level scramble, so the initial board is
  * identical); clearing a level fires onScore, bursts particles, and
- * auto-advances 1.5s later. Panel-driven pause freezes the advance timer via
- * the stored-remainder pattern; there is no pause hotkey.
+ * auto-advances 1.5s later. Panel-driven pause (and the P hotkey) freezes
+ * the advance timer via the stored-remainder pattern.
  */
 import type { MiniGameDefinition } from '../types.ts';
 export declare const lightsOutGame: MiniGameDefinition;

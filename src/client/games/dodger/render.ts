@@ -34,8 +34,11 @@ const particles = createParticles()
 let prevNow = 0
 let prevOver = false
 
-/** Draw one frame. */
-export function renderDodger(ctx: CanvasRenderingContext2D, state: DodgerState): void {
+/**
+ * Draw one frame.
+ * @param paused - show the pause overlay.
+ */
+export function renderDodger(ctx: CanvasRenderingContext2D, state: DodgerState, paused: boolean): void {
   const now = performance.now()
   const dt = Math.min(50, Math.max(0, now - prevNow))
   prevNow = now
@@ -88,6 +91,8 @@ export function renderDodger(ctx: CanvasRenderingContext2D, state: DodgerState):
       `坚持 ${(state.t / 1000).toFixed(1)} 秒 · 得分 ${state.score} · 按 R 重新开始`,
       THEME.bad,
     )
+  } else if (paused) {
+    drawOverlay(ctx, W, H, '已暂停', '面板继续', THEME.text)
   }
 }
 

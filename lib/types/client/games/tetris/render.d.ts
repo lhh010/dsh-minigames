@@ -9,5 +9,5 @@ export declare const BOARD_W: number;
 export declare const BOARD_H: number;
 /** Full logical canvas width: the board plus the preview column. */
 export declare const LOGICAL_W: number;
-/** Draw one frame of the game. */
-export declare function renderTetris(ctx: CanvasRenderingContext2D, state: TetrisState): void;
+/** Draw one frame of the game; `paused` veils the board. */
+export declare function renderTetris(ctx: CanvasRenderingContext2D, state: TetrisState, paused: boolean): void;

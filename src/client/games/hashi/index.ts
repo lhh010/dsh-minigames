@@ -7,7 +7,8 @@
  * bridge ends, all islands form one connected group and no bridges cross;
  * the win overlay, a particle burst and onScore(level) fire, and the next
  * level starts 1.5s later (stored-remainder pattern keeps that timer
- * pause-safe).
+ * pause-safe); P toggles pause. The highest level reached persists per game
+ * id, so re-entering resumes where the player left off.
  */
 import type {
   MiniGameDefinition,
@@ -21,6 +22,7 @@ import {
 import { LOGICAL_H, LOGICAL_W, islandAt, renderHashi } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { readLevel, saveLevel } from '../level-progress.ts'
 
 const ADVANCE_MS = 1500
 
@@ -42,7 +44,8 @@ function createHashiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   if (fit === null) throw new Error('dsh-minigames: hashi needs a 2d canvas context')
   const ctx = fit.ctx
 
-  let level = 1
+  // Level memory: resume at the highest level reached (persisted per game id).
+  let level = Math.min(readLevel('hashi'), LEVEL_SIZES.length)
   let puzzle = puzzleFromSeed(levelSeed(level), levelSize(level))
   let placed: Placed = new Map()
   let selected: number | null = null
@@ -64,6 +67,7 @@ function createHashiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
 
   const startLevel = (next: number): void => {
     level = next > LEVEL_SIZES.length ? 1 : next // wrap after L5
+    saveLevel('hashi', level) // progress memory: never regresses
     puzzle = puzzleFromSeed(levelSeed(level), levelSize(level))
     placed = new Map()
     selected = null
@@ -128,6 +132,11 @@ function createHashiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       startLevel(level) // same seed → same puzzle
       return
     }
+    if (event.code === 'KeyP') {
+      event.preventDefault()
+      togglePause()
+      return
+    }
     if (!running || winText !== null) return
     if (event.code === 'Backspace' || event.code === 'KeyZ') {
       event.preventDefault()
@@ -156,6 +165,10 @@ function createHashiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   const stopLoop = (): void => {
     cancelAnimationFrame(raf)
     raf = 0
+  }
+  const togglePause = (): void => {
+    if (running) pause()
+    else resume()
   }
   const pause = (): void => {
     if (!running) return
@@ -210,6 +223,7 @@ export const hashiGame: MiniGameDefinition = {
     'Backspace / Z：拆除上一座桥',
     'Esc：取消选择',
     'R：重开本关',
+    'P：暂停',
   ],
   create: createHashiGame,
 }
