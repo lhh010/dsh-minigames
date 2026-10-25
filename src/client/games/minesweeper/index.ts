@@ -15,6 +15,7 @@ import { COLS, ROWS } from './logic.ts'
 import { renderMinesweeper, LOGICAL_W, LOGICAL_H, CELL, HUD_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 /** Time-based score: a faster solve -> a higher score (the panel keeps the max). */
 function solveScore(elapsed: number): number {
@@ -31,9 +32,8 @@ function createMinesweeperGame(host: HTMLElement, options?: MiniGameMountOptions
 
   let state: MinesweeperState = createMinesweeperState()
   let running = false
-  let raf = 0
-  let last = 0
   let reported = false // report the solve score once per solve
+  let shownSec = -1 // last rendered whole second of the HUD clock
 
   const cellFromEvent = (event: MouseEvent): { r: number; c: number } | null => {
     const rect = canvas.getBoundingClientRect()
@@ -51,11 +51,15 @@ function createMinesweeperGame(host: HTMLElement, options?: MiniGameMountOptions
     if (cell === null) return
     if (event.button === 2) {
       event.preventDefault()
-      if (!state.over && !state.won) toggleFlag(state, cell.r, cell.c)
+      if (!state.over && !state.won) {
+        toggleFlag(state, cell.r, cell.c)
+        loop.markDirty()
+      }
       return
     }
     if (event.button !== 0 || state.over || state.won) return
     if (reveal(state, cell.r, cell.c) && state.over) revealAllMines(state)
+    loop.markDirty()
   }
 
   const onContextMenu = (event: MouseEvent): void => {
@@ -68,6 +72,7 @@ function createMinesweeperGame(host: HTMLElement, options?: MiniGameMountOptions
     if (cell === null) return
     chord(state, cell.r, cell.c)
     if (state.over) revealAllMines(state)
+    loop.markDirty()
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -76,34 +81,29 @@ function createMinesweeperGame(host: HTMLElement, options?: MiniGameMountOptions
       event.preventDefault()
       state = createMinesweeperState()
       reported = false
+      shownSec = -1
+      loop.markDirty()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
-    last = now
-    tick(state, dt)
+  const loop = createFrameLoop((f) => {
+    tick(state, f.dt)
     if (state.won && !reported) {
       reported = true
       options?.onScore?.(solveScore(state.elapsed))
+      loop.markDirty()
     }
-    renderMinesweeper(ctx, state, false)
-  }
+    const sec = Math.floor(state.elapsed)
+    if (sec !== shownSec) {
+      shownSec = sec
+      loop.markDirty()
+    }
+    if (f.render) renderMinesweeper(ctx, state, false)
+  }, { mode: 'dirty' })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -111,13 +111,14 @@ function createMinesweeperGame(host: HTMLElement, options?: MiniGameMountOptions
   const pause = (): void => {
     if (!running) return
     running = false
-    stopLoop()
+    loop.pause()
     renderMinesweeper(ctx, state, true)
   }
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.resume()
+    loop.markDirty()
   }
 
   canvas.addEventListener('mousedown', onMouseDown)
@@ -126,7 +127,7 @@ function createMinesweeperGame(host: HTMLElement, options?: MiniGameMountOptions
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderMinesweeper(ctx, state, false)
 
   return {
@@ -135,7 +136,7 @@ function createMinesweeperGame(host: HTMLElement, options?: MiniGameMountOptions
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       canvas.removeEventListener('mousedown', onMouseDown)
       canvas.removeEventListener('contextmenu', onContextMenu)

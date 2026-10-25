@@ -19,6 +19,7 @@ import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { readLevel, saveLevel } from '../level-progress.ts'
 import { THEME, createParticles } from '../theme.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 const ADVANCE_MS = 1500
 /** Discs per level; level index into this table, not a raw count. */
@@ -51,8 +52,6 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   let toastUntil = 0
   let winText: string | null = null
   let running = false
-  let raf = 0
-  let last = 0
   let advanceTimer = 0
   let advanceAt = 0
   let advanceRemaining = 0
@@ -77,6 +76,7 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     toast = null
     winText = null
     history.length = 0
+    loop.markDirty()
   }
 
   const scheduleAdvance = (delayMs: number): void => {
@@ -90,6 +90,7 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   const showToast = (): void => {
     toast = '大盘不能压小盘'
     toastUntil = performance.now() + TOAST_MS
+    loop.markDirty()
   }
 
   /** Try to drop the held disc on `to`; illegal drops shake with a toast. */
@@ -97,6 +98,7 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     if (heldRod === null) return
     if (to === heldRod) {
       heldRod = null // putting the disc back is not a move
+      loop.markDirty()
       return
     }
     const next = applyMove(state, heldRod, to)
@@ -110,6 +112,7 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     moves += 1
     heldRod = null
     selected = to
+    loop.markDirty()
     if (isWin(state)) {
       winText = `完成 · ${moves} 步（最少 ${optimalFor(discs)} 步）`
       reportScore()
@@ -130,6 +133,7 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
         return
       }
       heldRod = rod
+      loop.markDirty()
     } else {
       dropOn(rod)
     }
@@ -143,6 +147,7 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     state = entry.state
     moves = entry.moves
     heldRod = null
+    loop.markDirty()
   }
 
   const onMouseDown = (event: MouseEvent): void => {
@@ -152,6 +157,7 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     const rod = rodAt(x)
     if (rod !== null) {
       selected = rod
+      loop.markDirty()
       actOn(rod)
     }
   }
@@ -182,31 +188,27 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       if (event.code === 'ArrowLeft' || event.code === 'KeyA') selected = Math.max(0, selected - 1)
       else if (event.code === 'ArrowRight' || event.code === 'KeyD') selected = Math.min(2, selected + 1)
       else actOn(selected)
+      loop.markDirty()
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(50, now - last)
-    last = now
-    if (toast !== null && now > toastUntil) toast = null
-    renderHanoi(
-      ctx, LOGICAL_W, LOGICAL_H, state, selected, heldRod, discs, moves,
-      optimalFor(discs), perfectSoFar(moves, discs), false, winText, toast,
-    )
-    particles.tick(ctx, dt)
-  }
+  // 脏标记渲染：静态盘面只在状态或动效变化时重绘（见 frame-scheduler）。
+  const loop = createFrameLoop(f => {
+    if (toast !== null && performance.now() > toastUntil) {
+      toast = null
+      loop.markDirty()
+    }
+    const animating = particles.size() > 0
+    if (f.render || animating) {
+      renderHanoi(
+        ctx, LOGICAL_W, LOGICAL_H, state, selected, heldRod, discs, moves,
+        optimalFor(discs), perfectSoFar(moves, discs), false, winText, toast,
+      )
+      particles.tick(ctx, f.dt * 1000)
+      if (animating) loop.markDirty()
+    }
+  }, { mode: 'dirty' })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -220,7 +222,7 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       advanceTimer = 0
       advanceRemaining = Math.max(0, advanceAt - performance.now())
     }
-    stopLoop()
+    loop.pause()
     renderHanoi(
       ctx, LOGICAL_W, LOGICAL_H, state, selected, heldRod, discs, moves,
       optimalFor(discs), perfectSoFar(moves, discs), true, winText, toast,
@@ -233,14 +235,15 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       scheduleAdvance(advanceRemaining)
       advanceRemaining = 0
     }
-    startLoop()
+    loop.markDirty()
+    loop.resume()
   }
 
   canvas.addEventListener('mousedown', onMouseDown)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
 
   return {
     start: resume,
@@ -248,7 +251,7 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       clearTimeout(advanceTimer)
       advanceTimer = 0
       fit.dispose()

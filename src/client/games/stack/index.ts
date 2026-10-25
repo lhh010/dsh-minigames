@@ -14,6 +14,7 @@ import { renderStack } from './render.ts'
 import { STACK_W, STACK_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
 function createStackGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -25,8 +26,6 @@ function createStackGame(host: HTMLElement, options?: MiniGameMountOptions): Min
 
   let state: StackState = createState((Math.random() * 0xffffffff) >>> 0)
   let running = false
-  let raf = 0
-  let last = 0
   let lastScore = -1
 
   const reportScore = (): void => {
@@ -71,32 +70,20 @@ function createStackGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
+  const frame = (f: FrameInfo): void => {
     if (!running) return
-    // Clamped dt: a background tab never teleports the slider.
-    const dt = Math.min(50, Math.max(0, now - last))
-    last = now
-    step(state, dt)
-    renderStack(ctx, state)
+    step(state, f.dt * 1000)
+    if (f.render) renderStack(ctx, state)
   }
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
+  const loop = createFrameLoop(frame)
 
   const reset = (): void => {
     state = createState((Math.random() * 0xffffffff) >>> 0)
     lastScore = -1
     reportScore()
-    if (running) startLoop()
     renderStack(ctx, state)
+    loop.markDirty()
   }
 
   const togglePause = (): void => {
@@ -105,19 +92,19 @@ function createStackGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   }
   const pause = (): void => {
     running = false
-    stopLoop()
+    loop.pause()
   }
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.start()
   }
 
   canvas.addEventListener('pointerdown', onPointerDown)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderStack(ctx, state)
 
   return {
@@ -126,7 +113,7 @@ function createStackGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       canvas.removeEventListener('pointerdown', onPointerDown)
       window.removeEventListener('keydown', onKeyDown)

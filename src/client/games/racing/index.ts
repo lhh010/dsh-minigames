@@ -18,6 +18,7 @@ import { renderRacing, LOGICAL_W, LOGICAL_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { THEME, createParticles } from '../theme.ts'
+import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
 const BEST_KEY = 'dsh-minigames:best:racing'
 
@@ -43,8 +44,6 @@ function createRacingGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   let state: RacingState = createState((Date.now() ^ 0x9e3779b9) >>> 0)
   const input: LaneInput = { left: false, right: false, accel: false, brake: false }
   let running = false
-  let raf = 0
-  let last = 0
   let best = loadBest()
   let lastScore = -1
   const particles = createParticles()
@@ -201,11 +200,9 @@ function createRacingGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     changeLane(state, x < LOGICAL_W / 2 ? -1 : 1)
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
+  const frame = (f: FrameInfo): void => {
     if (!running) return
-    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000))
-    last = now
+    const dt = f.dt
     step(state, dt, input)
     handleEvents()
     // Particle physics (screen space; the burst sites are HUD-relative).
@@ -218,9 +215,11 @@ function createRacingGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     state.particles = state.particles.filter(p => p.life > 0)
     attractStep(state, dt) // no-op unless ready
     if (state.result === 'playing') reportScore()
-    renderRacing(ctx, { state, paused: false, best })
+    if (f.render) renderRacing(ctx, { state, paused: false, best })
     updateEngine()
   }
+
+  const loop = createFrameLoop(frame)
 
   const pause = (): void => {
     if (!running) return
@@ -230,7 +229,7 @@ function createRacingGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   const resume = (): void => {
     if (running) return
     running = true
-    last = performance.now()
+    loop.markDirty()
   }
   const togglePauseLocal = (): void => {
     togglePause(state)
@@ -254,8 +253,7 @@ function createRacingGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   window.addEventListener('keyup', keyUpHandler)
   focusGameHost(host)
   running = true
-  last = performance.now()
-  raf = requestAnimationFrame(frame)
+  loop.start()
   void particles
 
   return {
@@ -264,7 +262,7 @@ function createRacingGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     resume,
     destroy: () => {
       running = false
-      cancelAnimationFrame(raf)
+      loop.destroy()
       canvas.removeEventListener('pointerdown', onPointerDown)
       window.removeEventListener('keydown', keyHandler)
       window.removeEventListener('keyup', keyUpHandler)

@@ -17,6 +17,7 @@ import { renderConnect4, LOGICAL_W, LOGICAL_H, colAt, type Connect4View } from '
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { THEME, createParticles } from '../theme.ts'
+import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
 const AI_DELAY_MS = 350
 /** Per-level AI search depth (ply). */
@@ -40,8 +41,6 @@ function createConnect4Game(host: HTMLElement, options?: MiniGameMountOptions): 
   let record = { w: 0, d: 0, l: 0 }
   let winStreak = 0
   let running = false
-  let raf = 0
-  let last = 0
   let aiAt = 0
   let lastScore = -1
   const particles = createParticles()
@@ -72,6 +71,7 @@ function createConnect4Game(host: HTMLElement, options?: MiniGameMountOptions): 
     winCells = null
     aiAt = 0
     lastScore = -1
+    loop.markDirty()
   }
 
   const settle = (): void => {
@@ -104,6 +104,7 @@ function createConnect4Game(host: HTMLElement, options?: MiniGameMountOptions): 
     board = res.board
     lastMove = col * 6 + res.row
     settle()
+    loop.markDirty()
   }
 
   const playerDrop = (col: number): void => {
@@ -113,6 +114,7 @@ function createConnect4Game(host: HTMLElement, options?: MiniGameMountOptions): 
     board = res.board
     lastMove = col * 6 + res.row
     settle()
+    loop.markDirty()
     if (over === 'playing') aiAt = performance.now() + AI_DELAY_MS
   }
 
@@ -123,6 +125,7 @@ function createConnect4Game(host: HTMLElement, options?: MiniGameMountOptions): 
     const y = ((event.clientY - rect.top) * LOGICAL_H) / rect.height
     const col = colAt(x, y)
     hoverCol = col
+    loop.markDirty()
     if (col >= 0) playerDrop(col)
   }
 
@@ -131,7 +134,11 @@ function createConnect4Game(host: HTMLElement, options?: MiniGameMountOptions): 
     const rect = canvas.getBoundingClientRect()
     const x = ((event.clientX - rect.left) * LOGICAL_W) / rect.width
     const y = ((event.clientY - rect.top) * LOGICAL_H) / rect.height
-    hoverCol = colAt(x, y)
+    const col = colAt(x, y)
+    if (col !== hoverCol) {
+      hoverCol = col
+      loop.markDirty()
+    }
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -148,31 +155,33 @@ function createConnect4Game(host: HTMLElement, options?: MiniGameMountOptions): 
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
+  const frame = (f: FrameInfo): void => {
     if (!running) return
-    const dt = Math.min(50, now - last)
-    last = now
+    const now = performance.now()
     if (over === 'playing' && aiAt > 0 && now >= aiAt) {
       aiAt = 0
       aiMove()
     }
+    // Static between moves: repaint only when the scheduler allows it or a
+    // celebration burst is still on the board.
+    if (!f.render && particles.size() === 0) return
     const view: Connect4View = {
       board, hoverCol, lastMove,
       levelLabel: `L${level + 1}·深度${depth()}`,
       record, result: over, winCells,
     }
     renderConnect4(ctx, view)
-    particles.tick(ctx, dt)
+    particles.tick(ctx, f.dt * 1000)
   }
+
+  const loop = createFrameLoop(frame)
 
   canvas.addEventListener('mousedown', onMouseDown)
   canvas.addEventListener('mousemove', onMouseMove)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  last = performance.now()
-  raf = requestAnimationFrame(frame)
+  loop.start()
 
   // Sanity export for tests/debug: the first legal column helper is unused
   // in the glue but keeps the import list honest.
@@ -182,11 +191,11 @@ function createConnect4Game(host: HTMLElement, options?: MiniGameMountOptions): 
 
   return {
     start: () => { running = true },
-    pause: () => { running = false },
-    resume: () => { running = true; last = performance.now() },
+    pause: () => { running = false; loop.markDirty() },
+    resume: () => { running = true; loop.markDirty() },
     destroy: () => {
       running = false
-      cancelAnimationFrame(raf)
+      loop.destroy()
       canvas.removeEventListener('mousedown', onMouseDown)
       canvas.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('keydown', onKeyDown)

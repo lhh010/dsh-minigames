@@ -19,6 +19,7 @@ import {
 import { renderPipes, LOGICAL_W, LOGICAL_H, CELL, HUD_H, MARGIN } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
 const AUTO_ADVANCE_MS = 1500
 const MAX_SIZE = 8
@@ -41,8 +42,6 @@ function createPipesGame(host: HTMLElement, options?: MiniGameMountOptions): Min
 
   let state: PipesState = createPipesState()
   let running = false
-  let raf = 0
-  let last = 0
   let lastScore = -1
   let cursor: { r: number; c: number } | null = null
   // Seconds accumulated in the 'won' state; dt-driven so pause freezes it.
@@ -59,12 +58,14 @@ function createPipesGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     cursor = null
     wonElapsed = 0
     reportScore()
+    loop.markDirty()
   }
 
   /** Rotate the tile at the cursor/cell and check for the win transition. */
   const rotateAt = (r: number, c: number): void => {
     if (state.status !== 'playing') return
     if (rotateTile(state, r, c)) {
+      loop.markDirty()
       if (checkWin(state)) {
         wonElapsed = 0
         reportScore()
@@ -76,10 +77,12 @@ function createPipesGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     const size = state.board.size
     if (cursor === null) {
       cursor = { r: Math.floor(size / 2), c: Math.floor(size / 2) }
+      loop.markDirty()
       return
     }
     cursor.r = Math.min(size - 1, Math.max(0, cursor.r + dr))
     cursor.c = Math.min(size - 1, Math.max(0, cursor.c + dc))
+    loop.markDirty()
   }
 
   const onPointerDown = (event: PointerEvent): void => {
@@ -116,6 +119,7 @@ function createPipesGame(host: HTMLElement, options?: MiniGameMountOptions): Min
         advanceLevel(state)
         cursor = null
         wonElapsed = 0
+        loop.markDirty()
       }
       return
     }
@@ -141,48 +145,38 @@ function createPipesGame(host: HTMLElement, options?: MiniGameMountOptions): Min
         advanceLevel(state)
         cursor = null
         wonElapsed = 0
+        loop.markDirty()
       }
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
+  const frame = (f: FrameInfo): void => {
     if (!running) return
-    const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
-    last = now
-    advance(dt)
-    renderPipes(ctx, state, { paused: false, cursor })
+    advance(f.dt)
+    if (f.render) renderPipes(ctx, state, { paused: false, cursor })
   }
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
+  const loop = createFrameLoop(frame)
   const togglePause = (): void => {
     if (running) pause()
     else resume()
   }
   const pause = (): void => {
     running = false
-    stopLoop()
+    loop.pause()
     renderPipes(ctx, state, { paused: true, cursor })
   }
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.start()
   }
 
   canvas.addEventListener('pointerdown', onPointerDown)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderPipes(ctx, state, { paused: false, cursor })
 
   return {
@@ -191,7 +185,7 @@ function createPipesGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       canvas.removeEventListener('pointerdown', onPointerDown)
       window.removeEventListener('keydown', onKeyDown)

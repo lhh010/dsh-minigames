@@ -17,6 +17,7 @@ import { renderTyping, LOGICAL_W, LOGICAL_H, WORD_FONT } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { accent, createParticles } from '../theme.ts'
+import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
 function createTypingGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -28,8 +29,6 @@ function createTypingGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 
   let state: TypingState
   let running = false
-  let raf = 0
-  let last = 0
   let lastScore = -1
   const particles = createParticles()
 
@@ -91,47 +90,39 @@ function createTypingGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
+  const frame = (f: FrameInfo): void => {
     if (!running) return
-    const dt = Math.min(50, Math.max(0, now - last))
-    last = now
-    tickTyping(state, dt)
+    const dtMs = f.dt * 1000
+    tickTyping(state, dtMs)
     reportScore()
-    const shakeDx = state.shake > 0 ? Math.sin(state.shake / 18) * 4 : 0
-    renderTyping(ctx, state, false, shakeDx)
-    particles.tick(ctx, dt)
+    if (f.render) {
+      const shakeDx = state.shake > 0 ? Math.sin(state.shake / 18) * 4 : 0
+      renderTyping(ctx, state, false, shakeDx)
+      particles.tick(ctx, dtMs)
+    }
   }
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
+  const loop = createFrameLoop(frame)
   const togglePause = (): void => {
     if (running) pause()
     else resume()
   }
   const pause = (): void => {
     running = false
-    stopLoop()
+    loop.pause()
     // Frozen because all timing is dt-driven; nothing to store.
     renderTyping(ctx, state, true)
   }
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.start()
   }
 
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderTyping(ctx, state, false)
 
   return {
@@ -140,7 +131,7 @@ function createTypingGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       window.removeEventListener('keydown', onKeyDown)
     },

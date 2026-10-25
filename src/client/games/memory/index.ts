@@ -14,6 +14,7 @@ import { COLS, PAIRS } from './logic.ts'
 import { renderMemory, LOGICAL_W, LOGICAL_H, CELL, HUD_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 const REVEAL_MS = 1000
 
@@ -27,8 +28,6 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 
   let state: MemoryState = createMemoryState()
   let running = false
-  let raf = 0
-  let last = 0
   let lockUntil = 0 // ignore clicks while a mismatched pair is on display
   let flipTimer = 0 // timeout that flips a mismatched pair back down
   let revealRemaining = 0 // reveal time left when paused (pause must freeze it)
@@ -65,9 +64,11 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       flipTimer = window.setTimeout(() => {
         resetFlip(state)
         reportScore()
+        loop.markDirty()
       }, REVEAL_MS)
     }
     reportScore()
+    loop.markDirty()
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -80,30 +81,18 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       state = createMemoryState()
       lockUntil = 0
       lastScore = -1
+      loop.markDirty()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
-    last = now
-    void dt
-    renderMemory(ctx, state, false)
-  }
+  const loop = createFrameLoop((f) => {
+    void f.dt
+    if (f.render) renderMemory(ctx, state, false)
+  }, { mode: 'dirty' })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -117,7 +106,7 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       flipTimer = 0
       revealRemaining = Math.max(0, lockUntil - performance.now())
     }
-    stopLoop()
+    loop.pause()
     renderMemory(ctx, state, true)
   }
   const resume = (): void => {
@@ -129,17 +118,19 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       flipTimer = window.setTimeout(() => {
         resetFlip(state)
         reportScore()
+        loop.markDirty()
       }, revealRemaining)
     }
     revealRemaining = 0
-    startLoop()
+    loop.resume()
+    loop.markDirty()
   }
 
   canvas.addEventListener('mousedown', onMouseDown)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderMemory(ctx, state, false)
 
   return {
@@ -148,7 +139,7 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       clearTimeout(flipTimer)
       fit.dispose()
       canvas.removeEventListener('mousedown', onMouseDown)

@@ -20,6 +20,7 @@ import { LOGICAL_H, LOGICAL_W, cellAt, renderNonogram, type Cursor } from './ren
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { readLevel, saveLevel } from '../level-progress.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 const ADVANCE_MS = 1500
 
@@ -46,10 +47,10 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
   let cells = emptyCells()
   let cursor: Cursor = { r: 0, c: 0 }
   let elapsed = 0
+  /** HUD 当前已显示的整秒数，用于按秒置脏。 */
+  let shownSec = 0
   let winText: string | null = null
   let running = false
-  let raf = 0
-  let last = 0
   let advanceTimer = 0
   let advanceAt = 0
   let advanceRemaining = 0
@@ -69,6 +70,7 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
     cursor = { r: 0, c: 0 }
     elapsed = 0
     winText = null
+    loop.markDirty()
   }
 
   const scheduleAdvance = (delayMs: number): void => {
@@ -85,17 +87,20 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
   /** Toggle fill at a cell (empty/crossed → filled, filled → empty). */
   const fillAt = (r: number, c: number): void => {
     cells[r]![c] = cells[r]![c] === 1 ? 0 : 1
+    loop.markDirty()
     checkWinNow()
   }
 
   /** Toggle the X mark at a cell (empty → crossed, crossed → empty). */
   const crossAt = (r: number, c: number): void => {
     cells[r]![c] = cells[r]![c] === 2 ? 0 : 2
+    loop.markDirty()
   }
 
   const checkWinNow = (): void => {
     if (winText !== null || !checkWin(cells, pattern)) return
     winText = `第 ${level} 关完成 · 用时 ${Math.floor(elapsed)} 秒`
+    loop.markDirty()
     reportScore()
     if (running) scheduleAdvance(ADVANCE_MS)
     else advanceRemaining = ADVANCE_MS // paused at the win: arm on resume
@@ -109,6 +114,7 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
     const cell = cellAt(x, y)
     if (cell === null) return
     cursor = cell
+    loop.markDirty()
     if (event.button === 2 || event.shiftKey) crossAt(cell.r, cell.c)
     else if (event.button === 0) fillAt(cell.r, cell.c)
   }
@@ -139,6 +145,7 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
       else if (event.code === 'ArrowDown') cursor = { r: Math.min(SIZE - 1, cursor.r + 1), c: cursor.c }
       else if (event.code === 'ArrowLeft') cursor = { r: cursor.r, c: Math.max(0, cursor.c - 1) }
       else cursor = { r: cursor.r, c: Math.min(SIZE - 1, cursor.c + 1) }
+      loop.markDirty()
     } else if (event.code === 'Space') {
       event.preventDefault()
       if (event.shiftKey) crossAt(cursor.r, cursor.c)
@@ -146,24 +153,19 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000))
-    last = now
-    if (winText === null) elapsed += dt
-    renderNonogram(ctx, cells, clues, cursor, level, elapsed, false, winText)
-  }
+  // 脏标记渲染：盘面只在输入或显示秒数变化时重绘（见 frame-scheduler）。
+  const loop = createFrameLoop(f => {
+    if (winText === null) {
+      elapsed += f.dt
+      // HUD 只显示整秒：仅当显示秒变化时置脏。
+      if (Math.floor(elapsed) !== shownSec) {
+        shownSec = Math.floor(elapsed)
+        loop.markDirty()
+      }
+    }
+    if (f.render) renderNonogram(ctx, cells, clues, cursor, level, elapsed, false, winText)
+  }, { mode: 'dirty' })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -176,7 +178,7 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
       advanceTimer = 0
       advanceRemaining = Math.max(0, advanceAt - performance.now())
     }
-    stopLoop()
+    loop.pause()
     renderNonogram(ctx, cells, clues, cursor, level, elapsed, true, winText)
   }
   const resume = (): void => {
@@ -186,7 +188,8 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
       scheduleAdvance(advanceRemaining)
       advanceRemaining = 0
     }
-    startLoop()
+    loop.markDirty()
+    loop.resume()
   }
 
   canvas.addEventListener('mousedown', onMouseDown)
@@ -194,7 +197,7 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
 
   return {
     start: resume,
@@ -202,7 +205,7 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       clearTimeout(advanceTimer)
       advanceTimer = 0
       fit.dispose()

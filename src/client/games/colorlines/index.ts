@@ -14,6 +14,7 @@ import {
 import { renderColorLines, LOGICAL_W, LOGICAL_H, HUD_H, CELL, GAP, type ColorLinesView } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 const CLEAR_MS = 300
 
@@ -27,8 +28,6 @@ function createColorLinesGame(host: HTMLElement, options?: MiniGameMountOptions)
 
   let state: ColorLinesState = createColorLinesState()
   let running = false
-  let raf = 0
-  let last = 0
   let lastScore = -1
 
   let selected: Position | null = null
@@ -89,6 +88,7 @@ function createColorLinesGame(host: HTMLElement, options?: MiniGameMountOptions)
     if (cell !== null) {
       cursor = cell
       activate(cell)
+      loop.markDirty()
     }
   }
 
@@ -131,49 +131,44 @@ function createColorLinesGame(host: HTMLElement, options?: MiniGameMountOptions)
         togglePause()
         break
     }
+    loop.markDirty()
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
-    last = now
+  const loop = createFrameLoop((f) => {
     if (clearing !== null) {
-      clearing.t += dt
-      if (clearing.t >= CLEAR_MS / 1000) clearing = null
+      clearing.t += f.dt
+      if (clearing.t >= CLEAR_MS / 1000) {
+        clearing = null
+        loop.markDirty()
+      }
     }
-    const view: ColorLinesView = { selected, cursor, clearing }
-    renderColorLines(ctx, state, view)
-  }
+    // Repaint on change, or while the clear-flash animation is still live.
+    if (f.render || clearing !== null) {
+      const view: ColorLinesView = { selected, cursor, clearing }
+      renderColorLines(ctx, state, view)
+    }
+  }, { mode: 'dirty' })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
     if (running) pause()
     else resume()
   }
   const pause = (): void => {
     running = false
-    stopLoop()
+    loop.pause()
   }
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.resume()
+    loop.markDirty()
   }
 
   canvas.addEventListener('pointerdown', onPointerDown)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderColorLines(ctx, state, { selected, cursor, clearing: null })
 
   return {
@@ -182,7 +177,7 @@ function createColorLinesGame(host: HTMLElement, options?: MiniGameMountOptions)
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       canvas.removeEventListener('pointerdown', onPointerDown)
       window.removeEventListener('keydown', onKeyDown)

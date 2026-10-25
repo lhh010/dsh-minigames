@@ -12,6 +12,7 @@ import { create2048State, move2048, type Game2048State } from './logic.ts'
 import { render2048, LOGICAL_W, LOGICAL_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 function create2048Game(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -23,8 +24,6 @@ function create2048Game(host: HTMLElement, options?: MiniGameMountOptions): Mini
 
   let state: Game2048State = create2048State()
   let running = false
-  let raf = 0
-  let last = 0
   let lastScore = -1
 
   const reportScore = (): void => {
@@ -46,7 +45,10 @@ function create2048Game(host: HTMLElement, options?: MiniGameMountOptions): Mini
     if (dir !== undefined) {
       event.preventDefault()
       if (!running) return // paused: freeze the board
-      if (move2048(state, dir)) reportScore()
+      if (move2048(state, dir)) {
+        reportScore()
+        loop.markDirty()
+      }
       return
     }
     if (event.code === 'KeyR') {
@@ -54,30 +56,18 @@ function create2048Game(host: HTMLElement, options?: MiniGameMountOptions): Mini
       state = create2048State()
       lastScore = -1
       reportScore()
+      loop.markDirty()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
-    last = now
-    void dt
-    render2048(ctx, state, false)
-  }
+  const loop = createFrameLoop((f) => {
+    void f.dt
+    if (f.render) render2048(ctx, state, false)
+  }, { mode: 'dirty' })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -85,19 +75,20 @@ function create2048Game(host: HTMLElement, options?: MiniGameMountOptions): Mini
   const pause = (): void => {
     if (!running) return
     running = false
-    stopLoop()
+    loop.pause()
     render2048(ctx, state, true)
   }
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.resume()
+    loop.markDirty()
   }
 
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   render2048(ctx, state, false)
 
   return {
@@ -106,7 +97,7 @@ function create2048Game(host: HTMLElement, options?: MiniGameMountOptions): Mini
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       window.removeEventListener('keydown', onKeyDown)
     },

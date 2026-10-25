@@ -16,6 +16,7 @@ import { LOGICAL_H, LOGICAL_W, holeAt, holeCenter, renderPeg } from './render.ts
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { THEME, accent, createParticles } from '../theme.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 const ADVANCE_MS = 1500
 const TOAST_MS = 900
@@ -43,8 +44,6 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
   let toast: string | null = null
   let toastTimer = 0
   let running = false
-  let raf = 0
-  let last = 0
   let advanceTimer = 0
   let advanceAt = 0
   let advanceRemaining = 0
@@ -72,6 +71,7 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     toastTimer = window.setTimeout(() => {
       toast = null
       toastTimer = 0
+      loop.markDirty()
     }, TOAST_MS)
   }
 
@@ -81,6 +81,7 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     cursor = CENTER
     selected = null
     history.length = 0
+    loop.markDirty()
   }
 
   const scheduleAdvance = (delayMs: number): void => {
@@ -98,11 +99,16 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     if (won() || stuck()) return // frozen behind the overlay
     if (selected === null) {
       if (board[index] === 1) selected = index
-      else showToast('先选一枚棋子')
+      else {
+        showToast('先选一枚棋子')
+        return
+      }
+      loop.markDirty()
       return
     }
     if (board[index] === 1) {
       selected = index // re-pick another peg
+      loop.markDirty()
       return
     }
     const next = applyMove(board, selected, index)
@@ -125,6 +131,7 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
       if (running) scheduleAdvance(ADVANCE_MS)
       else advanceRemaining = ADVANCE_MS // paused mid-burst: arm on resume
     }
+    loop.markDirty()
   }
 
   /**
@@ -138,6 +145,7 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     if (entry === undefined) return
     board = entry.board
     selected = null
+    loop.markDirty()
   }
 
   const onMouseDown = (event: MouseEvent): void => {
@@ -148,6 +156,7 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     const index = holeAt(x, y)
     if (index !== null) {
       cursor = index
+      loop.markDirty()
       activate(index)
     }
   }
@@ -163,6 +172,7 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
       const index = r * 7 + c
       if (BOARD_MASK[index] === 1) {
         cursor = index
+        loop.markDirty()
         return
       }
     }
@@ -185,6 +195,7 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
       event.preventDefault()
       if (!running) return
       selected = null
+      loop.markDirty()
     } else if (event.code === 'Enter' || event.code === 'Space') {
       event.preventDefault()
       if (!running) return
@@ -199,28 +210,20 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(50, now - last)
-    last = now
-    renderPeg(ctx, {
-      board, cursor, selected, hints: hints(), levelDisplay: level + 1,
-      levelName: LEVELS[level]!.name, toast, win: won(), stuck: stuck(),
-      cleared: clearedPegs(),
-    }, false)
-    particles.tick(ctx, dt)
-  }
+  // 脏标记渲染：静态盘面只在状态或动效变化时重绘（见 frame-scheduler）。
+  const loop = createFrameLoop(f => {
+    const animating = particles.size() > 0
+    if (f.render || animating) {
+      renderPeg(ctx, {
+        board, cursor, selected, hints: hints(), levelDisplay: level + 1,
+        levelName: LEVELS[level]!.name, toast, win: won(), stuck: stuck(),
+        cleared: clearedPegs(),
+      }, false)
+      particles.tick(ctx, f.dt * 1000)
+      if (animating) loop.markDirty()
+    }
+  }, { mode: 'dirty' })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const pause = (): void => {
     if (!running) return
     running = false
@@ -230,7 +233,7 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
       advanceTimer = 0
       advanceRemaining = Math.max(0, advanceAt - performance.now())
     }
-    stopLoop()
+    loop.pause()
     renderPeg(ctx, {
       board, cursor, selected, hints: [], levelDisplay: level + 1,
       levelName: LEVELS[level]!.name, toast, win: won(), stuck: stuck(),
@@ -244,14 +247,15 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
       scheduleAdvance(advanceRemaining)
       advanceRemaining = 0
     }
-    startLoop()
+    loop.markDirty()
+    loop.resume()
   }
 
   canvas.addEventListener('mousedown', onMouseDown)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
 
   return {
     start: resume,
@@ -259,7 +263,7 @@ function createPegGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       clearTimeout(advanceTimer)
       advanceTimer = 0
       clearTimeout(toastTimer)

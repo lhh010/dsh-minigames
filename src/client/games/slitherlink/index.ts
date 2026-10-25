@@ -21,6 +21,7 @@ import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { readLevel, saveLevel } from '../level-progress.ts'
 import { THEME, createParticles } from '../theme.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 const ADVANCE_MS = 1500
 
@@ -35,11 +36,11 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
   let hover = -1
   let solved = false
   let running = false
-  let raf = 0
-  let last = 0
   let startedAt = 0
   let pausedAt = 0
   let elapsed = '0:00'
+  /** HUD 当前已显示的整秒数，用于按秒置脏。 */
+  let shownSec = -1
   let advanceTimer = 0
   let advanceAt = 0
   let advanceRemaining = 0
@@ -68,6 +69,7 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
     startedAt = performance.now()
     // Re-fit the canvas for the new grid size.
     refit(w, h)
+    loop.markDirty()
   }
 
   const scheduleAdvance = (delayMs: number): void => {
@@ -90,6 +92,7 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
     const cx = logicalW(puzzle.w) / 2
     const cy = logicalH(puzzle.h) / 2
     particles.burst(cx, cy, THEME.gold, 18, 170)
+    loop.markDirty()
     if (running) scheduleAdvance(ADVANCE_MS)
     else advanceRemaining = ADVANCE_MS
   }
@@ -99,6 +102,7 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
     edges[i] = mode === 'line'
       ? (edges[i] === 1 ? 0 : 1) as EdgeState
       : (edges[i] === 2 ? 0 : 2) as EdgeState
+    loop.markDirty()
     checkSolved()
   }
 
@@ -120,7 +124,11 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
     const rect = canvas.getBoundingClientRect()
     const x = ((event.clientX - rect.left) * logicalW(puzzle.w)) / rect.width
     const y = ((event.clientY - rect.top) * logicalH(puzzle.h)) / rect.height
-    hover = edgeAt(puzzle.w, puzzle.h, x, y)
+    const next = edgeAt(puzzle.w, puzzle.h, x, y)
+    if (next !== hover) {
+      hover = next
+      loop.markDirty()
+    }
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -139,23 +147,29 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(50, now - last)
-    last = now
+  // 脏标记渲染：盘面只在输入、悬停、粒子或计时秒数变化时重绘（见 frame-scheduler）。
+  const loop = createFrameLoop(f => {
     if (!solved && startedAt > 0) {
-      const secs = Math.floor((now - startedAt) / 1000)
-      elapsed = `${String(Math.floor(secs / 60))}:${String(secs % 60).padStart(2, '0')}`
+      const secs = Math.floor((performance.now() - startedAt) / 1000)
+      // HUD 计时按整秒显示：仅当显示秒变化时置脏。
+      if (secs !== shownSec) {
+        shownSec = secs
+        elapsed = `${String(Math.floor(secs / 60))}:${String(secs % 60).padStart(2, '0')}`
+        loop.markDirty()
+      }
     }
-    renderSlitherlink(ctx, {
-      w: puzzle.w, h: puzzle.h, clues: puzzle.clues, edges, hover,
-      levelLabel: `第 ${level + 1} 关`, unique: puzzle.unique, elapsed,
-      solved, paused: false,
-      cluesAllSatisfied: checkClues(edges, puzzle.clues, puzzle.w, puzzle.h),
-    })
-    particles.tick(ctx, dt)
-  }
+    const animating = particles.size() > 0
+    if (f.render || animating) {
+      renderSlitherlink(ctx, {
+        w: puzzle.w, h: puzzle.h, clues: puzzle.clues, edges, hover,
+        levelLabel: `第 ${level + 1} 关`, unique: puzzle.unique, elapsed,
+        solved, paused: false,
+        cluesAllSatisfied: checkClues(edges, puzzle.clues, puzzle.w, puzzle.h),
+      })
+      particles.tick(ctx, f.dt * 1000)
+      if (animating) loop.markDirty()
+    }
+  }, { mode: 'dirty' })
 
   const togglePause = (): void => {
     if (running) pause()
@@ -172,6 +186,7 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
       advanceTimer = 0
       advanceRemaining = Math.max(0, advanceAt - performance.now())
     }
+    loop.pause()
     renderSlitherlink(ctx, {
       w: puzzle.w, h: puzzle.h, clues: puzzle.clues, edges, hover,
       levelLabel: `第 ${level + 1} 关`, unique: puzzle.unique, elapsed,
@@ -186,12 +201,12 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
       startedAt += performance.now() - pausedAt
       pausedAt = 0
     }
-    last = performance.now()
     if (advanceRemaining > 0) {
       scheduleAdvance(advanceRemaining)
       advanceRemaining = 0
     }
-    raf = requestAnimationFrame(frame)
+    loop.markDirty()
+    loop.resume()
   }
 
   canvas.addEventListener('mousedown', onMouseDown)
@@ -201,8 +216,7 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
   focusGameHost(host)
   running = true
   startedAt = performance.now()
-  last = performance.now()
-  raf = requestAnimationFrame(frame)
+  loop.start()
 
   return {
     start: resume,
@@ -210,7 +224,7 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
     resume,
     destroy: () => {
       running = false
-      cancelAnimationFrame(raf)
+      loop.destroy()
       clearTimeout(advanceTimer)
       canvas.removeEventListener('mousedown', onMouseDown)
       canvas.removeEventListener('contextmenu', onContextMenu)

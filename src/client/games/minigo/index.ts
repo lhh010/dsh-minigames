@@ -18,6 +18,7 @@ import { renderMiniGo, LOGICAL_W, LOGICAL_H, pointAt, type MiniGoView } from './
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { THEME, createParticles } from '../theme.ts'
+import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
 const AI_DELAY_MS = 450
 
@@ -42,8 +43,6 @@ function createMiniGoGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   let whiteArea = 0
   let passes = 0
   let running = false
-  let raf = 0
-  let last = 0
   let aiAt = 0
   let lastScore = -1
   const particles = createParticles()
@@ -71,6 +70,7 @@ function createMiniGoGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     passes = 0
     aiAt = 0
     lastScore = -1
+    loop.markDirty()
   }
 
   const finish = (): void => {
@@ -82,6 +82,7 @@ function createMiniGoGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     reportScore()
     const mid = rc(board, Math.floor(board.cells.length / 2))
     particles.burst(LOGICAL_W / 2, 40 + mid.r * 30, THEME.gold, 18, 160)
+    loop.markDirty()
   }
 
   const applyPlay = (i: number, color: number): boolean => {
@@ -100,6 +101,7 @@ function createMiniGoGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     lastMove = i
     moves += 1
     passes = 0
+    loop.markDirty()
     return true
   }
 
@@ -124,6 +126,7 @@ function createMiniGoGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     const y = ((event.clientY - rect.top) * LOGICAL_H) / rect.height
     const i = pointAt(x, y)
     hover = i
+    loop.markDirty()
     if (i < 0) return
     if (board.cells[i] !== 0) return
     if (!isLegal(board, i, BLACK, prev)) return
@@ -135,7 +138,11 @@ function createMiniGoGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     const rect = canvas.getBoundingClientRect()
     const x = ((event.clientX - rect.left) * LOGICAL_W) / rect.width
     const y = ((event.clientY - rect.top) * LOGICAL_H) / rect.height
-    hover = pointAt(x, y)
+    const i = pointAt(x, y)
+    if (i !== hover) {
+      hover = i
+      loop.markDirty()
+    }
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -152,38 +159,40 @@ function createMiniGoGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
+  const frame = (f: FrameInfo): void => {
     if (!running) return
-    const dt = Math.min(50, now - last)
-    last = now
+    const now = performance.now()
     if (!over && aiAt > 0 && now >= aiAt) {
       aiAt = 0
       aiMove()
     }
+    // Static between moves: repaint only when the scheduler allows it or a
+    // capture burst is still on the board.
+    if (!f.render && particles.size() === 0) return
     const view: MiniGoView = {
       board, lastMove, levelLabel: AI_LEVELS[level]!.label,
       captures, moves, hover, over, winner, blackArea, whiteArea,
     }
     renderMiniGo(ctx, view)
-    particles.tick(ctx, dt)
+    particles.tick(ctx, f.dt * 1000)
   }
+
+  const loop = createFrameLoop(frame)
 
   canvas.addEventListener('mousedown', onMouseDown)
   canvas.addEventListener('mousemove', onMouseMove)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  last = performance.now()
-  raf = requestAnimationFrame(frame)
+  loop.start()
 
   return {
     start: () => { running = true },
-    pause: () => { running = false },
-    resume: () => { running = true; last = performance.now() },
+    pause: () => { running = false; loop.markDirty() },
+    resume: () => { running = true; loop.markDirty() },
     destroy: () => {
       running = false
-      cancelAnimationFrame(raf)
+      loop.destroy()
       canvas.removeEventListener('mousedown', onMouseDown)
       canvas.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('keydown', onKeyDown)

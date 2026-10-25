@@ -14,6 +14,7 @@ import {
 import { renderTanks, TANK_W, TANK_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 function createTanksGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -24,9 +25,6 @@ function createTanksGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   const ctx = fit.ctx
 
   let world: WorldState = createWorld()
-  let running = false
-  let raf = 0
-  let last = 0
   let lastScore = -1
 
   const input: PlayerInput = { up: false, down: false, left: false, right: false, fire: false }
@@ -97,55 +95,37 @@ function createTanksGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
-    last = now
-    stepWorld(world, dt, input)
+  const loop = createFrameLoop((f) => {
+    stepWorld(world, f.dt, input)
     reportScore()
-    renderTanks(ctx, world, false)
-  }
-
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
+    if (f.render) renderTanks(ctx, world, false)
+  })
 
   const reset = (): void => {
     world = createWorld()
     lastScore = -1
     input.up = input.down = input.left = input.right = input.fire = false
     reportScore()
-    if (running) startLoop()
+    loop.markDirty()
   }
 
   const togglePause = (): void => {
-    if (running) pause()
+    if (loop.running) pause()
     else resume()
   }
   const pause = (): void => {
-    if (!running) return
-    running = false
-    stopLoop()
+    if (!loop.running) return
+    loop.pause()
     renderTanks(ctx, world, true)
   }
   const resume = (): void => {
-    if (running) return
-    running = true
-    startLoop()
+    loop.resume()
   }
 
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
   focusGameHost(host)
-  running = true
-  startLoop()
+  loop.start()
   renderTanks(ctx, world, false)
 
   return {
@@ -153,8 +133,7 @@ function createTanksGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     pause,
     resume,
     destroy: () => {
-      running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)

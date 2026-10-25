@@ -17,6 +17,7 @@ import { PAD_KEYS } from './logic.ts'
 import { renderSimon, padAt, LOGICAL_W, LOGICAL_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 const START_DELAY_MS = 700
 const ROUND_CLEAR_MS = 800
@@ -32,8 +33,6 @@ function createSimonGame(host: HTMLElement, options?: MiniGameMountOptions): Min
 
   let state: SimonState = createSimonState()
   let running = false
-  let raf = 0
-  let last = 0
   let lit: number | null = null
   let stepTimer = 0 // timeout for the next flash start / round-start gap
   let stepAt = 0 // absolute deadline of stepTimer
@@ -58,11 +57,13 @@ function createSimonGame(host: HTMLElement, options?: MiniGameMountOptions): Min
 
   const lightPad = (pad: number, ms: number): void => {
     lit = pad
+    loop.markDirty()
     clearTimeout(litOffTimer)
     litOffAt = performance.now() + ms
     litOffTimer = window.setTimeout(() => {
       lit = null
       litOffTimer = 0
+      loop.markDirty()
     }, ms)
   }
 
@@ -89,6 +90,7 @@ function createSimonGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       startRound(state)
       scheduleStep(ROUND_CLEAR_MS)
     }
+    loop.markDirty()
     // 'wrong' -> over; render shows the overlay, 按 R 重开.
   }
 
@@ -113,6 +115,7 @@ function createSimonGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       lastScore = -1
       reportScore() // report the reset score now, not at the next round-clear
       startRound(state)
+      loop.markDirty()
       if (running) scheduleStep(START_DELAY_MS)
     } else if (event.code === 'KeyP') {
       event.preventDefault()
@@ -126,23 +129,11 @@ function createSimonGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    last = now
-    void last
-    renderSimon(ctx, state, lit, false)
-  }
+  const loop = createFrameLoop((f) => {
+    void f.dt
+    if (f.render) renderSimon(ctx, state, lit, false)
+  }, { mode: 'dirty' })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -161,7 +152,7 @@ function createSimonGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       litOffTimer = 0
       litRemaining = Math.max(0, litOffAt - performance.now())
     }
-    stopLoop()
+    loop.pause()
     renderSimon(ctx, state, lit, true)
   }
   const resume = (): void => {
@@ -182,7 +173,8 @@ function createSimonGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       lit = null
     }
     litRemaining = 0
-    startLoop()
+    loop.resume()
+    loop.markDirty()
   }
 
   canvas.addEventListener('mousedown', onMouseDown)
@@ -191,7 +183,7 @@ function createSimonGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   running = true
   startRound(state)
   scheduleStep(START_DELAY_MS)
-  startLoop()
+  loop.start()
 
   return {
     start: resume,
@@ -199,7 +191,7 @@ function createSimonGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       clearTimers()
       fit.dispose()
       canvas.removeEventListener('mousedown', onMouseDown)

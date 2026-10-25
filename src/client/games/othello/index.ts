@@ -12,6 +12,7 @@ import { chooseAiMove, createOthelloState, passTurn, place, type OthelloState } 
 import { renderOthello, LOGICAL_W, LOGICAL_H, CELL, HUD_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 const AI_DELAY_MS = 500
 
@@ -25,8 +26,6 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
 
   let state: OthelloState = createOthelloState()
   let running = false
-  let raf = 0
-  let last = 0
   let aiAt = 0
   let lastScore = -1
 
@@ -55,6 +54,7 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
     if (cell === null) return
     if (place(state, cell.r, cell.c)) {
       reportScore()
+      loop.markDirty()
       if (!state.over) aiAt = performance.now() + AI_DELAY_MS
     }
   }
@@ -66,36 +66,25 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
       state = createOthelloState()
       aiAt = 0
       lastScore = -1
+      loop.markDirty()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
-    last = now
-    if (!state.over && state.turn === 2 && now >= aiAt) {
+  const loop = createFrameLoop((f) => {
+    if (!state.over && state.turn === 2 && performance.now() >= aiAt) {
       const move = chooseAiMove(state)
       if (move !== null) place(state, move.r, move.c)
       else passTurn(state)
       reportScore()
+      loop.markDirty()
     }
-    void dt
-    renderOthello(ctx, state, false)
-  }
+    void f.dt
+    if (f.render) renderOthello(ctx, state, false)
+  }, { mode: 'dirty' })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -103,20 +92,21 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
   const pause = (): void => {
     if (!running) return
     running = false
-    stopLoop()
+    loop.pause()
     renderOthello(ctx, state, true)
   }
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.resume()
+    loop.markDirty()
   }
 
   canvas.addEventListener('mousedown', onMouseDown)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderOthello(ctx, state, false)
 
   return {
@@ -125,7 +115,7 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       canvas.removeEventListener('mousedown', onMouseDown)
       window.removeEventListener('keydown', onKeyDown)

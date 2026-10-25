@@ -17,6 +17,7 @@ import {
 import { renderMatch3, LOGICAL_W, LOGICAL_H, HUD_H, CELL, type Match3View } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
 const CLEAR_MS = 280
 const WIN_MS = 900
@@ -33,8 +34,6 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
 
   let state: Match3State = createMatch3State()
   let running = false
-  let raf = 0
-  let last = 0
   let lastScore = -1
 
   let phase: Phase = 'idle'
@@ -77,6 +76,7 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
     displayGrid = clearGrid
     phase = 'clear'
     phaseT = 0
+    loop.markDirty()
   }
 
   const onPointerDown = (event: PointerEvent): void => {
@@ -87,6 +87,7 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    const wasCursorKey = event.code.startsWith('Arrow')
     switch (event.code) {
       case 'ArrowUp':
         event.preventDefault()
@@ -117,6 +118,7 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
           reportScore()
           phase = 'idle'
           phaseT = 0
+          loop.markDirty()
         }
         break
       case 'KeyP':
@@ -124,6 +126,7 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
         togglePause()
         break
     }
+    if (wasCursorKey) loop.markDirty()
   }
 
   const advancePhase = (dt: number): void => {
@@ -152,12 +155,12 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
+  const frame = (f: FrameInfo): void => {
     if (!running) return
-    const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
-    last = now
-    advancePhase(dt)
+    advancePhase(f.dt)
+    // Idle board is static: repaint only when the scheduler is not skipping
+    // or an animation phase is running.
+    if (!f.render && phase === 'idle') return
     const view: Match3View = {
       cursor,
       clear: phase === 'clear' && clearPlan !== null
@@ -174,15 +177,7 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
     renderMatch3(ctx, state, displayGrid, view)
   }
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
+  const loop = createFrameLoop(frame)
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -190,7 +185,7 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
   const pause = (): void => {
     if (!running) return
     running = false
-    stopLoop()
+    loop.pause()
     renderMatch3(ctx, state, displayGrid, {
       cursor,
       clear: null,
@@ -201,14 +196,14 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.start()
   }
 
   canvas.addEventListener('pointerdown', onPointerDown)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderMatch3(ctx, state, state.grid, {
     cursor, clear: null, result: 'none', paused: false,
   })
@@ -219,7 +214,7 @@ function createMatch3Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       canvas.removeEventListener('pointerdown', onPointerDown)
       window.removeEventListener('keydown', onKeyDown)

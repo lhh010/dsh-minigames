@@ -19,6 +19,7 @@ import { LOGICAL_H, LOGICAL_W, TRAIL_MAX, renderMaze } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { readLevel, saveLevel } from '../level-progress.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 const ADVANCE_MS = 1500
 /** Cell grid size per level: L1 11×9, +2×2 per level up to L5 19×17. */
@@ -61,12 +62,10 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
   let moves = 0
   let winText: string | null = null
   let running = false
-  let raf = 0
   let lastScore = -1
   let advanceTimer = 0
   let advanceAt = 0
   let advanceRemaining = 0
-  let last = 0
 
   const reportScore = (): void => {
     if (level === lastScore) return
@@ -84,6 +83,7 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     trail.length = 0
     moves = 0
     winText = null
+    loop.markDirty()
   }
 
   const scheduleAdvance = (delayMs: number): void => {
@@ -102,6 +102,7 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     const delta = { up: [0, -1], right: [1, 0], down: [0, 1], left: [-1, 0] }[dir] as [number, number]
     player = { x: player.x + delta[0], y: player.y + delta[1] }
     moves += 1
+    loop.markDirty()
     if (player.x === maze.w - 1 && player.y === maze.h - 1) {
       winText = `第 ${level} 关完成 · ${moves} 步（最短 ${shortest} 步）`
       reportScore()
@@ -126,6 +127,7 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
       trail.length = 0
       moves = 0
       winText = null
+      loop.markDirty()
       return
     }
     if (event.code === 'KeyP') {
@@ -140,22 +142,11 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     tryMove(dir)
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    last = now
-    renderMaze(ctx, maze, { player, trail, level, moves, shortest, winText, paused: false })
-  }
+  // 脏标记渲染：回合制盘面只在移动 / 胜负 / 重开时重绘（见 frame-scheduler）。
+  const loop = createFrameLoop(f => {
+    if (f.render) renderMaze(ctx, maze, { player, trail, level, moves, shortest, winText, paused: false })
+  }, { mode: 'dirty' })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -163,7 +154,7 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
   const pause = (): void => {
     if (!running) return
     running = false
-    stopLoop()
+    loop.pause()
     if (advanceTimer !== 0) {
       // Freeze the auto-advance: keep the remaining delay for resume.
       advanceRemaining = Math.max(0, advanceAt - performance.now())
@@ -179,13 +170,14 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
       scheduleAdvance(advanceRemaining)
       advanceRemaining = 0
     }
-    startLoop()
+    loop.markDirty()
+    loop.resume()
   }
 
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderMaze(ctx, maze, { player, trail, level, moves, shortest, winText, paused: false })
 
   return {
@@ -194,7 +186,7 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       if (advanceTimer !== 0) window.clearTimeout(advanceTimer)
       fit.dispose()
       window.removeEventListener('keydown', onKeyDown)

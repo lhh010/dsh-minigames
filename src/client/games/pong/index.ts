@@ -13,6 +13,7 @@ import { createState, step, W, H, WIN_SCORE, type PongState } from './logic.ts'
 import { renderPong } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
 function createPongGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -24,8 +25,6 @@ function createPongGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
 
   let state: PongState = createState()
   let running = false
-  let raf = 0
-  let last = 0
   let reported = false
 
   const input = { playerX: undefined as number | undefined, left: false, right: false }
@@ -41,7 +40,7 @@ function createPongGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     state = createState((Math.random() * 0xffffffff) >>> 0)
     reported = false
     input.left = input.right = false
-    if (running) startLoop()
+    loop.markDirty()
   }
 
   const onPointerMove = (event: PointerEvent): void => {
@@ -96,26 +95,14 @@ function createPongGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     if (state.over !== null) restart()
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
+  const frame = (f: FrameInfo): void => {
     if (!running) return
-    // Clamped dt: a background tab or hitch never tunnels the ball.
-    const dt = Math.min(50, Math.max(0, now - last))
-    last = now
-    state = step(state, dt, input)
+    state = step(state, f.dt * 1000, input)
     reportScore()
-    renderPong(ctx, state)
+    if (f.render) renderPong(ctx, state)
   }
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
+  const loop = createFrameLoop(frame)
 
   const togglePause = (): void => {
     if (running) pause()
@@ -123,13 +110,13 @@ function createPongGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
   }
   const pause = (): void => {
     running = false
-    stopLoop()
+    loop.pause()
     renderPong(ctx, state)
   }
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.start()
   }
 
   canvas.addEventListener('pointermove', onPointerMove)
@@ -138,7 +125,7 @@ function createPongGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
   window.addEventListener('keyup', onKeyUp)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderPong(ctx, state)
 
   return {
@@ -147,7 +134,7 @@ function createPongGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       canvas.removeEventListener('pointermove', onPointerMove)
       canvas.removeEventListener('pointerdown', onPointerDown)

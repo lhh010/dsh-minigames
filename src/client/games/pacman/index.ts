@@ -12,6 +12,7 @@ import { createPacmanState, stepPacman, type Dir, type PacmanState } from './log
 import { renderPacman, LOGICAL_W, LOGICAL_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 const KEY_DIR: Record<string, Dir> = {
   ArrowUp: 0,
@@ -33,9 +34,6 @@ function createPacmanGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   const ctx = fit.ctx
 
   let state: PacmanState = createPacmanState()
-  let running = false
-  let raf = 0
-  let last = 0
   let t = 0
   let lastScore = -1
 
@@ -57,52 +55,36 @@ function createPacmanGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       event.preventDefault()
       state = createPacmanState()
       lastScore = -1
+      loop.markDirty()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
-    last = now
-    t += dt
-    stepPacman(state, dt)
+  const loop = createFrameLoop((f) => {
+    t += f.dt
+    stepPacman(state, f.dt)
     reportScore()
-    renderPacman(ctx, state, t, false)
-  }
+    if (f.render) renderPacman(ctx, state, t, false)
+  })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
-    if (running) pause()
+    if (loop.running) pause()
     else resume()
   }
   const pause = (): void => {
-    if (!running) return
-    running = false
-    stopLoop()
+    if (!loop.running) return
+    loop.pause()
     renderPacman(ctx, state, t, true)
   }
   const resume = (): void => {
-    if (running) return
-    running = true
-    startLoop()
+    loop.resume()
   }
 
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
-  running = true
-  startLoop()
+  loop.start()
   renderPacman(ctx, state, 0, false)
 
   return {
@@ -110,8 +92,7 @@ function createPacmanGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     pause,
     resume,
     destroy: () => {
-      running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       window.removeEventListener('keydown', onKeyDown)
     },

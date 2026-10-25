@@ -14,6 +14,7 @@ import { createFpsTrackState, shoot, tickFpsTrack, turn, LOGICAL_W, LOGICAL_H, t
 import { renderAimTrack } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
 /** Ready = click to capture the mouse; playing = locked and ticking. */
 type Phase = 'ready' | 'playing' | 'paused' | 'over'
@@ -28,8 +29,6 @@ function createAimTrackGame(host: HTMLElement, options?: MiniGameMountOptions): 
 
   let state: FpsTrackState = createFpsTrackState()
   let phase: Phase = 'ready'
-  let raf = 0
-  let last = 0
   let t = 0
   let lastScore = -1
 
@@ -53,12 +52,12 @@ function createAimTrackGame(host: HTMLElement, options?: MiniGameMountOptions): 
     const locked = document.pointerLockElement === canvas
     if (locked) {
       // Captured: start or resume the round.
-      last = performance.now()
       if (phase !== 'playing') phase = 'playing'
     } else if (phase === 'playing') {
       // Esc or browser release: park on the pause overlay.
       phase = 'paused'
     }
+    loop.markDirty()
   }
 
   const onMouseMove = (event: MouseEvent): void => {
@@ -83,6 +82,7 @@ function createAimTrackGame(host: HTMLElement, options?: MiniGameMountOptions): 
       lastScore = -1
     }
     if (phase !== 'playing') lockMouse()
+    loop.markDirty()
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -92,6 +92,7 @@ function createAimTrackGame(host: HTMLElement, options?: MiniGameMountOptions): 
       state = createFpsTrackState()
       lastScore = -1
       if (phase === 'over') phase = 'ready'
+      loop.markDirty()
       return
     }
     if (event.code === 'KeyP') {
@@ -105,36 +106,27 @@ function createAimTrackGame(host: HTMLElement, options?: MiniGameMountOptions): 
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
+  const frame = (f: FrameInfo): void => {
     if (phase === 'playing') {
-      const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
-      last = now
-      t += dt
-      tickFpsTrack(state, dt)
+      t += f.dt
+      tickFpsTrack(state, f.dt)
       reportScore()
       if (state.over && phase === 'playing') {
         phase = 'over'
         if (document.pointerLockElement === canvas) document.exitPointerLock()
       }
     }
-    renderAimTrack(ctx, state, t, phase)
+    if (f.render) renderAimTrack(ctx, state, t, phase)
   }
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
+  const loop = createFrameLoop(frame)
+
   const pause = (): void => {
     if (phase === 'playing') {
       phase = 'paused'
       if (document.pointerLockElement === canvas) document.exitPointerLock()
     }
+    loop.markDirty()
   }
   const resume = (): void => {
     // The panel asks us to resume; we need a click to re-capture the mouse.
@@ -147,7 +139,7 @@ function createAimTrackGame(host: HTMLElement, options?: MiniGameMountOptions): 
   canvas.addEventListener('click', onClick)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
-  startLoop()
+  loop.start()
   renderAimTrack(ctx, state, 0, phase)
 
   return {
@@ -155,7 +147,7 @@ function createAimTrackGame(host: HTMLElement, options?: MiniGameMountOptions): 
     pause,
     resume,
     destroy: () => {
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       if (document.pointerLockElement === canvas) document.exitPointerLock()
       document.removeEventListener('pointerlockchange', onPointerLockChange)

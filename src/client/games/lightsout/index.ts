@@ -17,6 +17,7 @@ import { LOGICAL_H, LOGICAL_W, cellAt, cellCenter, renderLights, type Cursor } f
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { THEME, createParticles } from '../theme.ts'
+import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
 const ADVANCE_MS = 1500
 /** Undo history cap: rewind stays bounded and cheap. */
@@ -60,8 +61,6 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
   let cursor: Cursor = { r: 2, c: 2 }
   let winText: string | null = null
   let running = false
-  let raf = 0
-  let last = 0
   let advanceTimer = 0
   let advanceAt = 0
   let advanceRemaining = 0
@@ -81,6 +80,7 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
     board = scramble(level * 0x9e3779b9, scrambleCount(level))
     winText = null
     history.length = 0
+    loop.markDirty()
   }
 
   const scheduleAdvance = (delayMs: number): void => {
@@ -97,6 +97,7 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
     if (history.length > MAX_HISTORY) history.shift()
     moves += 1
     board = toggleAt(board, r, c)
+    loop.markDirty()
     if (isSolved(board)) {
       winText = `第 ${level} 关完成 · ${moves} 步`
       saveReached(level + 1)
@@ -119,6 +120,7 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
     if (entry === undefined) return
     board = entry.board
     moves = entry.moves
+    loop.markDirty()
   }
 
   const onMouseDown = (event: MouseEvent): void => {
@@ -158,27 +160,21 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
       else if (event.code === 'ArrowLeft') cursor = { r: cursor.r, c: Math.max(0, cursor.c - 1) }
       else if (event.code === 'ArrowRight') cursor = { r: cursor.r, c: Math.min(SIZE - 1, cursor.c + 1) }
       else move(cursor.r, cursor.c)
+      loop.markDirty()
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
+  const frame = (f: FrameInfo): void => {
     if (!running) return
-    const dt = Math.min(50, now - last)
-    last = now
+    // Static board: repaint only when the scheduler allows it or a burst is
+    // still on the board.
+    if (!f.render && particles.size() === 0) return
     renderLights(ctx, LOGICAL_W, LOGICAL_H, board, cursor, level, moves, false, winText)
-    particles.tick(ctx, dt)
+    particles.tick(ctx, f.dt * 1000)
   }
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
+  const loop = createFrameLoop(frame)
+
   const pause = (): void => {
     if (!running) return
     running = false
@@ -188,7 +184,7 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
       advanceTimer = 0
       advanceRemaining = Math.max(0, advanceAt - performance.now())
     }
-    stopLoop()
+    loop.pause()
     renderLights(ctx, LOGICAL_W, LOGICAL_H, board, cursor, level, moves, true, winText)
   }
   const resume = (): void => {
@@ -198,7 +194,7 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
       scheduleAdvance(advanceRemaining)
       advanceRemaining = 0
     }
-    startLoop()
+    loop.start()
   }
   const togglePause = (): void => {
     if (running) pause()
@@ -209,7 +205,7 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
 
   return {
     start: resume,
@@ -217,7 +213,7 @@ function createLightsOutGame(host: HTMLElement, options?: MiniGameMountOptions):
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       clearTimeout(advanceTimer)
       advanceTimer = 0
       fit.dispose()

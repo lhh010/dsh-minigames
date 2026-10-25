@@ -15,6 +15,7 @@ import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { readLevel, saveLevel } from '../level-progress.ts'
 import { accent, createParticles } from '../theme.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 const SHAKE_MS = 260
 const TOAST_MS = 1300
@@ -58,8 +59,6 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   let toast = ''
   let toastMs = 0
   let running = false
-  let raf = 0
-  let last = 0
   let lastScore = -1
   const particles = createParticles()
 
@@ -87,6 +86,7 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     shakeMs = SHAKE_MS
     toast = text
     toastMs = TOAST_MS
+    loop.markDirty()
   }
 
   const submit = (): void => {
@@ -126,7 +126,10 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       current = current.slice(0, -1)
     } else if (/^[A-Z]$/.test(key) && current.length < len) {
       current += key
+    } else {
+      return
     }
+    loop.markDirty()
   }
 
   const restart = (): void => {
@@ -136,6 +139,7 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       reportScore()
     }
     newRound()
+    loop.markDirty()
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -164,6 +168,7 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       event.preventDefault()
       // 重开本关：当前关卡重新开局，关卡与连胜保持，不回第 1 关。
       newRound()
+      loop.markDirty()
       return
     }
     if (event.code === 'KeyP') {
@@ -194,48 +199,42 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     rows, current, keyHints, status, answer, len, tries, level, streak, toast, paused: !running,
   })
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(50, Math.max(0, now - last))
-    last = now
-    shakeMs = Math.max(0, shakeMs - dt)
-    toastMs = Math.max(0, toastMs - dt)
+  // 脏标记渲染：静态盘面只在状态或动效变化时重绘（见 frame-scheduler）。
+  const loop = createFrameLoop(f => {
+    const dtMs = f.dt * 1000
+    shakeMs = Math.max(0, shakeMs - dtMs)
+    toastMs = Math.max(0, toastMs - dtMs)
     if (toastMs === 0) toast = ''
-    const shakeDx = shakeMs > 0 ? Math.sin(shakeMs / 16) * 5 : 0
-    renderWordle(ctx, view(), shakeDx)
-    particles.tick(ctx, dt)
-  }
+    const animating = shakeMs > 0 || toastMs > 0 || particles.size() > 0
+    if (f.render || animating) {
+      const shakeDx = shakeMs > 0 ? Math.sin(shakeMs / 16) * 5 : 0
+      renderWordle(ctx, view(), shakeDx)
+      particles.tick(ctx, dtMs)
+      if (animating) loop.markDirty()
+    }
+  }, { mode: 'dirty' })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
     if (running) pause()
     else resume()
   }
   const pause = (): void => {
     running = false
-    stopLoop()
+    loop.pause()
     renderWordle(ctx, view())
   }
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.markDirty()
+    loop.resume()
   }
 
   canvas.addEventListener('mousedown', onMouseDown)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderWordle(ctx, view())
 
   return {
@@ -244,7 +243,7 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       canvas.removeEventListener('mousedown', onMouseDown)
       window.removeEventListener('keydown', onKeyDown)

@@ -20,6 +20,7 @@ import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { readLevel, saveLevel } from '../level-progress.ts'
 import { THEME, createParticles } from '../theme.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 const ADVANCE_MS = 1500
 /** Undo history cap: rewind stays bounded and cheap. */
@@ -49,8 +50,6 @@ function createFifteenGame(host: HTMLElement, options?: MiniGameMountOptions): M
   let board = scrambleFrom(createSolved(firstSize), level * 0x9e3779b9, scrambleMovesFor(firstSize)).board
   let winText: string | null = null
   let running = false
-  let raf = 0
-  let last = 0
   let advanceTimer = 0
   let advanceAt = 0
   let advanceRemaining = 0
@@ -75,6 +74,7 @@ function createFifteenGame(host: HTMLElement, options?: MiniGameMountOptions): M
     board = scrambleFrom(createSolved(s), level * 0x9e3779b9, par).board
     winText = null
     history.length = 0
+    loop.markDirty()
   }
 
   const scheduleAdvance = (delayMs: number): void => {
@@ -94,6 +94,7 @@ function createFifteenGame(host: HTMLElement, options?: MiniGameMountOptions): M
     if (history.length > MAX_HISTORY) history.shift()
     moves += 1
     board = next
+    loop.markDirty()
     if (isSolved(board)) {
       winText = `完成 · ${moves} 步（打乱 ${par} 步）`
       reportScore()
@@ -110,6 +111,7 @@ function createFifteenGame(host: HTMLElement, options?: MiniGameMountOptions): M
     if (entry === undefined) return
     board = entry.board
     moves = entry.moves
+    loop.markDirty()
   }
 
   const onMouseDown = (event: MouseEvent): void => {
@@ -148,24 +150,16 @@ function createFifteenGame(host: HTMLElement, options?: MiniGameMountOptions): M
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(50, now - last)
-    last = now
-    renderFifteen(ctx, LOGICAL_W, LOGICAL_H, board, size(), level, moves, par, false, winText)
-    particles.tick(ctx, dt)
-  }
+  // 脏标记渲染：静态盘面只在状态或动效变化时重绘（见 frame-scheduler）。
+  const loop = createFrameLoop(f => {
+    const animating = particles.size() > 0
+    if (f.render || animating) {
+      renderFifteen(ctx, LOGICAL_W, LOGICAL_H, board, size(), level, moves, par, false, winText)
+      particles.tick(ctx, f.dt * 1000)
+      if (animating) loop.markDirty()
+    }
+  }, { mode: 'dirty' })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -179,7 +173,7 @@ function createFifteenGame(host: HTMLElement, options?: MiniGameMountOptions): M
       advanceTimer = 0
       advanceRemaining = Math.max(0, advanceAt - performance.now())
     }
-    stopLoop()
+    loop.pause()
     renderFifteen(ctx, LOGICAL_W, LOGICAL_H, board, size(), level, moves, par, true, winText)
   }
   const resume = (): void => {
@@ -189,14 +183,15 @@ function createFifteenGame(host: HTMLElement, options?: MiniGameMountOptions): M
       scheduleAdvance(advanceRemaining)
       advanceRemaining = 0
     }
-    startLoop()
+    loop.markDirty()
+    loop.resume()
   }
 
   canvas.addEventListener('mousedown', onMouseDown)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
 
   return {
     start: resume,
@@ -204,7 +199,7 @@ function createFifteenGame(host: HTMLElement, options?: MiniGameMountOptions): M
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       clearTimeout(advanceTimer)
       advanceTimer = 0
       fit.dispose()

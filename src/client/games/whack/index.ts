@@ -11,6 +11,7 @@ import { createWhackState, tickWhack, whack, type WhackState } from './logic.ts'
 import { renderWhack, LOGICAL_W, LOGICAL_H, CELL, HUD_H, COLS, ROWS } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
 function createWhackGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -22,8 +23,6 @@ function createWhackGame(host: HTMLElement, options?: MiniGameMountOptions): Min
 
   let state: WhackState = createWhackState()
   let running = false
-  let raf = 0
-  let last = 0
   let lastScore = -1
 
   const reportScore = (): void => {
@@ -64,44 +63,33 @@ function createWhackGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
+  const frame = (f: FrameInfo): void => {
     if (!running) return
-    const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
-    last = now
-    tickWhack(state, dt)
+    tickWhack(state, f.dt)
     reportScore()
-    renderWhack(ctx, state)
+    if (f.render) renderWhack(ctx, state)
   }
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
+  const loop = createFrameLoop(frame)
   const togglePause = (): void => {
     if (running) pause()
     else resume()
   }
   const pause = (): void => {
     running = false
-    stopLoop()
+    loop.pause()
   }
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.start()
   }
 
   canvas.addEventListener('mousedown', onMouseDown)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderWhack(ctx, state)
 
   return {
@@ -110,7 +98,7 @@ function createWhackGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       canvas.removeEventListener('mousedown', onMouseDown)
       window.removeEventListener('keydown', onKeyDown)

@@ -12,6 +12,7 @@ import { createDodger, stepDodger, setTarget, W, H, type DodgerState } from './l
 import { renderDodger } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
 function createDodgerGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -23,8 +24,6 @@ function createDodgerGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 
   let state: DodgerState = createDodger()
   let running = false
-  let raf = 0
-  let last = 0
   let lastScore = -1
 
   const input = { up: false, down: false, left: false, right: false }
@@ -100,32 +99,20 @@ function createDodgerGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
+  const frame = (f: FrameInfo): void => {
     if (!running) return
-    // Clamped dt: a background tab or hitch never teleports bullets.
-    const dt = Math.min(50, Math.max(0, now - last))
-    last = now
-    stepDodger(state, dt, input)
+    stepDodger(state, f.dt * 1000, input)
     reportScore()
-    renderDodger(ctx, state, false)
+    if (f.render) renderDodger(ctx, state, false)
   }
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
+  const loop = createFrameLoop(frame)
 
   const reset = (): void => {
     state = createDodger()
     lastScore = -1
     input.up = input.down = input.left = input.right = false
-    if (running) startLoop()
+    loop.markDirty()
   }
 
   const togglePause = (): void => {
@@ -135,13 +122,13 @@ function createDodgerGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   const pause = (): void => {
     if (!running) return
     running = false
-    stopLoop()
+    loop.pause()
     renderDodger(ctx, state, true)
   }
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.start()
   }
 
   canvas.addEventListener('pointermove', onPointerMove)
@@ -149,7 +136,7 @@ function createDodgerGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   window.addEventListener('keyup', onKeyUp)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderDodger(ctx, state, false)
 
   return {
@@ -158,7 +145,7 @@ function createDodgerGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       canvas.removeEventListener('pointermove', onPointerMove)
       window.removeEventListener('keydown', onKeyDown)

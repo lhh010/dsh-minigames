@@ -14,6 +14,7 @@ import {
 import { renderAsteroids, AST_W, AST_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
 function createAsteroidsGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -25,8 +26,6 @@ function createAsteroidsGame(host: HTMLElement, options?: MiniGameMountOptions):
 
   let world: AsteroidsState = createAsteroids()
   let running = false
-  let raf = 0
-  let last = 0
   let lastScore = -1
 
   const input: PlayerInput = { left: false, right: false, thrust: false, fire: false }
@@ -88,32 +87,21 @@ function createAsteroidsGame(host: HTMLElement, options?: MiniGameMountOptions):
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
+  const frame = (f: FrameInfo): void => {
     if (!running) return
-    const dt = Math.min(50, Math.max(0, now - last))
-    last = now
-    updateAsteroids(world, dt, input)
+    updateAsteroids(world, f.dt * 1000, input)
     reportScore()
-    renderAsteroids(ctx, world, false)
+    if (f.render) renderAsteroids(ctx, world, false)
   }
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
+  const loop = createFrameLoop(frame)
 
   const reset = (): void => {
     world = createAsteroids()
     lastScore = -1
     input.left = input.right = input.thrust = input.fire = false
     reportScore()
-    if (running) startLoop()
+    loop.markDirty()
   }
 
   const togglePause = (): void => {
@@ -123,20 +111,20 @@ function createAsteroidsGame(host: HTMLElement, options?: MiniGameMountOptions):
   const pause = (): void => {
     if (!running) return
     running = false
-    stopLoop()
+    loop.pause()
     renderAsteroids(ctx, world, true)
   }
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.start()
   }
 
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderAsteroids(ctx, world, false)
 
   return {
@@ -145,7 +133,7 @@ function createAsteroidsGame(host: HTMLElement, options?: MiniGameMountOptions):
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)

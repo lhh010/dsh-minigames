@@ -17,6 +17,7 @@ import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { readLevel, saveLevel } from '../level-progress.ts'
 import { THEME, createParticles } from '../theme.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 const ADVANCE_MS = 1500
 
@@ -40,9 +41,9 @@ function createSchulteGame(host: HTMLElement, options?: MiniGameMountOptions): M
   let wrong: WrongFlash | null = null
   let wrongAt = 0
   let winText: string | null = null
+  /** HUD 当前已显示的 0.1 秒计数，用于计时显示变化时置脏。 */
+  let shownTenth = 0
   let running = false
-  let raf = 0
-  let last = 0
   let advanceTimer = 0
   let advanceAt = 0
   let advanceRemaining = 0
@@ -61,6 +62,7 @@ function createSchulteGame(host: HTMLElement, options?: MiniGameMountOptions): M
     pausedElapsed = 0
     wrong = null
     winText = null
+    loop.markDirty()
   }
 
   const finishLevel = (): void => {
@@ -86,6 +88,7 @@ function createSchulteGame(host: HTMLElement, options?: MiniGameMountOptions): M
       wrong = { index, ageMs: 0 }
       wrongAt = performance.now()
     }
+    loop.markDirty()
   }
 
   const scheduleAdvance = (delayMs: number): void => {
@@ -122,28 +125,30 @@ function createSchulteGame(host: HTMLElement, options?: MiniGameMountOptions): M
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(50, now - last)
-    last = now
+  // 脏标记渲染：盘面只在输入、误点闪烁、粒子或 HUD 计时显示值变化时重绘。
+  const loop = createFrameLoop(f => {
+    const now = performance.now()
     if (wrong !== null) {
-      wrong = { index: wrong.index, ageMs: now - wrongAt }
-      if (wrong.ageMs > 200) wrong = null
+      const ageMs = now - wrongAt
+      if (ageMs > 200) wrong = null
+      else wrong = { index: wrong.index, ageMs }
     }
-    renderSchulte(ctx, LOGICAL_W, LOGICAL_H, grid, level, lockedCount, wrong, penalizedElapsed(), wrongCount, false, winText)
-    particles.tick(ctx, dt)
-  }
+    if (startAt !== 0) {
+      // HUD 计时按 0.1 秒显示：仅当显示值变化时置脏。
+      const tenth = Math.floor(penalizedElapsed() / 100)
+      if (tenth !== shownTenth) {
+        shownTenth = tenth
+        loop.markDirty()
+      }
+    }
+    const animating = wrong !== null || particles.size() > 0
+    if (f.render || animating) {
+      renderSchulte(ctx, LOGICAL_W, LOGICAL_H, grid, level, lockedCount, wrong, penalizedElapsed(), wrongCount, false, winText)
+      particles.tick(ctx, f.dt * 1000)
+      if (animating) loop.markDirty()
+    }
+  }, { mode: 'dirty' })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -159,7 +164,7 @@ function createSchulteGame(host: HTMLElement, options?: MiniGameMountOptions): M
       advanceTimer = 0
       advanceRemaining = Math.max(0, advanceAt - performance.now())
     }
-    stopLoop()
+    loop.pause()
     renderSchulte(ctx, LOGICAL_W, LOGICAL_H, grid, level, lockedCount, wrong, penalizedElapsed(), wrongCount, true, winText)
   }
   const resume = (): void => {
@@ -170,14 +175,15 @@ function createSchulteGame(host: HTMLElement, options?: MiniGameMountOptions): M
       scheduleAdvance(advanceRemaining)
       advanceRemaining = 0
     }
-    startLoop()
+    loop.markDirty()
+    loop.resume()
   }
 
   canvas.addEventListener('pointerdown', onPointerDown)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
 
   return {
     start: resume,
@@ -185,7 +191,7 @@ function createSchulteGame(host: HTMLElement, options?: MiniGameMountOptions): M
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       clearTimeout(advanceTimer)
       advanceTimer = 0
       fit.dispose()

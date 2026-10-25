@@ -23,6 +23,7 @@ import { LOGICAL_H, LOGICAL_W, islandAt, renderHashi } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { readLevel, saveLevel } from '../level-progress.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 const ADVANCE_MS = 1500
 
@@ -52,8 +53,6 @@ function createHashiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   let elapsed = 0
   let winText: string | null = null
   let running = false
-  let raf = 0
-  let last = 0
   let advanceTimer = 0
   let advanceAt = 0
   let advanceRemaining = 0
@@ -73,6 +72,7 @@ function createHashiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     selected = null
     elapsed = 0
     winText = null
+    loop.markDirty()
   }
 
   const scheduleAdvance = (delayMs: number): void => {
@@ -86,6 +86,7 @@ function createHashiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   const checkWinNow = (): void => {
     if (winText !== null || !isSolved(puzzle.islands, placed)) return
     winText = `第 ${level} 关完成 · 用时 ${Math.floor(elapsed)} 秒`
+    loop.markDirty()
     reportScore()
     if (running) scheduleAdvance(ADVANCE_MS)
     else advanceRemaining = ADVANCE_MS // paused at the win: arm on resume
@@ -95,17 +96,21 @@ function createHashiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   const pickIsland = (index: number): void => {
     if (selected === null) {
       selected = index
+      loop.markDirty()
       return
     }
     if (selected === index) {
       selected = null // clicking the selected island again clears it
+      loop.markDirty()
       return
     }
     if (!legalLine(puzzle.islands, selected, index)) {
       selected = index // not in line: switch the selection instead
+      loop.markDirty()
       return
     }
     placed = cycleBridge(placed, selected, index)
+    loop.markDirty()
     checkWinNow()
   }
 
@@ -117,6 +122,7 @@ function createHashiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     const index = islandAt(puzzle.islands, puzzle.size, x, y)
     if (index === null) {
       selected = null // a click on empty water clears the selection
+      loop.markDirty()
       return
     }
     pickIsland(index)
@@ -141,31 +147,21 @@ function createHashiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     if (event.code === 'Backspace' || event.code === 'KeyZ') {
       event.preventDefault()
       placed = removeLastBridge(placed)
+      loop.markDirty()
       checkWinNow()
     } else if (event.code === 'Escape') {
       event.preventDefault()
       selected = null
+      loop.markDirty()
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000))
-    last = now
-    if (winText === null) elapsed += dt
-    renderHashi(ctx, puzzle, placed, selected, level, elapsed, false, winText)
-  }
+  // 脏标记渲染：静态盘面只在输入变化时重绘（见 frame-scheduler）。
+  const loop = createFrameLoop(f => {
+    if (winText === null) elapsed += f.dt
+    if (f.render) renderHashi(ctx, puzzle, placed, selected, level, elapsed, false, winText)
+  }, { mode: 'dirty' })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -178,7 +174,7 @@ function createHashiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       advanceTimer = 0
       advanceRemaining = Math.max(0, advanceAt - performance.now())
     }
-    stopLoop()
+    loop.pause()
     renderHashi(ctx, puzzle, placed, selected, level, elapsed, true, winText)
   }
   const resume = (): void => {
@@ -188,14 +184,15 @@ function createHashiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       scheduleAdvance(advanceRemaining)
       advanceRemaining = 0
     }
-    startLoop()
+    loop.markDirty()
+    loop.resume()
   }
 
   canvas.addEventListener('mousedown', onMouseDown)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
 
   return {
     start: resume,
@@ -203,7 +200,7 @@ function createHashiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       clearTimeout(advanceTimer)
       advanceTimer = 0
       fit.dispose()

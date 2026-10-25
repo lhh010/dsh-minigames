@@ -12,6 +12,7 @@ import { createSnakeState, stepSnake, turn, type SnakeState } from './logic.ts'
 import { renderSnake, LOGICAL_W, LOGICAL_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 const TICK_BASE = 180
 const TICK_MIN = 70
@@ -30,9 +31,6 @@ function createSnakeGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   const ctx = fit.ctx
 
   let state: SnakeState = createSnakeState()
-  let running = false
-  let raf = 0
-  let last = 0
   let tickAcc = 0
   let lastScore = -1
 
@@ -73,15 +71,12 @@ function createSnakeGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     tickAcc = 0
     lastScore = -1
     reportScore()
+    loop.markDirty()
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
-    last = now
+  const loop = createFrameLoop((f) => {
     if (!state.over) {
-      tickAcc += dt * 1000
+      tickAcc += f.dt * 1000
       const interval = tickFor(state.score)
       while (tickAcc >= interval && !state.over) {
         tickAcc -= interval
@@ -89,38 +84,25 @@ function createSnakeGame(host: HTMLElement, options?: MiniGameMountOptions): Min
         reportScore()
       }
     }
-    renderSnake(ctx, state, false)
-  }
+    if (f.render) renderSnake(ctx, state, false)
+  })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
-    if (running) pause()
+    if (loop.running) pause()
     else resume()
   }
   const pause = (): void => {
-    if (!running) return
-    running = false
-    stopLoop()
+    if (!loop.running) return
+    loop.pause()
     renderSnake(ctx, state, true)
   }
   const resume = (): void => {
-    if (running) return
-    running = true
-    startLoop()
+    loop.resume()
   }
 
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
-  running = true
-  startLoop()
+  loop.start()
   renderSnake(ctx, state, false)
 
   return {
@@ -128,8 +110,7 @@ function createSnakeGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     pause,
     resume,
     destroy: () => {
-      running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       window.removeEventListener('keydown', onKeyDown)
     },

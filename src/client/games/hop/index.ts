@@ -12,6 +12,7 @@ import { charge, createHopState, jump, startCharge, stepHop, type HopState } fro
 import { renderHop, VIEW_W, VIEW_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
 function createHopGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -23,8 +24,6 @@ function createHopGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
 
   let state: HopState = createHopState()
   let running = false
-  let raf = 0
-  let last = 0
   let lastScore = -1
 
   const reportScore = (): void => {
@@ -72,38 +71,27 @@ function createHopGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
+  const frame = (f: FrameInfo): void => {
     if (!running) return
-    const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
-    last = now
-    charge(state, dt)
-    stepHop(state, dt)
+    charge(state, f.dt)
+    stepHop(state, f.dt)
     reportScore()
-    renderHop(ctx, state)
+    if (f.render) renderHop(ctx, state)
   }
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
+  const loop = createFrameLoop(frame)
   const togglePause = (): void => {
     if (running) pause()
     else resume()
   }
   const pause = (): void => {
     running = false
-    stopLoop()
+    loop.pause()
   }
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.start()
   }
 
   canvas.addEventListener('mousedown', onMouseDown)
@@ -112,7 +100,7 @@ function createHopGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
   window.addEventListener('keyup', onKeyUp)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderHop(ctx, state)
 
   return {
@@ -121,7 +109,7 @@ function createHopGame(host: HTMLElement, options?: MiniGameMountOptions): MiniG
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       canvas.removeEventListener('mousedown', onMouseDown)
       canvas.removeEventListener('mouseup', onMouseUp)

@@ -12,6 +12,7 @@ import { createBreakoutState, movePaddle, stepBreakout, type BreakoutState } fro
 import { renderBreakout, LOGICAL_W, LOGICAL_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
 function createBreakoutGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -23,8 +24,6 @@ function createBreakoutGame(host: HTMLElement, options?: MiniGameMountOptions): 
 
   let state: BreakoutState = createBreakoutState()
   let running = false
-  let raf = 0
-  let last = 0
   let lastScore = -1
 
   const reportScore = (): void => {
@@ -67,27 +66,16 @@ function createBreakoutGame(host: HTMLElement, options?: MiniGameMountOptions): 
     }
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
+  const frame = (f: FrameInfo): void => {
     if (!running) return
-    const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
-    last = now
     if (!state.over) {
-      stepBreakout(state, dt)
+      stepBreakout(state, f.dt)
       reportScore()
     }
-    renderBreakout(ctx, state, false)
+    if (f.render) renderBreakout(ctx, state, false)
   }
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
+  const loop = createFrameLoop(frame)
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -95,13 +83,13 @@ function createBreakoutGame(host: HTMLElement, options?: MiniGameMountOptions): 
   const pause = (): void => {
     if (!running) return
     running = false
-    stopLoop()
+    loop.pause()
     renderBreakout(ctx, state, true)
   }
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.start()
   }
 
   canvas.addEventListener('mousemove', onMouseMove)
@@ -109,7 +97,7 @@ function createBreakoutGame(host: HTMLElement, options?: MiniGameMountOptions): 
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderBreakout(ctx, state, false)
 
   return {
@@ -118,7 +106,7 @@ function createBreakoutGame(host: HTMLElement, options?: MiniGameMountOptions): 
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       canvas.removeEventListener('mousemove', onMouseMove)
       canvas.removeEventListener('mousedown', onMouseDown)

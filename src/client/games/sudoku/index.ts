@@ -13,6 +13,7 @@ import { createSudokuState, place, tick, type Difficulty, type SudokuState } fro
 import { renderSudoku, LOGICAL_W, LOGICAL_H, CELL, HUD_H } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
+import { createFrameLoop } from '../frame-scheduler.ts'
 
 /** Time-based score: a faster solve -> a higher score (the panel keeps the max). */
 function solveScore(elapsed: number): number {
@@ -33,9 +34,8 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   let difficulty: Difficulty = 'normal'
   let cursor = { r: 0, c: 0 }
   let running = false
-  let raf = 0
-  let last = 0
   let reported = false
+  let shownSec = -1 // last rendered whole second of the HUD clock
 
   const newPuzzle = (): void => {
     state = createSudokuState(undefined, difficulty)
@@ -55,11 +55,13 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   const onMouseDown = (event: MouseEvent): void => {
     if (state.won) {
       newPuzzle()
+      loop.markDirty()
       return
     }
     const cell = cellFromEvent(event)
     if (cell === null) return
     cursor = cell
+    loop.markDirty()
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -67,6 +69,7 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     if (event.code === 'KeyR') {
       event.preventDefault()
       newPuzzle()
+      loop.markDirty()
       return
     }
     if (event.code === 'KeyP') {
@@ -78,6 +81,7 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       event.preventDefault()
       difficulty = DIFF_CYCLE[(DIFF_CYCLE.indexOf(difficulty) + 1) % DIFF_CYCLE.length]!
       newPuzzle()
+      loop.markDirty()
       return
     }
     if (!running || state.won) return
@@ -101,30 +105,24 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       event.preventDefault()
       cursor = { r: cursor.r, c: Math.min(8, cursor.c + 1) }
     }
+    loop.markDirty()
   }
 
-  const frame = (now: number): void => {
-    raf = requestAnimationFrame(frame)
-    if (!running) return
-    const dt = Math.min(0.033, Math.max(0, (now - last) / 1000))
-    last = now
-    tick(state, dt)
+  const loop = createFrameLoop((f) => {
+    tick(state, f.dt)
     if (state.won && !reported) {
       reported = true
       options?.onScore?.(solveScore(state.elapsed))
+      loop.markDirty()
     }
-    renderSudoku(ctx, state, difficulty, cursor, false)
-  }
+    const sec = Math.floor(state.elapsed)
+    if (sec !== shownSec) {
+      shownSec = sec
+      loop.markDirty()
+    }
+    if (f.render) renderSudoku(ctx, state, difficulty, cursor, false)
+  }, { mode: 'dirty' })
 
-  const startLoop = (): void => {
-    if (raf !== 0) return
-    last = performance.now()
-    raf = requestAnimationFrame(frame)
-  }
-  const stopLoop = (): void => {
-    cancelAnimationFrame(raf)
-    raf = 0
-  }
   const togglePause = (): void => {
     if (running) pause()
     else resume()
@@ -132,20 +130,21 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   const pause = (): void => {
     if (!running) return
     running = false
-    stopLoop()
+    loop.pause()
     renderSudoku(ctx, state, difficulty, cursor, true)
   }
   const resume = (): void => {
     if (running) return
     running = true
-    startLoop()
+    loop.resume()
+    loop.markDirty()
   }
 
   canvas.addEventListener('mousedown', onMouseDown)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
-  startLoop()
+  loop.start()
   renderSudoku(ctx, state, difficulty, cursor, false)
 
   return {
@@ -154,7 +153,7 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     resume,
     destroy: () => {
       running = false
-      stopLoop()
+      loop.destroy()
       fit.dispose()
       canvas.removeEventListener('mousedown', onMouseDown)
       window.removeEventListener('keydown', onKeyDown)
