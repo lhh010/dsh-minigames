@@ -5,7 +5,7 @@
  * (LOGICAL_W x LOGICAL_H).
  */
 import {
-  HIT_MIN_Y, LANE_COUNT, LOGIC_H, MISS_Y, ROW_H, type PianoState, type Tile,
+  HIT_MIN_Y, LANE_COUNT, LINE_Y, LOGIC_H, MISS_Y, ROW_H, type PianoState, type Tile,
 } from './logic.ts'
 import { THEME, accent, drawBackground, drawOverlay, glow, hudPair, noGlow, roundRectPath } from '../theme.ts'
 
@@ -43,17 +43,31 @@ function drawLanes(ctx: CanvasRenderingContext2D): void {
 }
 
 function drawHitZone(ctx: CanvasRenderingContext2D): void {
+  // Soft gradient window + a bright judge line at LINE_Y: presses count
+  // while a tile covers the line; the window edges are the early/late
+  // tolerance, so the visuals and the logic read the same rule.
   const h = MISS_Y - HIT_MIN_Y
   const g = ctx.createLinearGradient(0, HIT_MIN_Y, 0, MISS_Y)
-  g.addColorStop(0, 'rgba(122,162,247,0)')
-  g.addColorStop(1, 'rgba(122,162,247,0.16)')
+  g.addColorStop(0, 'rgba(122,162,247,0.02)')
+  g.addColorStop(0.5, 'rgba(122,162,247,0.14)')
+  g.addColorStop(1, 'rgba(122,162,247,0.02)')
   ctx.fillStyle = g
   ctx.fillRect(0, HIT_MIN_Y, LOGICAL_W, h)
-  ctx.strokeStyle = 'rgba(122,162,247,0.55)'
-  ctx.lineWidth = 2
+  ctx.strokeStyle = 'rgba(122,162,247,0.28)'
+  ctx.lineWidth = 1
+  ctx.setLineDash([6, 8])
   ctx.beginPath()
+  ctx.moveTo(0, HIT_MIN_Y)
+  ctx.lineTo(LOGICAL_W, HIT_MIN_Y)
   ctx.moveTo(0, MISS_Y)
   ctx.lineTo(LOGICAL_W, MISS_Y)
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.strokeStyle = 'rgba(122,162,247,0.75)'
+  ctx.lineWidth = 2.5
+  ctx.beginPath()
+  ctx.moveTo(0, LINE_Y)
+  ctx.lineTo(LOGICAL_W, LINE_Y)
   ctx.stroke()
 }
 

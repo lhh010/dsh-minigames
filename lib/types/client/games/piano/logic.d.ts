@@ -12,12 +12,16 @@ export declare const LANE_COUNT = 4;
 export declare const LOGIC_H = 640;
 /** One tile row height in px; 4 rows are visible. */
 export declare const ROW_H = 160;
-/** Tiles are hittable once their top edge is below this y. */
+/** The judge line: tiles must cover it when pressed. */
+export declare const LINE_Y: number;
+/** Judge window half-height around LINE_Y (early/late tolerance). */
+export declare const GRACE: number;
+/** A tile is hittable while it overlaps this window (bottom >= HIT_MIN_Y). */
 export declare const HIT_MIN_Y: number;
-/** An unhit tile whose top passes this y (the bottom edge) is a miss. */
-export declare const MISS_Y = 640;
-/** Rows prefilled above/at the screen at run start. */
-export declare const PREFILL_ROWS = 5;
+/** An unhit tile whose top passes this y has left the judge window: miss. */
+export declare const MISS_Y: number;
+/** Rows prefilled above the screen at run start (lead-in for reaction). */
+export declare const PREFILL_ROWS = 8;
 /** Probability a spawned tile is long (2 rows, counts as one hit). */
 export declare const LONG_CHANCE = 0.18;
 export declare const BASE_SPEED = 340;
@@ -73,16 +77,21 @@ export declare function comboMultiplier(combo: number): number;
  * (len 2). Long tiles do not consume an extra row slot — spacing is uniform.
  */
 export declare function spawnTile(rng: () => number, y: number): Tile;
-/** A fresh state in the ready (attract) state, prefilled deterministically. */
+/** A fresh state in the ready (attract) state, prefilled deterministically.
+ * The prefilled field starts ABOVE the screen: the lowest tile's top sits a
+ * full row above y=0 so the first press is ~1.8s away at base speed — the
+ * player gets a lead-in instead of an instant judgment. */
 export declare function createState(seed?: number): PianoState;
 /** Start (or restart) the run from ready/over with the SAME seed. */
 export declare function startRun(state: PianoState): void;
 /** Toggle between playing and paused; no-op otherwise. */
 export declare function togglePause(state: PianoState): void;
 /**
- * Press a lane. A hit requires an unhit tile in that lane whose top edge is
- * inside the hit zone ([HIT_MIN_Y, MISS_Y]); otherwise the press is a miss
- * and the run ends. Wrong lane and too-early presses both fail here.
+ * Press a lane. A hit requires an unhit tile in that lane OVERLAPPING the
+ * judge window (the tile's body covers any part of [HIT_MIN_Y, MISS_Y] —
+ * i.e. it is pressing on or straddling the judge line); a press with no
+ * such tile (wrong lane or too early) fails the run. Long tiles hit from
+ * the moment their bottom edge reaches the window top.
  */
 export declare function pressLane(state: PianoState, lane: number): boolean;
 /**

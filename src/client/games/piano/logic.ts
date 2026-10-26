@@ -13,12 +13,16 @@ export const LANE_COUNT = 4
 export const LOGIC_H = 640
 /** One tile row height in px; 4 rows are visible. */
 export const ROW_H = 160
-/** Tiles are hittable once their top edge is below this y. */
-export const HIT_MIN_Y = LOGIC_H - ROW_H * 1.25
-/** An unhit tile whose top passes this y (the bottom edge) is a miss. */
-export const MISS_Y = LOGIC_H
-/** Rows prefilled above/at the screen at run start. */
-export const PREFILL_ROWS = 5
+/** The judge line: tiles must cover it when pressed. */
+export const LINE_Y = LOGIC_H - 100
+/** Judge window half-height around LINE_Y (early/late tolerance). */
+export const GRACE = ROW_H * 0.45
+/** A tile is hittable while it overlaps this window (bottom >= HIT_MIN_Y). */
+export const HIT_MIN_Y = LINE_Y - GRACE
+/** An unhit tile whose top passes this y has left the judge window: miss. */
+export const MISS_Y = LINE_Y + GRACE
+/** Rows prefilled above the screen at run start (lead-in for reaction). */
+export const PREFILL_ROWS = 8
 /** Probability a spawned tile is long (2 rows, counts as one hit). */
 export const LONG_CHANCE = 0.18
 
@@ -97,11 +101,14 @@ export function spawnTile(rng: () => number, y: number): Tile {
   }
 }
 
-/** A fresh state in the ready (attract) state, prefilled deterministically. */
+/** A fresh state in the ready (attract) state, prefilled deterministically.
+ * The prefilled field starts ABOVE the screen: the lowest tile's top sits a
+ * full row above y=0 so the first press is ~1.8s away at base speed — the
+ * player gets a lead-in instead of an instant judgment. */
 export function createState(seed = 1): PianoState {
   const rng = mulberry32(seed)
   const tiles: Tile[] = []
-  let topY = LOGIC_H - ROW_H * 2
+  let topY = LOGIC_H - ROW_H * 7
   for (let i = 0; i < PREFILL_ROWS; i += 1) {
     tiles.push(spawnTile(rng, topY))
     topY -= ROW_H
@@ -134,16 +141,19 @@ export function togglePause(state: PianoState): void {
 }
 
 /**
- * Press a lane. A hit requires an unhit tile in that lane whose top edge is
- * inside the hit zone ([HIT_MIN_Y, MISS_Y]); otherwise the press is a miss
- * and the run ends. Wrong lane and too-early presses both fail here.
+ * Press a lane. A hit requires an unhit tile in that lane OVERLAPPING the
+ * judge window (the tile's body covers any part of [HIT_MIN_Y, MISS_Y] —
+ * i.e. it is pressing on or straddling the judge line); a press with no
+ * such tile (wrong lane or too early) fails the run. Long tiles hit from
+ * the moment their bottom edge reaches the window top.
  */
 export function pressLane(state: PianoState, lane: number): boolean {
   if (state.result !== 'playing') return false
   let candidate: Tile | null = null
   for (const tile of state.tiles) {
     if (tile.lane !== lane || tile.hit) continue
-    if (tile.y >= HIT_MIN_Y && tile.y <= MISS_Y) {
+    const bottom = tile.y + tile.len * ROW_H
+    if (tile.y <= MISS_Y && bottom >= HIT_MIN_Y) {
       if (candidate === null || tile.y > candidate.y) candidate = tile
     }
   }
@@ -186,7 +196,8 @@ export function step(state: PianoState, dt: number): void {
     state.tiles.push(tile)
     minY = tile.y
   }
-  // Miss: the lowest unhit tile scrolled past the bottom edge entirely.
+  // Miss: an unhit tile whose top edge has left the judge window bottom —
+  // the tile visibly slid past the line, so the failure reads on screen.
   for (const tile of state.tiles) {
     if (!tile.hit && tile.y > MISS_Y) {
       fail(state, 'miss')

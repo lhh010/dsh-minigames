@@ -12,27 +12,32 @@ function run(state: PianoState, secs: number): void {
   for (let i = 0; i < Math.round(secs / DT); i += 1) step(state, DT)
 }
 
-/** Step one frame at a time until the lowest unhit tile's top is inside the
- * hit zone ([HIT_MIN_Y, MISS_Y]); returns that tile's lane. */
+/** Whether a tile overlaps the judge window (pressLane's hittable test). */
+function overlapsWindow(y: number, len: number): boolean {
+  return y <= MISS_Y && y + len * ROW_H >= HIT_MIN_Y
+}
+
+/** Step one frame at a time until the lowest unhit tile overlaps the judge
+ *  window; returns that tile's lane. */
 function waitLowestInZone(state: PianoState): number {
   for (let i = 0; i < 600; i += 1) {
-    let lowest: { y: number; lane: number } | null = null
+    let lowest: { y: number; len: number; lane: number } | null = null
     for (const t of state.tiles) {
       if (t.hit) continue
-      if (lowest === null || t.y > lowest.y) lowest = t
+      if (lowest === null || t.y > lowest.y) lowest = { y: t.y, len: t.len, lane: t.lane }
     }
-    if (lowest !== null && lowest.y >= HIT_MIN_Y && lowest.y <= MISS_Y) return lowest.lane
+    if (lowest !== null && overlapsWindow(lowest.y, lowest.len)) return lowest.lane
     step(state, DT)
     if (state.result !== 'playing') break
   }
   throw new Error('no tile reached the hit zone')
 }
 
-/** A lane that currently has NO unhit tile in the hit zone. */
+/** A lane that currently has NO unhit tile overlapping the judge window. */
 function emptyZoneLane(state: PianoState): number {
   const busy = new Set<number>()
   for (const t of state.tiles) {
-    if (!t.hit && t.y >= HIT_MIN_Y && t.y <= MISS_Y) busy.add(t.lane)
+    if (!t.hit && overlapsWindow(t.y, t.len)) busy.add(t.lane)
   }
   for (let l = 0; l < LANE_COUNT; l += 1) if (!busy.has(l)) return l
   throw new Error('all lanes busy in zone')
@@ -108,11 +113,22 @@ describe('piano tiles logic', () => {
   it('a press above the zone (too early) ends the run', () => {
     const s = createState(5)
     startRun(s)
-    // At start the lowest tile top is well above the zone.
-    expect(s.tiles.some(t => t.y >= HIT_MIN_Y)).toBe(false)
+    // At start every tile is above the screen: the lead-in guarantees no
+    // tile overlaps the judge window yet.
+    expect(s.tiles.some(t => overlapsWindow(t.y, t.len))).toBe(false)
+    expect(s.tiles.every(t => t.y < 0)).toBe(true)
     pressLane(s, s.tiles[0]!.lane) // its tile exists but is above the zone
     expect(s.result).toBe('over')
     expect(s.failReason).toBe('wrong')
+  })
+
+  it('the run start has a reaction lead-in: the first pressable moment is ≥1.5s away', () => {
+    const s = createState(5)
+    startRun(s)
+    const lowest = Math.max(...s.tiles.map(t => t.y + t.len * ROW_H))
+    // Distance from the window top at base speed.
+    const secs = (HIT_MIN_Y - lowest) / BASE_SPEED
+    expect(secs).toBeGreaterThanOrEqual(1.5)
   })
 
   it('a wrong-lane press with no tile in the zone ends the run', () => {
