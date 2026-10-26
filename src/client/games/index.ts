@@ -45,6 +45,9 @@ import { miniGoGame } from './minigo/index.ts'
 import { connect4Game } from './connect4/index.ts'
 import { slitherlinkGame } from './slitherlink/index.ts'
 import { racingGame } from './racing/index.ts'
+import { bubbleGame } from './bubble/index.ts'
+import { bomberGame } from './bomber/index.ts'
+import { pianoGame } from './piano/index.ts'
 
 export { getGames, getGame } from './registry.ts'
 export { registerGame } from './registry.ts'
@@ -68,6 +71,7 @@ export function registerBuiltinGames(): void {
     schulteGame,
     hashiGame, miniGoGame, connect4Game, slitherlinkGame,
     racingGame,
+    bubbleGame, bomberGame, pianoGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
