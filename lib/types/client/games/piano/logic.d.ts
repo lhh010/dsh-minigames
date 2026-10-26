@@ -36,6 +36,17 @@ export declare const SPEED_PER_HIT = 7;
 export declare const SPEED_ADD_MAX = 460;
 /** Score bonus for holding a long tile through its tail. */
 export declare const HOLD_BONUS = 3;
+/** Timing grades shown on hit; PERFECT/GREAT/GOOD also scale the score. */
+export type Grade = 'PERFECT' | 'GREAT' | 'GOOD' | 'BAD' | 'MISS';
+/** |center − line| ≤ PERFECT_PX → PERFECT; ≤ GREAT_PX → GREAT; else GOOD. */
+export declare const PERFECT_PX = 32;
+export declare const GREAT_PX = 64;
+/** Seconds the grade text stays on screen. */
+export declare const GRADE_SHOW_S = 0.9;
+/** Grade for a press whose tile-center sits `offset` px from the judge line. */
+export declare function gradeFor(offset: number): Grade;
+/** Score multiplier by grade (timing reward on top of the combo multiplier). */
+export declare function gradeMultiplier(grade: Grade): number;
 export type GameResult = 'ready' | 'playing' | 'paused' | 'over';
 export interface Tile {
     /** Lane index 0..3. */
@@ -55,6 +66,7 @@ export type PianoEvent = {
     kind: 'hit';
     lane: number;
     note: number;
+    grade: Grade;
 } | {
     kind: 'hold-start';
     lane: number;
@@ -70,6 +82,7 @@ export type PianoEvent = {
     kind: 'miss-life';
     lane: number;
     reason: 'miss' | 'early' | 'drop';
+    grade: Grade;
 } | {
     kind: 'over';
 };
@@ -91,6 +104,12 @@ export interface PianoState {
     tiles: Tile[];
     /** Per-lane press flash (seconds remaining, renderer feedback). */
     laneFlash: number[];
+    /** Floating grade text: the grade, its lane, and the t it appeared at. */
+    judge: {
+        grade: Grade;
+        lane: number;
+        at: number;
+    } | null;
     /** Why the run ended ('' while alive). */
     failReason: '' | 'miss' | 'early' | 'drop' | 'lives';
     events: PianoEvent[];

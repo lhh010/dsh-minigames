@@ -39,6 +39,29 @@ export const SPEED_ADD_MAX = 460
 /** Score bonus for holding a long tile through its tail. */
 export const HOLD_BONUS = 3
 
+/** Timing grades shown on hit; PERFECT/GREAT/GOOD also scale the score. */
+export type Grade = 'PERFECT' | 'GREAT' | 'GOOD' | 'BAD' | 'MISS'
+/** |center − line| ≤ PERFECT_PX → PERFECT; ≤ GREAT_PX → GREAT; else GOOD. */
+export const PERFECT_PX = 32
+export const GREAT_PX = 64
+/** Seconds the grade text stays on screen. */
+export const GRADE_SHOW_S = 0.9
+
+/** Grade for a press whose tile-center sits `offset` px from the judge line. */
+export function gradeFor(offset: number): Grade {
+  const d = Math.abs(offset)
+  if (d <= PERFECT_PX) return 'PERFECT'
+  if (d <= GREAT_PX) return 'GREAT'
+  return 'GOOD'
+}
+
+/** Score multiplier by grade (timing reward on top of the combo multiplier). */
+export function gradeMultiplier(grade: Grade): number {
+  if (grade === 'PERFECT') return 3
+  if (grade === 'GREAT') return 2
+  return 1
+}
+
 export type GameResult = 'ready' | 'playing' | 'paused' | 'over'
 
 export interface Tile {
@@ -57,11 +80,11 @@ export interface Tile {
 }
 
 export type PianoEvent =
-  | { kind: 'hit'; lane: number; note: number }
+  | { kind: 'hit'; lane: number; note: number; grade: Grade }
   | { kind: 'hold-start'; lane: number }
   | { kind: 'hold-done'; lane: number; points: number }
   | { kind: 'press'; lane: number; empty: boolean }
-  | { kind: 'miss-life'; lane: number; reason: 'miss' | 'early' | 'drop' }
+  | { kind: 'miss-life'; lane: number; reason: 'miss' | 'early' | 'drop'; grade: Grade }
   | { kind: 'over' }
 
 export interface PianoState {
@@ -82,6 +105,8 @@ export interface PianoState {
   tiles: Tile[]
   /** Per-lane press flash (seconds remaining, renderer feedback). */
   laneFlash: number[]
+  /** Floating grade text: the grade, its lane, and the t it appeared at. */
+  judge: { grade: Grade; lane: number; at: number } | null
   /** Why the run ended ('' while alive). */
   failReason: '' | 'miss' | 'early' | 'drop' | 'lives'
   events: PianoEvent[]
@@ -148,6 +173,7 @@ export function createState(seed = 1): PianoState {
     misses: 0,
     tiles,
     laneFlash: new Array<number>(LANE_COUNT).fill(0),
+    judge: null,
     failReason: '',
     events: [],
   }
@@ -166,10 +192,11 @@ export function togglePause(state: PianoState): void {
 }
 
 /** Spend one life; ends the run at LIVES. Returns true when the run ended. */
-function spendLife(state: PianoState, lane: number, reason: 'miss' | 'early' | 'drop'): boolean {
+function spendLife(state: PianoState, lane: number, reason: 'miss' | 'early' | 'drop', grade: Grade): boolean {
   state.misses += 1
   state.combo = 0
-  state.events.push({ kind: 'miss-life', lane, reason })
+  state.judge = { grade, lane, at: state.t }
+  state.events.push({ kind: 'miss-life', lane, reason, grade })
   if (state.misses >= LIVES) {
     state.result = 'over'
     state.failReason = 'lives'
@@ -209,10 +236,14 @@ export function pressLane(state: PianoState, lane: number): boolean {
   if (candidate !== null) {
     if (candidate.len === 1) {
       candidate.hit = true
+      // Timing grade: how close the tile CENTER is to the judge line.
+      const offset = candidate.y + (candidate.len * ROW_H) / 2 - LINE_Y
+      const grade = gradeFor(offset)
+      state.judge = { grade, lane, at: state.t }
       state.hits += 1
       state.combo += 1
-      state.score += comboMultiplier(state.combo)
-      state.events.push({ kind: 'hit', lane, note: state.hits })
+      state.score += comboMultiplier(state.combo) * gradeMultiplier(grade)
+      state.events.push({ kind: 'hit', lane, note: state.hits, grade })
     } else {
       candidate.holding = true
       state.events.push({ kind: 'hold-start', lane })
@@ -223,7 +254,7 @@ export function pressLane(state: PianoState, lane: number): boolean {
   if (approaching !== null) {
     // Early press on an inbound tile: the press is committed to a real
     // note but mistimed — costs a life, the tile keeps coming.
-    spendLife(state, lane, 'early')
+    spendLife(state, lane, 'early', 'BAD')
     state.events.push({ kind: 'press', lane, empty: false })
     return false
   }
@@ -246,7 +277,7 @@ export function releaseLane(state: PianoState, lane: number): void {
       // Head has not crossed the line yet: dropped hold.
       tile.holding = false
       tile.hit = true
-      spendLife(state, lane, 'drop')
+      spendLife(state, lane, 'drop', 'BAD')
       return
     }
   }
@@ -287,13 +318,15 @@ export function step(state: PianoState, dt: number): void {
       state.combo += 1
       const points = comboMultiplier(state.combo) * HOLD_BONUS
       state.score += points
+      // Holding the full length is a PERFECT by definition.
+      state.judge = { grade: 'PERFECT', lane: tile.lane, at: state.t }
       state.events.push({ kind: 'hold-done', lane: tile.lane, points })
       continue
     }
     // Miss: an unhit tile whose top edge has left the judge window bottom.
     if (!tile.hit && !tile.holding && tile.y > MISS_Y) {
       tile.hit = true // resolved as missed; scrolls off without repeats
-      if (spendLife(state, tile.lane, 'miss')) break
+      if (spendLife(state, tile.lane, 'miss', 'MISS')) break
     }
   }
   state.tiles = state.tiles.filter(tile => tile.y < LOGIC_H + ROW_H * 3)

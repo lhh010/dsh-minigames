@@ -311,4 +311,44 @@ describe('piano tiles logic', () => {
     expect(s.result).toBe('ready')
     expect(s.score).toBe(0)
   })
+
+  it('timing grades: PERFECT/GREAT/GOOD by center offset, scaling the score', () => {
+    const s = createState(21)
+    startRun(s)
+    // Center = y + ROW_H/2; offsets 0 / 40 / 90 px from the judge line.
+    const placements = [LINE_Y - ROW_H / 2, LINE_Y - ROW_H / 2 + 40, LINE_Y - ROW_H / 2 + 90]
+    const expected = ['PERFECT', 'GREAT', 'GOOD'] as const
+    const mults = [3, 2, 1]
+    let prevScore = 0
+    for (let i = 0; i < 3; i += 1) {
+      s.tiles = [{ lane: i % LANE_COUNT, y: placements[i]!, len: 1, hit: false, holding: false, held: false }]
+      pressLane(s, i % LANE_COUNT)
+      expect(s.judge?.grade).toBe(expected[i])
+      // Combo stays 1 on isolated presses → multiplier 1 × grade mult.
+      expect(s.score - prevScore).toBe(mults[i])
+      prevScore = s.score
+    }
+  })
+
+  it('misses and drops show BAD/MISS judge text; a full hold reads PERFECT', () => {
+    const s = createState(22)
+    startRun(s)
+    s.tiles = [{ lane: 1, y: MISS_Y + 5, len: 1, hit: false, holding: false, held: false }]
+    step(s, DT)
+    expect(s.judge?.grade).toBe('MISS')
+    // A dropped hold reads BAD.
+    const s2 = createState(22)
+    startRun(s2)
+    s2.tiles = [{ lane: 0, y: LINE_Y - 50, len: 2, hit: false, holding: false, held: false }]
+    pressLane(s2, 0)
+    releaseLane(s2, 0)
+    expect(s2.judge?.grade).toBe('BAD')
+    // A hold carried through reads PERFECT.
+    const s3 = createState(22)
+    startRun(s3)
+    s3.tiles = [{ lane: 3, y: LINE_Y - 50, len: 2, hit: false, holding: false, held: false }]
+    pressLane(s3, 3)
+    while (s3.result === 'playing' && s3.tiles[0] !== undefined && !s3.tiles[0]!.held) step(s3, DT)
+    expect(s3.judge?.grade).toBe('PERFECT')
+  })
 })

@@ -5,7 +5,8 @@
  * happens in the fixed logical space (LOGICAL_W x FIELD_H).
  */
 import {
-  HIT_MIN_Y, LANE_COUNT, LINE_Y, LOGIC_H as FIELD_H, LIVES, MISS_Y, ROW_H, type PianoState, type Tile,
+  GRADE_SHOW_S, HIT_MIN_Y, LANE_COUNT, LINE_Y, LOGIC_H as FIELD_H, LIVES, MISS_Y, ROW_H,
+  type Grade, type PianoState, type Tile,
 } from './logic.ts'
 import { THEME, accent, drawBackground, drawOverlay, glow, hudPair, noGlow, roundRectPath } from '../theme.ts'
 
@@ -137,6 +138,42 @@ function drawKeyLabels(ctx: CanvasRenderingContext2D, state: PianoState): void {
   }
 }
 
+/** Grade text: color per grade. */
+const GRADE_COLORS: Record<Grade, string> = {
+  PERFECT: '#ffe066',
+  GREAT: '#7dcfff',
+  GOOD: '#c0caf5',
+  BAD: '#ff9e64',
+  MISS: '#f7768e',
+}
+
+function drawJudge(ctx: CanvasRenderingContext2D, state: PianoState): void {
+  const j = state.judge
+  if (j === null) return
+  const age = state.t - j.at
+  if (age < 0 || age > GRADE_SHOW_S) return
+  // Pop in (0-0.1s scale up), float up, fade out.
+  const pop = Math.min(1, age / 0.1)
+  const rise = age * 26
+  const alpha = age < GRADE_SHOW_S * 0.6 ? 1 : 1 - (age - GRADE_SHOW_S * 0.6) / (GRADE_SHOW_S * 0.4)
+  const size = (j.grade === 'PERFECT' ? 26 : 21) * (0.6 + 0.4 * pop)
+  ctx.save()
+  ctx.globalAlpha = Math.max(0, alpha)
+  ctx.translate(laneCenter(j.lane), LINE_Y - 46 - rise)
+  ctx.scale(1, 1)
+  ctx.font = `900 ${size.toFixed(0)}px system-ui, sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  const color = GRADE_COLORS[j.grade]
+  if (j.grade === 'PERFECT' || j.grade === 'MISS' || j.grade === 'BAD') {
+    ctx.shadowColor = color
+    ctx.shadowBlur = 14
+  }
+  ctx.fillStyle = color
+  ctx.fillText(j.grade, 0, 0)
+  ctx.restore()
+}
+
 /** Draw one frame. */
 export function renderPiano(ctx: CanvasRenderingContext2D, view: PianoView): void {
   const state = view.state
@@ -146,6 +183,7 @@ export function renderPiano(ctx: CanvasRenderingContext2D, view: PianoView): voi
   const ordered = [...state.tiles].sort((a, b) => a.y - b.y)
   for (const tile of ordered) drawTile(ctx, tile)
   drawHitZone(ctx)
+  drawJudge(ctx, state)
   drawKeyLabels(ctx, state)
 
   // HUD: score / combo on the left, lives + best on the right.
