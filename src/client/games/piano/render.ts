@@ -1,16 +1,16 @@
 /**
- * Piano Tiles renderer: 4 lanes with divider lines, the hit zone at the
- * bottom, glowing tiles (dimmed once hit), lane key labels, HUD, and the
- * ready/pause/over overlays. All drawing happens in the fixed logical space
- * (LOGICAL_W x LOGICAL_H).
+ * Piano Tiles renderer: 4 lanes with divider lines, the judge window at the
+ * bottom, glowing tiles (dimmed once resolved), lane press-flash feedback,
+ * hold progress, lives HUD, and the ready/pause/over overlays. All drawing
+ * happens in the fixed logical space (LOGICAL_W x FIELD_H).
  */
 import {
-  HIT_MIN_Y, LANE_COUNT, LINE_Y, LOGIC_H, MISS_Y, ROW_H, type PianoState, type Tile,
+  HIT_MIN_Y, LANE_COUNT, LINE_Y, LOGIC_H as FIELD_H, LIVES, MISS_Y, ROW_H, type PianoState, type Tile,
 } from './logic.ts'
 import { THEME, accent, drawBackground, drawOverlay, glow, hudPair, noGlow, roundRectPath } from '../theme.ts'
 
 export const LOGICAL_W = 360
-export const LOGICAL_H = LOGIC_H
+export const LOGICAL_H = FIELD_H
 const HUD_H = 40
 
 export interface PianoView {
@@ -25,19 +25,34 @@ export function laneCenter(lane: number): number {
   return (LOGICAL_W / LANE_COUNT) * (lane + 0.5)
 }
 
-function drawLanes(ctx: CanvasRenderingContext2D): void {
+function drawLanes(ctx: CanvasRenderingContext2D, state: PianoState): void {
   const laneW = LOGICAL_W / LANE_COUNT
   // Faint alternating lane fill.
   for (let i = 0; i < LANE_COUNT; i += 1) {
     ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.045)'
-    ctx.fillRect(i * laneW, 0, laneW, LOGIC_H)
+    ctx.fillRect(i * laneW, 0, laneW, FIELD_H)
+  }
+  // Press feedback: a lane key held/pressed lights its whole column (flash
+  // decays via state.laneFlash; holds keep a steady glow).
+  for (let i = 0; i < LANE_COUNT; i += 1) {
+    const holding = state.tiles.some(t => t.holding && t.lane === i)
+    const flash = state.laneFlash[i] ?? 0
+    const a = holding ? 0.20 : flash > 0 ? (flash / 0.18) * 0.16 : 0
+    if (a <= 0.005) continue
+    const g = ctx.createLinearGradient(0, FIELD_H * 0.45, 0, FIELD_H)
+    g.addColorStop(0, 'rgba(122,162,247,0)')
+    g.addColorStop(1, `rgba(122,162,247,${a.toFixed(3)})`)
+    ctx.fillStyle = g
+    ctx.fillRect(i * laneW, FIELD_H * 0.45, laneW, FIELD_H * 0.55)
+    ctx.fillStyle = `rgba(122,162,247,${(a * 0.4).toFixed(3)})`
+    ctx.fillRect(i * laneW, 0, laneW, FIELD_H * 0.45)
   }
   ctx.strokeStyle = 'rgba(226,226,238,0.10)'
   ctx.lineWidth = 1
   for (let i = 1; i < LANE_COUNT; i += 1) {
     ctx.beginPath()
     ctx.moveTo(i * laneW, 0)
-    ctx.lineTo(i * laneW, LOGIC_H)
+    ctx.lineTo(i * laneW, FIELD_H)
     ctx.stroke()
   }
 }
@@ -79,29 +94,43 @@ function drawTile(ctx: CanvasRenderingContext2D, tile: Tile): void {
   const h = tile.len * ROW_H - pad * 2
   const color = accent(tile.lane)
   ctx.globalAlpha = tile.hit ? 0.18 : 1
-  glow(ctx, color, tile.hit ? 0 : 14)
+  glow(ctx, color, tile.holding ? 26 : tile.hit ? 0 : 14)
   roundRectPath(ctx, x, tile.y + pad, w, h, 8)
   ctx.fillStyle = tile.hit ? '#2a2a38' : color
   ctx.fill()
   noGlow(ctx)
-  // Top edge highlight on live tiles.
+  // Top edge highlight on live tiles; holds pulse along their body.
   if (!tile.hit) {
     ctx.fillStyle = 'rgba(255,255,255,0.35)'
     ctx.fillRect(x + 4, tile.y + pad + 2, w - 8, 3)
+  }
+  if (tile.holding && tile.len > 1) {
+    // Hold progress: brighten the held stretch from the head down to the
+    // judge line (the still-approaching tail brightens as it arrives).
+    const held = Math.min(h, Math.max(0, LINE_Y - (tile.y + pad)))
+    if (held > 4) {
+      ctx.fillStyle = 'rgba(255,255,255,0.30)'
+      ctx.fillRect(x + 4, tile.y + pad + 4, w - 8, held - 4)
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'
+    ctx.font = '700 11px system-ui, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('按住', x + w / 2, tile.y + pad + h / 2 + 4)
   }
   ctx.globalAlpha = 1
 }
 
 const LANE_KEYS = ['D', 'F', 'J', 'K'] as const
 
-function drawKeyLabels(ctx: CanvasRenderingContext2D): void {
+function drawKeyLabels(ctx: CanvasRenderingContext2D, state: PianoState): void {
   const laneW = LOGICAL_W / LANE_COUNT
   ctx.textAlign = 'center'
   ctx.font = '700 14px system-ui, sans-serif'
   for (let i = 0; i < LANE_COUNT; i += 1) {
-    ctx.fillStyle = 'rgba(226,226,238,0.4)'
-    ctx.fillText(LANE_KEYS[i]!, laneCenter(i), LOGIC_H - 10)
-    ctx.globalAlpha = 0.25
+    const active = state.laneFlash[i]! > 0 || state.tiles.some(t => t.holding && t.lane === i)
+    ctx.fillStyle = active ? accent(i) : 'rgba(226,226,238,0.4)'
+    ctx.fillText(LANE_KEYS[i]!, laneCenter(i), FIELD_H - 10)
+    ctx.globalAlpha = active ? 0.7 : 0.25
     ctx.fillStyle = accent(i)
     ctx.fillRect(i * laneW, 0, laneW, 4)
     ctx.globalAlpha = 1
@@ -111,25 +140,26 @@ function drawKeyLabels(ctx: CanvasRenderingContext2D): void {
 /** Draw one frame. */
 export function renderPiano(ctx: CanvasRenderingContext2D, view: PianoView): void {
   const state = view.state
-  drawBackground(ctx, LOGICAL_W, LOGIC_H)
-  drawLanes(ctx)
+  drawBackground(ctx, LOGICAL_W, FIELD_H)
+  drawLanes(ctx, state)
   // Draw far tiles first so nearer tiles layer on top.
   const ordered = [...state.tiles].sort((a, b) => a.y - b.y)
   for (const tile of ordered) drawTile(ctx, tile)
   drawHitZone(ctx)
-  drawKeyLabels(ctx)
+  drawKeyLabels(ctx, state)
 
-  // HUD: score / combo on the left, best on the right.
+  // HUD: score / combo on the left, lives + best on the right.
   hudPair(ctx, 12, 22, '分数 ', String(state.score), 'left', THEME.gold)
   hudPair(ctx, 12, HUD_H + 6, '连击 ', `${String(state.combo)} · ×${String(Math.min(8, 1 + Math.floor(state.combo / 8)))}`, 'left', THEME.text)
-  hudPair(ctx, LOGICAL_W - 12, 22, '最高 ', String(view.best), 'right', THEME.text)
+  const hearts = '♥'.repeat(Math.max(0, LIVES - state.misses)) + '·'.repeat(Math.min(LIVES, state.misses))
+  hudPair(ctx, LOGICAL_W - 12, 22, '命 ', hearts, 'right', THEME.bad)
+  hudPair(ctx, LOGICAL_W - 12, HUD_H + 6, '最高 ', String(view.best), 'right', THEME.text)
 
   if (state.result === 'over') {
-    const why = state.failReason === 'wrong' ? '按错啦' : '漏掉了'
-    drawOverlay(ctx, LOGICAL_W, LOGIC_H, '游戏结束', `${why} · 分数 ${String(state.score)} · Enter 再来一局`, THEME.bad)
+    drawOverlay(ctx, LOGICAL_W, FIELD_H, '游戏结束', `失误 ${String(state.misses)} 次 · 分数 ${String(state.score)} · Enter 再来一局`, THEME.bad)
   } else if (state.result === 'ready') {
-    drawOverlay(ctx, LOGICAL_W, LOGIC_H, '钢琴块', 'Enter 开始 · D F J K 或点击轨道', THEME.gold)
+    drawOverlay(ctx, LOGICAL_W, FIELD_H, '钢琴块', 'Enter 开始 · D F J K · 长块按住 · 空按免罚', THEME.gold)
   } else if (view.paused) {
-    drawOverlay(ctx, LOGICAL_W, LOGIC_H, '已暂停', '按 P 或面板继续', THEME.text)
+    drawOverlay(ctx, LOGICAL_W, FIELD_H, '已暂停', '按 P 或面板继续', THEME.text)
   }
 }

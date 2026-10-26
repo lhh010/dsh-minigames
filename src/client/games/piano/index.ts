@@ -12,7 +12,7 @@ import type {
   MiniGameMountOptions,
 } from '../types.ts'
 import {
-  LANE_COUNT, attractStep, createState, pressLane, startRun, step, togglePause,
+  LANE_COUNT, attractStep, createState, pressLane, releaseLane, startRun, step, togglePause,
   type PianoState,
 } from './logic.ts'
 import { LOGICAL_W, LOGICAL_H, renderPiano } from './render.ts'
@@ -60,6 +60,8 @@ function createPianoGame(host: HTMLElement, options?: MiniGameMountOptions): Min
 
   // --- audio (WebAudio synth, initialized on the first start gesture) ---
   let actx: AudioContext | null = null
+  /** Lane held by the current touch (for touch holds); null when released. */
+  let pointerLane: number | null = null
   const initAudio = (): void => {
     if (actx !== null) { if (actx.state === 'suspended') void actx.resume(); return }
     try {
@@ -104,9 +106,15 @@ function createPianoGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       if (ev.kind === 'hit') {
         note(SCALE[(ev.note - 1) % SCALE.length]!, 0.28, 0.12)
         particles.burst((LOGICAL_W / LANE_COUNT) * (ev.lane + 0.5), LOGICAL_H - 30, accent(ev.lane), 8, 160)
-      } else if (ev.kind === 'fail') {
+      } else if (ev.kind === 'hold-start') {
+        note(SCALE[(state.hits) % SCALE.length]!, 0.15, 0.1)
+      } else if (ev.kind === 'hold-done') {
+        note(SCALE[(state.hits + 2) % SCALE.length]!, 0.3, 0.12)
+        particles.burst((LOGICAL_W / LANE_COUNT) * (ev.lane + 0.5), LOGICAL_H - 30, THEME.gold, 10, 180)
+      } else if (ev.kind === 'miss-life') {
+        // A spent life: brief failure sting (full fanfare only on game over).
         failSound()
-        particles.burst(LOGICAL_W / 2, LOGICAL_H / 2, THEME.bad, 26, 260)
+        particles.burst((LOGICAL_W / LANE_COUNT) * (ev.lane + 0.5), LOGICAL_H - 30, THEME.bad, 12, 200)
       } else if (ev.kind === 'over') {
         reportScore()
       }
@@ -160,9 +168,21 @@ function createPianoGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     }
   }
 
+  const onKeyUp = (event: KeyboardEvent): void => {
+    const lane = laneForCode(event.code)
+    if (lane >= 0 && state.result === 'playing') releaseLane(state, lane)
+  }
+
+  const laneAtPointer = (event: PointerEvent): number => {
+    const rect = canvas.getBoundingClientRect()
+    const x = ((event.clientX - rect.left) * LOGICAL_W) / rect.width
+    return Math.min(LANE_COUNT - 1, Math.max(0, Math.floor(x / (LOGICAL_W / LANE_COUNT))))
+  }
+
   const onPointerDown = (event: PointerEvent): void => {
     const rect = canvas.getBoundingClientRect()
     const x = ((event.clientX - rect.left) * LOGICAL_W) / rect.width
+    void rect
     if (state.result === 'ready' || state.result === 'over') {
       initAudio()
       restart()
@@ -170,7 +190,15 @@ function createPianoGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     }
     if (state.result === 'paused') { togglePauseLocal(); return }
     initAudio()
-    pressLane(state, Math.min(LANE_COUNT - 1, Math.max(0, Math.floor(x / (LOGICAL_W / LANE_COUNT)))))
+    pointerLane = laneAtPointer(event)
+    pressLane(state, pointerLane)
+  }
+
+  const onPointerUp = (): void => {
+    if (pointerLane !== null && state.result === 'playing') {
+      releaseLane(state, pointerLane)
+    }
+    pointerLane = null
   }
 
   const frame = (f: FrameInfo): void => {
@@ -204,7 +232,9 @@ function createPianoGame(host: HTMLElement, options?: MiniGameMountOptions): Min
   }
 
   canvas.addEventListener('pointerdown', onPointerDown)
+  window.addEventListener('pointerup', onPointerUp)
   window.addEventListener('keydown', onKeyDown)
+  window.addEventListener('keyup', onKeyUp)
   focusGameHost(host)
   running = true
   loop.start()
@@ -217,7 +247,9 @@ function createPianoGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       running = false
       loop.destroy()
       canvas.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('pointerup', onPointerUp)
       window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
       if (actx !== null) { try { void actx.close() } catch { /* ignore */ } }
       fit.dispose()
     },
@@ -228,11 +260,11 @@ export const pianoGame: MiniGameDefinition = {
   id: 'piano',
   title: '钢琴块',
   icon: '🎹',
-  description: '四轨钢琴块：块到达底部判定区时按 D F J K 或点击对应轨道，按错或漏块即结束，连击越高分越多。',
+  description: '四轨钢琴块：块压住判定线时按 D F J K 或点击轨道，长块需要按住；空按免罚，失误 5 次才结束。',
   controls: [
-    'D F J K / 点击轨道：击打判定区的块',
-    'Enter：开始 · R：同种子重开',
-    'P：暂停',
+    'D F J K / 点击轨道：击打判定线的块',
+    '长块：按住直到块尾过线',
+    'Enter：开始 · R：同种子重开 · P：暂停',
   ],
   create: createPianoGame,
 }

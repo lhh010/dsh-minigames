@@ -1,8 +1,10 @@
 /**
  * Piano Tiles pure logic: 4 vertical lanes, one seeded active tile per row
- * scrolling down; a lane press in the hit zone scores with a combo
- * multiplier, a press with no tile in the zone (wrong lane or too early) or
- * a tile scrolling fully past the bottom ends the run (classic rules).
+ * scrolling down. Press a lane while its tile covers the judge line; long
+ * tiles are HOLDS — press at the head, keep held until the tail passes the
+ * line. Empty presses (no tile near the window) are free; early presses,
+ * released holds, and tiles sliding past the window cost one of LIVES
+ * misses; the run ends when the misses run out.
  *
  * All randomness flows through an injected mulberry32 rng so runs are
  * deterministic under a seed. The renderer (render.ts) only draws state.
@@ -22,29 +24,52 @@ export declare const HIT_MIN_Y: number;
 export declare const MISS_Y: number;
 /** Rows prefilled above the screen at run start (lead-in for reaction). */
 export declare const PREFILL_ROWS = 8;
-/** Probability a spawned tile is long (2 rows, counts as one hit). */
+/** Probability a spawned tile is long (a hold). */
 export declare const LONG_CHANCE = 0.18;
+/** Misses allowed before the run ends. */
+export declare const LIVES = 5;
+/** A press counts as "early" (life loss) when a same-lane tile is this
+ * close above the window top; farther away the press is a free empty tap. */
+export declare const EARLY_RANGE: number;
 export declare const BASE_SPEED = 340;
 export declare const SPEED_PER_HIT = 7;
 export declare const SPEED_ADD_MAX = 460;
+/** Score bonus for holding a long tile through its tail. */
+export declare const HOLD_BONUS = 3;
 export type GameResult = 'ready' | 'playing' | 'paused' | 'over';
 export interface Tile {
     /** Lane index 0..3. */
     lane: number;
     /** Screen y of the tile's top edge. */
     y: number;
-    /** Row count this tile spans (1 normal, 2 long; long = one hit). */
+    /** Row count this tile spans (1 normal, 2 long = hold). */
     len: number;
-    /** Already hit this run; hit tiles scroll off harmlessly. */
+    /** Already resolved this run; resolved tiles scroll off harmlessly. */
     hit: boolean;
+    /** A hold currently held by the player (head pressed, tail not past). */
+    holding: boolean;
+    /** The hold completed: head pressed AND held through the tail. */
+    held: boolean;
 }
 export type PianoEvent = {
     kind: 'hit';
     lane: number;
     note: number;
 } | {
-    kind: 'fail';
-    reason: 'miss' | 'wrong';
+    kind: 'hold-start';
+    lane: number;
+} | {
+    kind: 'hold-done';
+    lane: number;
+    points: number;
+} | {
+    kind: 'press';
+    lane: number;
+    empty: boolean;
+} | {
+    kind: 'miss-life';
+    lane: number;
+    reason: 'miss' | 'early' | 'drop';
 } | {
     kind: 'over';
 };
@@ -61,9 +86,13 @@ export interface PianoState {
     combo: number;
     /** Total successful hits (drives speed and the note scale). */
     hits: number;
+    /** Misses spent; the run ends at LIVES. */
+    misses: number;
     tiles: Tile[];
+    /** Per-lane press flash (seconds remaining, renderer feedback). */
+    laneFlash: number[];
     /** Why the run ended ('' while alive). */
-    failReason: '' | 'miss' | 'wrong';
+    failReason: '' | 'miss' | 'early' | 'drop' | 'lives';
     events: PianoEvent[];
 }
 /** mulberry32 seeded PRNG. */
@@ -74,7 +103,8 @@ export declare function speedAt(hits: number): number;
 export declare function comboMultiplier(combo: number): number;
 /**
  * Spawn one row: exactly one lane is active; occasionally the tile is long
- * (len 2). Long tiles do not consume an extra row slot — spacing is uniform.
+ * (len 2, a hold). Long tiles do not consume an extra row slot — spacing is
+ * uniform.
  */
 export declare function spawnTile(rng: () => number, y: number): Tile;
 /** A fresh state in the ready (attract) state, prefilled deterministically.
@@ -87,17 +117,26 @@ export declare function startRun(state: PianoState): void;
 /** Toggle between playing and paused; no-op otherwise. */
 export declare function togglePause(state: PianoState): void;
 /**
- * Press a lane. A hit requires an unhit tile in that lane OVERLAPPING the
- * judge window (the tile's body covers any part of [HIT_MIN_Y, MISS_Y] —
- * i.e. it is pressing on or straddling the judge line); a press with no
- * such tile (wrong lane or too early) fails the run. Long tiles hit from
- * the moment their bottom edge reaches the window top.
+ * Press a lane.
+ * - A tile overlapping the judge window: normal tiles resolve for combo
+ *   score; long tiles ENTER a hold (hold-start) and complete when their
+ *   tail passes the line while still held.
+ * - No tile in the window, but a same-lane tile within EARLY_RANGE above
+ *   it: an early press — costs one life.
+ * - Nothing nearby: a free empty tap (combo resets, no life lost).
  */
 export declare function pressLane(state: PianoState, lane: number): boolean;
 /**
- * Advance by dt seconds: scroll tiles, spawn rows above the top, and fail
- * the run when an unhit tile fully scrolls past the bottom. No-op unless
- * playing, so a paused or over state never advances.
+ * Release a lane key. Releasing while a hold's head has not yet crossed the
+ * judge line drops the hold and costs a life; after the head crosses, the
+ * release is irrelevant (completion is handled in step).
+ */
+export declare function releaseLane(state: PianoState, lane: number): void;
+/**
+ * Advance by dt seconds: scroll tiles, spawn rows above the top, decay the
+ * lane-press flashes, complete holds whose tails pass the line, and spend a
+ * life when an unhit tile leaves the judge window. No-op unless playing, so
+ * a paused or over state never advances.
  */
 export declare function step(state: PianoState, dt: number): void;
 /**

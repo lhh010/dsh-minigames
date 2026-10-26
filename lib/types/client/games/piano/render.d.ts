@@ -1,8 +1,8 @@
 /**
- * Piano Tiles renderer: 4 lanes with divider lines, the hit zone at the
- * bottom, glowing tiles (dimmed once hit), lane key labels, HUD, and the
- * ready/pause/over overlays. All drawing happens in the fixed logical space
- * (LOGICAL_W x LOGICAL_H).
+ * Piano Tiles renderer: 4 lanes with divider lines, the judge window at the
+ * bottom, glowing tiles (dimmed once resolved), lane press-flash feedback,
+ * hold progress, lives HUD, and the ready/pause/over overlays. All drawing
+ * happens in the fixed logical space (LOGICAL_W x FIELD_H).
  */
 import { type PianoState } from './logic.ts';
 export declare const LOGICAL_W = 360;

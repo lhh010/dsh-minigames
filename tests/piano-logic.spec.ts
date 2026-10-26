@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  BASE_SPEED, HIT_MIN_Y, LANE_COUNT, MISS_Y, PREFILL_ROWS, ROW_H, SPEED_ADD_MAX,
-  attractStep, comboMultiplier, createState, mulberry32, pressLane, speedAt, spawnTile,
+  BASE_SPEED, HIT_MIN_Y, LANE_COUNT, LINE_Y, MISS_Y, PREFILL_ROWS, ROW_H, SPEED_ADD_MAX,
+  attractStep, comboMultiplier, createState, mulberry32, pressLane, releaseLane, speedAt, spawnTile,
   startRun, step, togglePause, type PianoState,
 } from '../src/client/games/piano/logic.ts'
 
@@ -18,12 +18,13 @@ function overlapsWindow(y: number, len: number): boolean {
 }
 
 /** Step one frame at a time until the lowest unhit tile overlaps the judge
- *  window; returns that tile's lane. */
+ *  window; returns that tile's lane. Tiles under hold are treated as busy
+ *  (a second press on them would be a free-but-combo-breaking empty tap). */
 function waitLowestInZone(state: PianoState): number {
   for (let i = 0; i < 600; i += 1) {
     let lowest: { y: number; len: number; lane: number } | null = null
     for (const t of state.tiles) {
-      if (t.hit) continue
+      if (t.hit || t.holding) continue
       if (lowest === null || t.y > lowest.y) lowest = { y: t.y, len: t.len, lane: t.lane }
     }
     if (lowest !== null && overlapsWindow(lowest.y, lowest.len)) return lowest.lane
@@ -37,7 +38,7 @@ function waitLowestInZone(state: PianoState): number {
 function emptyZoneLane(state: PianoState): number {
   const busy = new Set<number>()
   for (const t of state.tiles) {
-    if (!t.hit && overlapsWindow(t.y, t.len)) busy.add(t.lane)
+    if (!t.hit && !t.holding && overlapsWindow(t.y, t.len)) busy.add(t.lane)
   }
   for (let l = 0; l < LANE_COUNT; l += 1) if (!busy.has(l)) return l
   throw new Error('all lanes busy in zone')
@@ -110,16 +111,33 @@ describe('piano tiles logic', () => {
     expect(s.events.filter(e => e.kind === 'hit')).toHaveLength(1)
   })
 
-  it('a press above the zone (too early) ends the run', () => {
+  it('an empty tap at run start is free: no life lost, combo resets', () => {
     const s = createState(5)
     startRun(s)
-    // At start every tile is above the screen: the lead-in guarantees no
-    // tile overlaps the judge window yet.
+    // At start every tile is above the screen beyond EARLY_RANGE: any press
+    // is a free empty tap (feedback only).
     expect(s.tiles.some(t => overlapsWindow(t.y, t.len))).toBe(false)
     expect(s.tiles.every(t => t.y < 0)).toBe(true)
-    pressLane(s, s.tiles[0]!.lane) // its tile exists but is above the zone
-    expect(s.result).toBe('over')
-    expect(s.failReason).toBe('wrong')
+    expect(pressLane(s, s.tiles[0]!.lane)).toBe(false)
+    expect(s.result).toBe('playing')
+    expect(s.misses).toBe(0)
+    expect(s.combo).toBe(0)
+    expect(s.events.some(e => e.kind === 'press' && e.empty)).toBe(true)
+  })
+
+  it('an early press on an approaching tile costs exactly one life, not the run', () => {
+    const s = createState(5)
+    startRun(s)
+    // Head and bottom both above the window, within EARLY_RANGE.
+    s.tiles = [{ lane: 0, y: HIT_MIN_Y - 180, len: 1, hit: false, holding: false, held: false }]
+    expect(pressLane(s, 0)).toBe(false)
+    expect(s.result).toBe('playing')
+    expect(s.misses).toBe(1)
+    expect(s.combo).toBe(0)
+    expect(s.events.some(e => e.kind === 'miss-life' && e.reason === 'early')).toBe(true)
+    // The tile keeps coming and is still hittable when it reaches the window.
+    while (!overlapsWindow(s.tiles[0]!.y, s.tiles[0]!.len) && s.result === 'playing') step(s, DT)
+    expect(pressLane(s, 0)).toBe(true)
   })
 
   it('the run start has a reaction lead-in: the first pressable moment is ≥1.5s away', () => {
@@ -131,21 +149,53 @@ describe('piano tiles logic', () => {
     expect(secs).toBeGreaterThanOrEqual(1.5)
   })
 
-  it('a wrong-lane press with no tile in the zone ends the run', () => {
-    const s = createState(5)
+  it('a hold completes when held through the tail: bonus score', () => {
+    const s = createState(9)
     startRun(s)
-    waitLowestInZone(s)
-    pressLane(s, emptyZoneLane(s))
-    expect(s.result).toBe('over')
-    expect(s.failReason).toBe('wrong')
+    // A long tile whose head already covers the line, tail not yet past.
+    s.tiles = [{ lane: 1, y: LINE_Y - 50, len: 2, hit: false, holding: false, held: false }]
+    const hold = s.tiles[0]!
+    expect(pressLane(s, 1)).toBe(true)
+    expect(hold.holding).toBe(true)
+    expect(s.score).toBe(0) // hold not scored yet
+    while (hold.holding && s.result === 'playing') step(s, DT)
+    expect(hold.hit).toBe(true)
+    expect(hold.held).toBe(true)
+    expect(s.hits).toBe(1)
+    expect(s.combo).toBe(1)
+    expect(s.score).toBe(3) // comboMultiplier(1) * HOLD_BONUS
+    expect(s.misses).toBe(0)
   })
 
-  it('a tile scrolling fully past the hit zone is a miss and ends the run', () => {
-    const s = createState(5)
+  it('releasing a hold before the tail drops it and costs a life', () => {
+    const s = createState(9)
     startRun(s)
-    run(s, 5) // never press
+    s.tiles = [{ lane: 2, y: LINE_Y - 50, len: 2, hit: false, holding: false, held: false }]
+    const hold = s.tiles[0]!
+    pressLane(s, 2)
+    releaseLane(s, 2)
+    expect(s.result).toBe('playing')
+    expect(s.misses).toBe(1)
+    expect(s.events.some(e => e.kind === 'miss-life' && e.reason === 'drop')).toBe(true)
+    expect(hold.holding).toBe(false)
+    expect(hold.hit).toBe(true)
+    expect(hold.held).toBe(false)
+  })
+
+  it('five misses end the run; four do not', () => {
+    const s = createState(7)
+    startRun(s)
+    for (let i = 0; i < 4; i += 1) {
+      s.tiles = [{ lane: 0, y: MISS_Y + 10 + i, len: 1, hit: false, holding: false, held: false }]
+      step(s, DT)
+      expect(s.result).toBe('playing')
+      expect(s.misses).toBe(i + 1)
+    }
+    s.tiles = [{ lane: 0, y: MISS_Y + 60, len: 1, hit: false, holding: false, held: false }]
+    step(s, DT)
     expect(s.result).toBe('over')
-    expect(s.failReason).toBe('miss')
+    expect(s.failReason).toBe('lives')
+    expect(s.misses).toBe(5)
   })
 
   it('hit tiles scroll past harmlessly (no miss after a hit)', () => {
@@ -187,20 +237,26 @@ describe('piano tiles logic', () => {
     for (let h = 0; h < 70; h += 7) expect(speedAt(h + 1)).toBeGreaterThanOrEqual(speedAt(h))
   })
 
-  it('score accumulates with the combo multiplier (7×1 then 2 per hit)', () => {
+  it('score accumulates with the combo multiplier (normal tiles: 7×1 then ×2)', () => {
     const s = createState(5)
     startRun(s)
+    // Seed 5's field contains one long tile among the first rows; hold it
+    // through by never releasing — the frame loop holds keys implicitly in
+    // this pure-logic harness (no keyup), so hold-done fires automatically.
     playHits(s, 10)
-    expect(s.hits).toBe(10)
-    expect(s.combo).toBe(10)
-    // hits 1-7 score 1 each; hits 8-10 (combo ≥ 8) score 2 each.
-    expect(s.score).toBe(7 * 1 + 3 * 2)
+    expect(s.hits).toBeGreaterThanOrEqual(10)
+    expect(s.combo).toBe(s.hits)
+    expect(s.misses).toBe(0)
+    // Every resolved tile scored at least its multiplier — exact math is
+    // covered by the multiplier and hold-bonus unit tests.
+    expect(s.score).toBeGreaterThan(10)
   })
 
   it('over state is inert to steps and presses', () => {
     const s = createState(5)
     startRun(s)
-    run(s, 5)
+    // Idle until the five lives run out (a few seconds of missed tiles).
+    for (let i = 0; i < 1500 && s.result !== 'over'; i += 1) step(s, DT)
     expect(s.result).toBe('over')
     const frozen = JSON.stringify({ tiles: s.tiles, score: s.score, t: s.t })
     run(s, 1)
