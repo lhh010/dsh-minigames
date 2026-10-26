@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  createWorld, startLevel, stepWorld, placeBomb, tryMove, tileAt, actorTile,
+  createWorld, startLevel, resetLevel, stepWorld, placeBomb, tryMove, tileAt, actorTile,
   generateLayout, computeBlast, buildFlowField, flowAt, mulberry32,
   TILE, GRID_W, GRID_H, FUSE_S, MAX_BOMBS, LEVELS, ADVANCE_DELAY, AI_TICK,
   PLAYER_START, CORNER_POCKETS,
@@ -347,5 +347,23 @@ describe('bomberman progression', () => {
     expect(a.result).toBe(b.result)
     expect(a.enemies.map(e => e.x)).toEqual(b.enemies.map(e => e.x))
     expect(a.flames.map(f => `${f.tx},${f.ty}`)).toEqual(b.flames.map(f => `${f.tx},${f.ty}`))
+  })
+
+  it('resetLevel zeroes the score and replays the same layout; startLevel keeps the score', () => {
+    const world = createWorld(1, rng(41))
+    world.score = 260
+    // Advance keeps the accumulated score.
+    startLevel(world, 2, mulberry32((2 * 2654435761) >>> 0))
+    expect(world.score).toBe(260)
+    expect(world.level).toBe(2)
+    // A restart (R / death) zeroes it and rebuilds the same layout.
+    const before = JSON.stringify(generateLayout(2, rng((2 * 0x9e3779b9) >>> 0)))
+    resetLevel(world, mulberry32((2 * 0x9e3779b9) >>> 0))
+    expect(world.score).toBe(0)
+    expect(world.level).toBe(2)
+    expect(world.result).toBe('none')
+    // Same seed → identical brick layout as the fresh generation.
+    const after = JSON.stringify(world.grid)
+    expect(after).toBe(before)
   })
 })

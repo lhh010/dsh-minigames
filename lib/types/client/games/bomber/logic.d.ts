@@ -96,8 +96,12 @@ export declare function enemiesForLevel(level: number): number;
  * @param rng - injected seeded rng, stored on the world for AI decisions.
  */
 export declare function createWorld(level: number, rng: () => number): WorldState;
-/** Reset to `nextLevel` keeping the score (auto-advance and R both use it). */
+/** Reset to `nextLevel` keeping the score (auto-advance uses it). */
 export declare function startLevel(state: WorldState, nextLevel: number, rng: () => number): void;
+/** Restart a level from scratch: same layout seed, score back to 0 (R and
+ * death-restart both use it — a fresh attempt must not inherit the aborted
+ * run's score). */
+export declare function resetLevel(state: WorldState, rng: () => number): void;
 /** Grid tile at tile coords; out of bounds counts as solid wall. */
 export declare function tileAt(grid: Tile[][], tx: number, ty: number): Tile;
 /** Tile an actor's center sits on. */

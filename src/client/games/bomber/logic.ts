@@ -189,10 +189,18 @@ export function createWorld(level: number, rng: () => number): WorldState {
   return state
 }
 
-/** Reset to `nextLevel` keeping the score (auto-advance and R both use it). */
+/** Reset to `nextLevel` keeping the score (auto-advance uses it). */
 export function startLevel(state: WorldState, nextLevel: number, rng: () => number): void {
   const fresh = createWorld(nextLevel, rng)
   fresh.score = state.score
+  Object.assign(state, fresh)
+}
+
+/** Restart a level from scratch: same layout seed, score back to 0 (R and
+ * death-restart both use it — a fresh attempt must not inherit the aborted
+ * run's score). */
+export function resetLevel(state: WorldState, rng: () => number): void {
+  const fresh = createWorld(state.level, rng)
   Object.assign(state, fresh)
 }
 

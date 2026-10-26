@@ -11,7 +11,7 @@ import type {
   MiniGameMountOptions,
 } from '../types.ts'
 import {
-  createWorld, startLevel, stepWorld, placeBomb, mulberry32, LEVELS,
+  createWorld, startLevel, resetLevel, stepWorld, placeBomb, mulberry32, LEVELS,
   type PlayerInput, type WorldState,
 } from './logic.ts'
 import { renderBomber, BOARD_W, BOARD_H } from './render.ts'
@@ -46,9 +46,10 @@ function createBomberGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   }
 
   const restartLevel = (): void => {
-    // Same seed → the same layout, so a retry is fair.
+    // Same seed → the same layout, so a retry is fair; the score restarts
+    // at 0 (a fresh attempt must not inherit the aborted run's score).
     const level = world.level
-    startLevel(world, level, levelRng(level))
+    resetLevel(world, levelRng(level))
     lastScore = -1
     input.up = input.down = input.left = input.right = false
     reportScore()
