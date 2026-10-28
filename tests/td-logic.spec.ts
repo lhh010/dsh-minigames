@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  BUILD_TIME, GRID_H, GRID_W, START_GOLD, START_LIVES,
+  BUILD_TIME, CALL_TIME, GRID_H, GRID_W, START_GOLD, START_LIVES, WAVES_PER_LEVEL,
   buildTower, canBuild, createState, earlySendBonus, enemySpeed, explode, generatePath,
   hitEnemy, killGold, mapSeed, mulberry32, pathLength, pathTilesOf, positionAt, restartLevel,
   sellTower, sendWaveEarly, startWave, step, towerStats, upgradeCost, upgradeTower, waveClearBonus, waveSize,
@@ -358,5 +358,69 @@ describe('td determinism', () => {
     const a = mulberry32(99)
     const b = mulberry32(99)
     for (let i = 0; i < 10; i += 1) expect(a()).toBe(b())
+  })
+
+  it('combat early-call overlaps the next wave onto survivors (harder, paid)', () => {
+    const s = createState(3)
+    startWave(s)
+    // Drain the spawn queue; enemies still alive on the path.
+    for (let i = 0; i < 60 * 30 && s.spawnQueue > 0; i += 1) step(s, 1 / 60)
+    expect(s.phase).toBe('wave')
+    expect(s.spawnQueue).toBe(0)
+    expect(s.enemies.length).toBeGreaterThan(0)
+    // Let the call window decay halfway, then call: wave 2 overlaps.
+    for (let i = 0; i < 60 * (CALL_TIME / 2); i += 1) step(s, 1 / 60)
+    const goldBefore = s.gold
+    sendWaveEarly(s)
+    expect(s.wave).toBe(2)
+    expect(s.phase).toBe('wave')
+    expect(s.spawnQueue).toBe(waveSize(2))
+    // Survivors of wave 1 are still fighting.
+    const ids = s.enemies.map(e => e.id)
+    expect(ids.length).toBeGreaterThan(waveSize(2) - s.spawnQueue)
+    // The early bonus was granted at roughly half the window.
+    expect(s.gold - goldBefore).toBeGreaterThan(0)
+    expect(s.gold - goldBefore).toBeLessThanOrEqual(Math.floor(CALL_TIME / 2) * 10 + 10)
+  })
+
+  it('the combat window never auto-overlaps; waiting clears the wave normally', () => {
+    const s = createState(4)
+    startWave(s)
+    for (let i = 0; i < 60 * 30 && s.spawnQueue > 0; i += 1) step(s, 1 / 60)
+    // Wait past the call window with enemies still mid-path: wave 2 must
+    // never start by itself.
+    for (let i = 0; i < 60 * (CALL_TIME + 2); i += 1) {
+      step(s, 1 / 60)
+      if (s.enemies.length === 0) break
+      expect(s.wave).toBe(1)
+      expect(s.phase).toBe('wave')
+    }
+    // Kill the survivors by hand; the wave-clear path resumes normally.
+    for (const e of s.enemies) { e.hp = 0; e.alive = false }
+    step(s, 1 / 60)
+    expect(s.phase).toBe('build')
+    expect(s.wave).toBe(2)
+    expect(s.buildTimer).toBe(BUILD_TIME)
+  })
+
+  it('startWave from combat only works with a drained queue and a next wave', () => {
+    const s = createState(5)
+    startWave(s)
+    // Queue still full: neither early send nor startWave overlaps.
+    startWave(s)
+    sendWaveEarly(s)
+    expect(s.wave).toBe(1)
+    expect(s.phase).toBe('wave')
+    expect(s.spawnQueue).toBeGreaterThan(0)
+    // Drain the queue with enemies alive, then stand at the final wave:
+    // there is no next wave to overlap.
+    for (let i = 0; i < 60 * 30 && s.spawnQueue > 0; i += 1) step(s, 1 / 60)
+    s.wave = WAVES_PER_LEVEL
+    s.spawnQueue = 0
+    sendWaveEarly(s)
+    startWave(s)
+    expect(s.wave).toBe(WAVES_PER_LEVEL)
+    expect(s.spawnQueue).toBe(0)
+    expect(s.phase).toBe('wave')
   })
 })

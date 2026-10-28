@@ -185,7 +185,7 @@ export const tdGame: MiniGameDefinition = {
   controls: [
     '1/2/3 或点工具栏：选塔 · 点击空地建造',
     '点已有塔查看射程 · U 升级（最多3级）· X 出售',
-    '空格：提前开战（按剩余秒数奖励金币）',
+    '空格：提前开战/战斗中召唤下一波（按剩余秒数奖励金币，叠波更难）',
     'R：重开本关 · P：暂停 · 失败后 Enter 重开',
   ],
   create: createTdGame,

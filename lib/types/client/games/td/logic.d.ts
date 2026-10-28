@@ -17,6 +17,13 @@ export declare const START_GOLD = 120;
 export declare const START_LIVES = 3;
 /** Seconds of build (pre-wave) time before the wave auto-starts. */
 export declare const BUILD_TIME = 8;
+/**
+ * Combat early-call window: once this wave's spawn queue drains, Space calls
+ * the NEXT wave immediately — its enemies fight alongside the survivors
+ * (overlap = harder). The bonus decays with this window, so calling sooner
+ * pays more. The wave never auto-overlaps: at 0 only the bonus is gone.
+ */
+export declare const CALL_TIME = 8;
 export type TowerKind = 'arrow' | 'frost' | 'cannon';
 /** Static per-kind metadata (cost / upgrade prices / display name). */
 export interface TowerInfo {
@@ -138,6 +145,8 @@ export interface TdState {
     phase: TdPhase;
     /** Seconds left in the build phase before the wave auto-starts. */
     buildTimer: number;
+    /** Early-call bonus window left during combat (next wave overlap). */
+    callTimer: number;
     /** Enemies still to spawn this wave. */
     spawnQueue: number;
     spawnTimer: number;
@@ -160,11 +169,19 @@ export declare function earlySendBonus(remaining: number): number;
 export declare function createState(seed: number, level?: number): TdState;
 /** Restart the current level: same map seed, gold back to start, wave 1. */
 export declare function restartLevel(state: TdState): void;
-/** Start the wave now (used by the auto countdown and the early send). */
+/**
+ * Start the wave now. From the build phase this runs the pending wave; from
+ * combat (queue drained, a next wave exists) it OVERLAPS: the next wave's
+ * enemies join the fight immediately. The early-call bonus is granted by
+ * {@link sendWaveEarly}, which routes both paths.
+ */
 export declare function startWave(state: TdState): void;
 /**
- * Send the next wave early: grants +10 gold per remaining build second and
- * starts the wave immediately.
+ * Send the next wave early: grants +10 gold per remaining second and starts
+ * the wave immediately. In the build phase that just skips the countdown; in
+ * combat (queue drained) it overlaps the next wave onto the survivors —
+ * harder fight, paid for with the bonus. Calling mid-combat trades the
+ * overlapped wave's clear bonus for the early bonus.
  */
 export declare function sendWaveEarly(state: TdState): void;
 /** Whether a tower may be built on tile (tx, ty): in bounds, off the path,

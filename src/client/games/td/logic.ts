@@ -28,6 +28,13 @@ export const START_GOLD = 120
 export const START_LIVES = 3
 /** Seconds of build (pre-wave) time before the wave auto-starts. */
 export const BUILD_TIME = 8
+/**
+ * Combat early-call window: once this wave's spawn queue drains, Space calls
+ * the NEXT wave immediately — its enemies fight alongside the survivors
+ * (overlap = harder). The bonus decays with this window, so calling sooner
+ * pays more. The wave never auto-overlaps: at 0 only the bonus is gone.
+ */
+export const CALL_TIME = 8
 const SPAWN_FIRST_DELAY = 0.4
 const EARLY_BONUS_PER_SECOND = 10
 
@@ -253,6 +260,8 @@ export interface TdState {
   phase: TdPhase
   /** Seconds left in the build phase before the wave auto-starts. */
   buildTimer: number
+  /** Early-call bonus window left during combat (next wave overlap). */
+  callTimer: number
   /** Enemies still to spawn this wave. */
   spawnQueue: number
   spawnTimer: number
@@ -303,6 +312,7 @@ function resetBoard(state: TdState, level: number): void {
   state.effects = []
   state.phase = 'build'
   state.buildTimer = BUILD_TIME
+  state.callTimer = CALL_TIME
   state.spawnQueue = 0
   state.spawnTimer = 0
   state.brutePending = false
@@ -325,6 +335,7 @@ export function createState(seed: number, level = 1): TdState {
     score: 0,
     phase: 'build',
     buildTimer: BUILD_TIME,
+    callTimer: CALL_TIME,
     spawnQueue: 0,
     spawnTimer: 0,
     brutePending: false,
@@ -350,25 +361,56 @@ export function restartLevel(state: TdState): void {
   state.rng = mulberry32((mapSeed(state.seed, state.level) ^ 0x5bf03635) >>> 0)
 }
 
-/** Start the wave now (used by the auto countdown and the early send). */
-export function startWave(state: TdState): void {
-  if (state.phase !== 'build' || state.result !== 'none') return
+/** Arm a fresh wave spawn (wave counter already points at the wave to run). */
+function beginWave(state: TdState): void {
   state.phase = 'wave'
   state.spawnQueue = waveSize(state.wave)
   state.spawnTimer = SPAWN_FIRST_DELAY
   state.brutePending = state.wave % 3 === 0
+  state.callTimer = CALL_TIME
 }
 
 /**
- * Send the next wave early: grants +10 gold per remaining build second and
- * starts the wave immediately.
+ * Start the wave now. From the build phase this runs the pending wave; from
+ * combat (queue drained, a next wave exists) it OVERLAPS: the next wave's
+ * enemies join the fight immediately. The early-call bonus is granted by
+ * {@link sendWaveEarly}, which routes both paths.
+ */
+export function startWave(state: TdState): void {
+  if (state.result !== 'none') return
+  if (state.phase === 'build') {
+    beginWave(state)
+    return
+  }
+  if (state.phase === 'wave' && state.spawnQueue === 0 && state.wave < WAVES_PER_LEVEL) {
+    state.wave += 1
+    beginWave(state)
+  }
+}
+
+/**
+ * Send the next wave early: grants +10 gold per remaining second and starts
+ * the wave immediately. In the build phase that just skips the countdown; in
+ * combat (queue drained) it overlaps the next wave onto the survivors —
+ * harder fight, paid for with the bonus. Calling mid-combat trades the
+ * overlapped wave's clear bonus for the early bonus.
  */
 export function sendWaveEarly(state: TdState): void {
-  if (state.phase !== 'build' || state.result !== 'none') return
-  const bonus = earlySendBonus(state.buildTimer)
-  state.gold += bonus
-  state.score += bonus
-  startWave(state)
+  if (state.result !== 'none') return
+  if (state.phase === 'build') {
+    const bonus = earlySendBonus(state.buildTimer)
+    state.gold += bonus
+    state.score += bonus
+    startWave(state)
+    return
+  }
+  if (state.phase === 'wave' && state.spawnQueue === 0 && state.wave < WAVES_PER_LEVEL) {
+    const bonus = earlySendBonus(state.callTimer)
+    state.gold += bonus
+    state.score += bonus
+    state.wave += 1
+    beginWave(state)
+  }
 }
 
 function spawnEnemy(state: TdState): void {
@@ -527,6 +569,7 @@ function waveCleared(state: TdState): void {
   state.wave += 1
   state.phase = 'build'
   state.buildTimer = BUILD_TIME
+  state.callTimer = CALL_TIME
 }
 
 /**
@@ -549,6 +592,13 @@ export function step(state: TdState, dt: number): void {
       spawnEnemy(state)
       state.spawnTimer = 0.9 + state.rng() * 0.3
     }
+  }
+
+  // Combat early-call window: once the queue is drained, the bonus window
+  // decays while enemies remain. It never auto-starts the next wave — only
+  // the player's Space does (overlap is a chosen risk).
+  if (state.phase === 'wave' && state.spawnQueue === 0 && state.enemies.length > 0 && state.callTimer > 0) {
+    state.callTimer = Math.max(0, state.callTimer - dt)
   }
 
   // Enemy movement + leaks.

@@ -6,7 +6,7 @@
  * layout constants for pointer input.
  */
 import {
-  GRID_H, GRID_W, TOWER_INFO, positionAt, towerStats,
+  GRID_H, GRID_W, TOWER_INFO, WAVES_PER_LEVEL, earlySendBonus, positionAt, towerStats,
   type TdState, type TowerKind,
 } from './logic.ts'
 import { THEME, accent, drawBackground, drawOverlay, glow, hudPair, noGlow, roundRectPath, spaced } from '../theme.ts'
@@ -219,6 +219,11 @@ function drawHud(ctx: CanvasRenderingContext2D, view: TdView): void {
     // Right-aligned next to 分数, separated from the left cluster: the old
     // center anchor overlapped 波次/关卡.
     hudPair(ctx, LOGICAL_W - 130, 27, '来袭', `${Math.ceil(state.buildTimer)}s`, 'right', THEME.textMuted)
+  } else if (state.phase === 'wave' && state.spawnQueue === 0 && state.enemies.length > 0 && state.wave < WAVES_PER_LEVEL) {
+    // Combat early-call window: the shrinking bonus for overlapping the next
+    // wave onto the fight (Space = call now).
+    const bonus = earlySendBonus(state.callTimer)
+    hudPair(ctx, LOGICAL_W - 130, 27, '空格 召唤', bonus > 0 ? `+${String(bonus)}` : '可叠波', 'right', THEME.gold)
   }
 }
 
