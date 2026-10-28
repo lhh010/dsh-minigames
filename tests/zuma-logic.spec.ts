@@ -313,4 +313,21 @@ describe('zuma win / lose / determinism', () => {
     expect(play(1234)).toBe(play(1234))
     expect(play(1234)).not.toBe(play(5678))
   })
+
+  it('spawned chains never self-assemble a 3-run at the tail (anti-autoplay)', () => {
+    // Simulate long idle spawning at several levels: with the tail-color
+    // exclusion the chain must never hold 3 consecutive same-color balls
+    // anywhere it built by spawning alone (a natural 3-run plus one player
+    // shot cascaded gap-merge reactions that cleared whole boards).
+    for (const level of [1, 3, 5]) {
+      const s = createState(99)
+      startRun(s)
+      startLevel(s, level)
+      for (let i = 0; i < 60 * 90 && s.remaining > 0 && s.result === 'playing'; i += 1) step(s, 1 / 60)
+      for (let i = 0; i + 2 < s.balls.length; i += 1) {
+        const run3 = s.balls[i]!.color === s.balls[i + 1]!.color && s.balls[i + 1]!.color === s.balls[i + 2]!.color
+        expect(run3).toBe(false)
+      }
+    }
+  })
 })

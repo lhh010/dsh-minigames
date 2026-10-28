@@ -229,6 +229,29 @@ function pickColor(state: ZumaState): number {
   return pool[(state.rng() * pool.length) | 0]!
 }
 
+/**
+ * Spawn color for the chain TAIL: from the level's FULL palette, excluding a
+ * color that would make a third consecutive run at the tail (when the palette
+ * allows). Two traps the old pick-a-present-color rule fell into:
+ * (1) a monochrome start chain can never diversify — every spawn repeats the
+ * only present color, self-assembling 3-runs the player clears by accident;
+ * (2) those natural runs plus one shot cascaded gap-merge reactions that
+ * emptied whole boards untouched.
+ */
+function spawnColor(state: ZumaState): number {
+  const all = Array.from({ length: colorCount(state.level) }, (_, i) => i)
+  const n = state.balls.length
+  if (n >= 2) {
+    const a = state.balls[n - 2]!
+    const b = state.balls[n - 1]!
+    if (a.color === b.color) {
+      const pool = all.filter(c => c !== b.color)
+      if (pool.length > 0) return pool[(state.rng() * pool.length) | 0]!
+    }
+  }
+  return all[(state.rng() * all.length) | 0]!
+}
+
 /** (Re)start a level: fresh chain, deterministic rng, shooter reloaded. */
 export function startLevel(state: ZumaState, level: number): void {
   state.level = level
@@ -462,7 +485,7 @@ export function step(state: ZumaState, dt: number, input?: ZumaInput): void {
     const tail = state.balls[state.balls.length - 1]
     if (tail !== undefined && tail.s < SPACING - 0.001) break
     if (state.spawnTimer > 0) break
-    state.balls.push({ s: 0, color: pickColor(state) })
+    state.balls.push({ s: 0, color: spawnColor(state) })
     state.remaining -= 1
     state.spawnTimer = spawnInterval(state.level)
   }

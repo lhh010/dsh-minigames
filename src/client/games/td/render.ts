@@ -22,10 +22,18 @@ const BOARD_Y = HUD_H
 
 const TOWER_ORDER: readonly TowerKind[] = ['arrow', 'frost', 'cannon']
 const TOWER_GLYPH: Record<TowerKind, string> = { arrow: '🏹', frost: '❄️', cannon: '💣' }
-const BTN_W = 128
+/**
+ * Five buttons must fit LOGICAL_W = 528px: 3 tower + upgrade + sell.
+ * 5 × 96 + 4 × 10 gaps = 520 + 2 × 4 margin = 528 — a compact grid the
+ * previous 128px-wide buttons could never fit (they stacked 3 + overlapped
+ * the right pair onto the cannon button).
+ */
+const BTN_W = 96
 const BTN_H = 52
 const BTN_GAP = 10
 const BTN_Y = LOGICAL_H - TOOLBAR_H + 8
+/** Left x of button slot i (0-2 towers, 3 upgrade, 4 sell). */
+const btnX = (i: number): number => 4 + i * (BTN_W + BTN_GAP)
 
 export interface ToolbarHit {
   kind: TowerKind | 'upgrade' | 'sell'
@@ -42,14 +50,13 @@ export function cellAt(x: number, y: number): { tx: number; ty: number } | null 
 /** Toolbar button under logical point (x, y), or null outside the toolbar. */
 export function toolbarAt(x: number, y: number): ToolbarHit | null {
   if (y < BTN_Y || y > BTN_Y + BTN_H) return null
-  for (let i = 0; i < TOWER_ORDER.length; i += 1) {
-    const bx = 10 + i * (BTN_W + BTN_GAP)
-    if (x >= bx && x <= bx + BTN_W) return { kind: TOWER_ORDER[i]! }
+  for (let i = 0; i < 5; i += 1) {
+    const bx = btnX(i)
+    if (x >= bx && x <= bx + BTN_W) {
+      if (i <= 2) return { kind: TOWER_ORDER[i]! }
+      return { kind: i === 3 ? 'upgrade' : 'sell' }
+    }
   }
-  const ux = LOGICAL_W - 10 - 2 * (BTN_W + BTN_GAP)
-  if (x >= ux && x <= ux + BTN_W) return { kind: 'upgrade' }
-  const sx = LOGICAL_W - 10 - BTN_W
-  if (x >= sx && x <= sx + BTN_W) return { kind: 'sell' }
   return null
 }
 
@@ -204,12 +211,14 @@ function drawHud(ctx: CanvasRenderingContext2D, view: TdView): void {
   ctx.stroke()
   ctx.textAlign = 'left'
   hudPair(ctx, 10, 27, '金币', String(state.gold), 'left', THEME.gold)
-  hudPair(ctx, 110, 27, '生命', `${'❤'.repeat(state.lives) || '—'}`, 'left', state.lives > 1 ? THEME.bad : THEME.text)
-  hudPair(ctx, 210, 27, '波次', `${state.wave}/10`)
-  hudPair(ctx, 300, 27, '关卡', String(state.level))
+  hudPair(ctx, 100, 27, '生命', `${'❤'.repeat(state.lives) || '—'}`, 'left', state.lives > 1 ? THEME.bad : THEME.text)
+  hudPair(ctx, 186, 27, '波次', `${state.wave}/10`)
+  hudPair(ctx, 264, 27, '关卡', String(state.level))
   hudPair(ctx, LOGICAL_W - 10, 27, '分数', String(state.score), 'right')
   if (state.phase === 'build') {
-    hudPair(ctx, LOGICAL_W / 2, 27, '来袭', `${Math.ceil(state.buildTimer)}s（空格 提前+奖励）`, 'right')
+    // Right-aligned next to 分数, separated from the left cluster: the old
+    // center anchor overlapped 波次/关卡.
+    hudPair(ctx, LOGICAL_W - 130, 27, '来袭', `${Math.ceil(state.buildTimer)}s`, 'right', THEME.textMuted)
   }
 }
 
@@ -217,10 +226,9 @@ function drawToolbar(ctx: CanvasRenderingContext2D, view: TdView): void {
   const { state } = view
   ctx.fillStyle = THEME.panel
   ctx.fillRect(0, LOGICAL_H - TOOLBAR_H, LOGICAL_W, TOOLBAR_H)
-  ctx.font = '600 12px system-ui, sans-serif'
   for (let i = 0; i < TOWER_ORDER.length; i += 1) {
     const kind = TOWER_ORDER[i]!
-    const bx = 10 + i * (BTN_W + BTN_GAP)
+    const bx = btnX(i)
     const affordable = state.gold >= TOWER_INFO[kind].cost
     const active = view.selectedKind === kind
     roundRectPath(ctx, bx, BTN_Y, BTN_W, BTN_H, 8)
@@ -230,13 +238,13 @@ function drawToolbar(ctx: CanvasRenderingContext2D, view: TdView): void {
     ctx.stroke()
     ctx.textAlign = 'left'
     ctx.fillStyle = affordable ? THEME.text : THEME.textMuted
-    ctx.font = '600 13px system-ui, sans-serif'
-    ctx.fillText(`${TOWER_GLYPH[kind]} ${TOWER_INFO[kind].name} ${TOWER_INFO[kind].cost}`, bx + 10, BTN_Y + 20)
+    ctx.font = '600 12px system-ui, sans-serif'
+    ctx.fillText(`${TOWER_GLYPH[kind]} ${TOWER_INFO[kind].name} ${TOWER_INFO[kind].cost}`, bx + 8, BTN_Y + 20)
     ctx.font = '600 11px system-ui, sans-serif'
     ctx.fillStyle = THEME.textMuted
-    ctx.fillText(kind === 'arrow' ? '快速单体' : kind === 'frost' ? '减速控制' : '范围溅射', bx + 10, BTN_Y + 38)
+    ctx.fillText(kind === 'arrow' ? '快速单体' : kind === 'frost' ? '减速控制' : '范围溅射', bx + 8, BTN_Y + 38)
   }
-  const ux = LOGICAL_W - 10 - 2 * (BTN_W + BTN_GAP)
+  const ux = btnX(3)
   const tower = state.towers.find(t => t.id === view.selectedTowerId)
   const upCost = tower !== undefined && tower.level < 3 ? TOWER_INFO[tower.kind].upgrades[tower.level - 1]! : null
   roundRectPath(ctx, ux, BTN_Y, BTN_W, BTN_H, 8)
@@ -245,16 +253,23 @@ function drawToolbar(ctx: CanvasRenderingContext2D, view: TdView): void {
   ctx.strokeStyle = upCost !== null && state.gold >= upCost ? accent(2) : THEME.textMuted
   ctx.stroke()
   ctx.fillStyle = upCost !== null ? THEME.text : THEME.textMuted
-  ctx.font = '600 13px system-ui, sans-serif'
-  ctx.fillText(upCost !== null ? `⬆ 升级 U ${upCost}` : '⬆ 已满级', ux + 10, BTN_Y + 32)
-  const sx = LOGICAL_W - 10 - BTN_W
+  ctx.font = '600 12px system-ui, sans-serif'
+  ctx.fillText(upCost !== null ? `⬆ 升级 ${upCost}` : '⬆ 已满级', ux + 8, BTN_Y + 20)
+  ctx.font = '600 11px system-ui, sans-serif'
+  ctx.fillStyle = THEME.textMuted
+  ctx.fillText('按 U', ux + 8, BTN_Y + 38)
+  const sx = btnX(4)
   roundRectPath(ctx, sx, BTN_Y, BTN_W, BTN_H, 8)
   ctx.fillStyle = THEME.panelEdge
   ctx.fill()
   ctx.strokeStyle = tower !== undefined ? THEME.bad : THEME.textMuted
   ctx.stroke()
   ctx.fillStyle = tower !== undefined ? THEME.text : THEME.textMuted
-  ctx.fillText('💰 出售 -40%', sx + 10, BTN_Y + 32)
+  ctx.font = '600 12px system-ui, sans-serif'
+  ctx.fillText('💰 出售', sx + 8, BTN_Y + 20)
+  ctx.font = '600 11px system-ui, sans-serif'
+  ctx.fillStyle = THEME.textMuted
+  ctx.fillText('返还 60%', sx + 8, BTN_Y + 38)
   // Build ghost on the hovered tile.
   if (view.hover !== null && view.selectedKind !== null) {
     const htx = view.hover.tx
