@@ -16,14 +16,14 @@ export declare const LEVEL_WRAP = 5;
 export declare const START_GOLD = 120;
 export declare const START_LIVES = 3;
 /** Seconds of build (pre-wave) time before the wave auto-starts. */
-export declare const BUILD_TIME = 8;
+export declare const BUILD_TIME = 20;
 /**
  * Combat early-call window: once this wave's spawn queue drains, Space calls
  * the NEXT wave immediately — its enemies fight alongside the survivors
  * (overlap = harder). The bonus decays with this window, so calling sooner
  * pays more. The wave never auto-overlaps: at 0 only the bonus is gone.
  */
-export declare const CALL_TIME = 8;
+export declare const CALL_TIME = 12;
 export type TowerKind = 'arrow' | 'frost' | 'cannon';
 /** Static per-kind metadata (cost / upgrade prices / display name). */
 export interface TowerInfo {

@@ -27,14 +27,14 @@ export const LEVEL_WRAP = 5
 export const START_GOLD = 120
 export const START_LIVES = 3
 /** Seconds of build (pre-wave) time before the wave auto-starts. */
-export const BUILD_TIME = 8
+export const BUILD_TIME = 20
 /**
  * Combat early-call window: once this wave's spawn queue drains, Space calls
  * the NEXT wave immediately — its enemies fight alongside the survivors
  * (overlap = harder). The bonus decays with this window, so calling sooner
  * pays more. The wave never auto-overlaps: at 0 only the bonus is gone.
  */
-export const CALL_TIME = 8
+export const CALL_TIME = 12
 const SPAWN_FIRST_DELAY = 0.4
 const EARLY_BONUS_PER_SECOND = 10
 
