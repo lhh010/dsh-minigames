@@ -27,7 +27,7 @@ export const LEVEL_WRAP = 5
 export const START_GOLD = 120
 export const START_LIVES = 3
 /** Seconds of build (pre-wave) time before the wave auto-starts. */
-export const BUILD_TIME = 20
+export const BUILD_TIME = 15
 /**
  * Combat early-call window: once this wave's spawn queue drains, Space calls
  * the NEXT wave immediately — its enemies fight alongside the survivors
