@@ -13,5 +13,10 @@ export interface BowlingView {
     paused: boolean;
     best: number;
 }
+/** Inverse of the lane mapping: canvas-logical point → lane coordinates. */
+export declare function laneFromLogical(x: number, y: number): {
+    x: number;
+    y: number;
+};
 /** Draw the whole scene (call once per rendered frame). */
 export declare function renderBowling(ctx: CanvasRenderingContext2D, view: BowlingView): void;

@@ -67,12 +67,16 @@ export declare const STUCK_KICK_MAX = 3;
 export declare const RESCUE_KICK = 320;
 /** Score needed to advance from level l (cumulative within one game). */
 export declare function levelThreshold(level: number): number;
-/** Anti-trap: this many hits within TRAP_WINDOW seconds sates the bumper;
- * it stops kicking/scoring until the ball stays clear for TRAP_CLEAR seconds. */
-export declare const TRAP_HITS = 3;
-export declare const TRAP_WINDOW = 1;
-export declare const TRAP_CLEAR = 0.35;
-/** While sated the bumper only nudges the ball out (no kick, no score). */
+/** Anti-farm: this many hits within FARM_WINDOW seconds sates the kicker;
+ * it stops kicking/scoring until the ball stays clear for TRAP_CLEAR seconds.
+ * The window is ROLLING (timestamp log), so alternating kicker pairs — a
+ * reset-based window let those escape forever — are covered too. TRAP_CLEAR
+ * must exceed a kicker-commute period (≥0.4s), or an A↔B orbit un-sates
+ * between legs and farms forever. */
+export declare const FARM_HITS = 3;
+export declare const FARM_WINDOW = 2.5;
+export declare const TRAP_CLEAR = 1;
+/** While sated the kicker only nudges the ball out (no kick, no score). */
 export declare const SATED_E = 0.45;
 export type PinballResult = 'playing' | 'paused' | 'gameOver';
 export interface Ball {
@@ -87,13 +91,11 @@ export interface Bumper {
     r: number;
     /** Re-trigger cooldown remaining (s). */
     cd: number;
-    /** Hits inside the current anti-trap window (resets after TRAP_WINDOW). */
-    trapHits: number;
-    /** Time accumulated in the current anti-trap window (s). */
-    trapT: number;
-    /** Sated: rapid re-hits detected — bumper goes quiet until the ball leaves. */
+    /** Rolling hit timestamps (state.time) — farm detection window. */
+    hitLog: number[];
+    /** Sated: too many recent hits — kicker goes quiet until the ball leaves. */
     sated: boolean;
-    /** Continuous time the ball has stayed clear of this bumper's margin (s). */
+    /** Continuous time the ball has stayed clear of this kicker's margin (s). */
     clearT: number;
 }
 export interface Sling {
@@ -102,6 +104,9 @@ export interface Sling {
     bx: number;
     by: number;
     cd: number;
+    hitLog: number[];
+    sated: boolean;
+    clearT: number;
 }
 export interface DropTarget {
     x1: number;

@@ -71,12 +71,16 @@ export function levelThreshold(level: number): number {
   return 2000 * level
 }
 
-/** Anti-trap: this many hits within TRAP_WINDOW seconds sates the bumper;
- * it stops kicking/scoring until the ball stays clear for TRAP_CLEAR seconds. */
-export const TRAP_HITS = 3
-export const TRAP_WINDOW = 1.0
-export const TRAP_CLEAR = 0.35
-/** While sated the bumper only nudges the ball out (no kick, no score). */
+/** Anti-farm: this many hits within FARM_WINDOW seconds sates the kicker;
+ * it stops kicking/scoring until the ball stays clear for TRAP_CLEAR seconds.
+ * The window is ROLLING (timestamp log), so alternating kicker pairs — a
+ * reset-based window let those escape forever — are covered too. TRAP_CLEAR
+ * must exceed a kicker-commute period (≥0.4s), or an A↔B orbit un-sates
+ * between legs and farms forever. */
+export const FARM_HITS = 3
+export const FARM_WINDOW = 2.5
+export const TRAP_CLEAR = 1.0
+/** While sated the kicker only nudges the ball out (no kick, no score). */
 export const SATED_E = 0.45
 
 export type PinballResult = 'playing' | 'paused' | 'gameOver'
@@ -94,13 +98,11 @@ export interface Bumper {
   r: number
   /** Re-trigger cooldown remaining (s). */
   cd: number
-  /** Hits inside the current anti-trap window (resets after TRAP_WINDOW). */
-  trapHits: number
-  /** Time accumulated in the current anti-trap window (s). */
-  trapT: number
-  /** Sated: rapid re-hits detected — bumper goes quiet until the ball leaves. */
+  /** Rolling hit timestamps (state.time) — farm detection window. */
+  hitLog: number[]
+  /** Sated: too many recent hits — kicker goes quiet until the ball leaves. */
   sated: boolean
-  /** Continuous time the ball has stayed clear of this bumper's margin (s). */
+  /** Continuous time the ball has stayed clear of this kicker's margin (s). */
   clearT: number
 }
 
@@ -110,6 +112,9 @@ export interface Sling {
   bx: number
   by: number
   cd: number
+  hitLog: number[]
+  sated: boolean
+  clearT: number
 }
 
 export interface DropTarget {
@@ -233,14 +238,14 @@ export const BUMPER_PRESETS: { x: number; y: number }[][] = [
 
 function makeBumpers(level: number): Bumper[] {
   const preset = BUMPER_PRESETS[(level - 1) % BUMPER_PRESETS.length]!
-  return preset.map(p => ({ x: p.x, y: p.y, r: 16, cd: 0, trapHits: 0, trapT: 0, sated: false, clearT: TRAP_CLEAR }))
+  return preset.map(p => ({ x: p.x, y: p.y, r: 16, cd: 0, hitLog: [], sated: false, clearT: TRAP_CLEAR }))
 }
 
 /** Slingshot active faces (the angled kickers above each flipper). */
 function makeSlings(): Sling[] {
   return [
-    { ax: 86, ay: 534, bx: 114, by: 566, cd: 0 },
-    { ax: 334, ay: 534, bx: 306, by: 566, cd: 0 },
+    { ax: 86, ay: 534, bx: 114, by: 566, cd: 0, hitLog: [], sated: false, clearT: TRAP_CLEAR },
+    { ax: 334, ay: 534, bx: 306, by: 566, cd: 0, hitLog: [], sated: false, clearT: TRAP_CLEAR },
   ]
 }
 
@@ -461,62 +466,73 @@ export function step(state: PinballState, dt: number): void {
 
     for (const w of state.walls) collideWall(ball, w)
 
-    for (const b of state.bumpers) {
-      // Anti-trap bookkeeping: a ball orbiting between a bumper and a wall
-      // re-triggers every cooldown and farms score forever. Three hits inside
-      // one window sate the bumper — quiet until the ball stays clear.
-      b.trapT += h
-      if (b.trapT >= TRAP_WINDOW) { b.trapT = 0; b.trapHits = 0 }
-      const nearR = BALL_R + b.r + 8
-      const dxw = ball.x - b.x
-      const dyw = ball.y - b.y
-      if (dxw * dxw + dyw * dyw < nearR * nearR) {
-        b.clearT = 0
+    /**
+     * Rolling farm guard, run EVERY substep for one kicker: maintain the hit
+     * timestamp log on scoring hits; sate when FARM_HITS land inside
+     * FARM_WINDOW; un-sate after the ball stays clear of the kicker's margin
+     * for TRAP_CLEAR seconds. Covers single-kicker orbits AND alternating
+     * kicker pairs (a reset-based window let those farm forever).
+     */
+    const farmGuard = (k: { hitLog: number[]; sated: boolean; clearT: number }, nearMargin: boolean, scoredHit: boolean): void => {
+      if (nearMargin) {
+        k.clearT = 0
+        if (k.sated) return
+        if (!scoredHit) return
+        const t = state.time
+        k.hitLog.push(t)
+        while (k.hitLog.length > 0 && t - k.hitLog[0]! > FARM_WINDOW) k.hitLog.shift()
+        if (k.hitLog.length >= FARM_HITS) {
+          k.sated = true
+          k.clearT = 0
+          k.hitLog = []
+        }
       } else {
-        b.clearT += h
-        if (b.sated && b.clearT >= TRAP_CLEAR) {
-          b.sated = false
-          b.trapHits = 0
-          b.trapT = 0
+        k.clearT += h
+        if (k.sated && k.clearT >= TRAP_CLEAR) {
+          k.sated = false
+          k.hitLog = []
         }
       }
+    }
+
+    for (const b of state.bumpers) {
+      const nearR = BALL_R + b.r + 8
+      const nearMargin = (ball.x - b.x) ** 2 + (ball.y - b.y) ** 2 < nearR * nearR
       const cp = { x: b.x, y: b.y }
       const dx = ball.x - b.x
       const dy = ball.y - b.y
-      if (dx * dx + dy * dy >= (BALL_R + b.r) * (BALL_R + b.r)) continue
-      if (b.sated) {
-        // Quiet separation only: no kick, no score, no orbit.
-        bounceOffPoint(ball, BALL_R + b.r, SATED_E, 0, cp.x, cp.y)
-        continue
-      }
-      if (b.cd <= 0) {
+      const contact = dx * dx + dy * dy < (BALL_R + b.r) * (BALL_R + b.r)
+      const canKick = !b.sated && b.cd <= 0
+      let scoredHit = false
+      if (canKick && contact) {
         b.cd = BUMPER_COOLDOWN
         bounceOffPoint(ball, BALL_R + b.r, BUMPER_E, BUMPER_KICK, cp.x, cp.y)
         state.score += BUMPER_POINTS
         state.events.push({ kind: 'bumper', x: b.x, y: b.y })
-        b.trapHits += 1
-        if (b.trapHits >= TRAP_HITS) {
-          b.trapHits = 0
-          b.sated = true
-          b.clearT = 0
-        }
-      } else {
-        // Cooldown: separate positions only, no re-kick and no re-score.
-        bounceOffPoint(ball, BALL_R + b.r, 0, 0, cp.x, cp.y)
+        scoredHit = true
+      } else if (contact) {
+        // Sated or cooling: separate positions only — no kick, no score.
+        bounceOffPoint(ball, BALL_R + b.r, b.sated ? SATED_E : 0, 0, cp.x, cp.y)
       }
+      farmGuard(b, nearMargin, scoredHit)
     }
 
     for (const s of state.slings) {
       const cp = closestPointOnSegment(ball.x, ball.y, s.ax, s.ay, s.bx, s.by)
-      if (cp.d2 >= BALL_R * BALL_R) continue
-      if (s.cd <= 0) {
+      const contact = cp.d2 < BALL_R * BALL_R
+      const nearMargin = cp.d2 < (BALL_R + 8) ** 2
+      const canKick = !s.sated && s.cd <= 0
+      let scoredHit = false
+      if (canKick && contact) {
         s.cd = SLING_COOLDOWN
         bounceOffPoint(ball, BALL_R, SLING_E, SLING_KICK, cp.x, cp.y)
         state.score += SLING_POINTS
         state.events.push({ kind: 'sling', x: (s.ax + s.bx) / 2, y: (s.ay + s.by) / 2 })
-      } else {
-        bounceOffPoint(ball, BALL_R, 0, 0, cp.x, cp.y)
+        scoredHit = true
+      } else if (contact) {
+        bounceOffPoint(ball, BALL_R, s.sated ? SATED_E : 0, 0, cp.x, cp.y)
       }
+      farmGuard(s, nearMargin, scoredHit)
     }
 
     for (const t of state.targets) {
@@ -609,6 +625,8 @@ function loseBall(state: PinballState): void {
   state.plunger = 0
   state.stuckT = 0
   state.stuckKicks = 0
+  for (const b of state.bumpers) { b.hitLog = []; b.sated = false; b.clearT = TRAP_CLEAR }
+  for (const s of state.slings) { s.hitLog = []; s.sated = false; s.clearT = TRAP_CLEAR }
   state.msg = `损失一球 · 剩 ${state.ballsLeft} 球`
   state.msgTimer = 2
 }

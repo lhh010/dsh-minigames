@@ -28,6 +28,11 @@ export interface BowlingView {
 const wx = (x: number): number => LANE_X + x * SCALE
 const wy = (y: number): number => LANE_Y + y * SCALE
 
+/** Inverse of the lane mapping: canvas-logical point → lane coordinates. */
+export function laneFromLogical(x: number, y: number): { x: number; y: number } {
+  return { x: (x - LANE_X) / SCALE, y: (y - LANE_Y) / SCALE }
+}
+
 function drawLane(ctx: CanvasRenderingContext2D): void {
   const x = wx(0)
   const y = wy(0)

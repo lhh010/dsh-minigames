@@ -8,10 +8,10 @@
  */
 import type { MiniGameDefinition, MiniGameInstance, MiniGameMountOptions } from '../types.ts'
 import {
-  MAX_AIM, MIN_THROW_POWER, createLevel, currentScore, nextLevel, restartLevel,
+  BALL_RADIUS, FOUL_Y, LANE_W, MAX_AIM, MIN_THROW_POWER, createLevel, currentScore, nextLevel, restartLevel,
   throwBall, step, togglePause, type BowlingState,
 } from './logic.ts'
-import { LOGICAL_H, LOGICAL_W, renderBowling } from './render.ts'
+import { LOGICAL_H, LOGICAL_W, laneFromLogical, renderBowling } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { readLevel, saveLevel } from '../level-progress.ts'
@@ -22,7 +22,7 @@ const GAME_ID = 'bowling'
 /** Keyboard charge rate (power per second while Space is held). */
 const CHARGE_RATE = 0.85
 /** Aim rotation rate (radians per second while ←/→ is held). */
-const AIM_RATE = 1.2
+const AIM_RATE = 2.0
 /** Spin adjustment rate (spin units per second while A/D is held). */
 const SPIN_RATE = 1.6
 
@@ -159,6 +159,7 @@ function createBowlingGame(host: HTMLElement, options?: MiniGameMountOptions): M
     loop.pause()
     renderBowling(ctx, { state, paused: true, best: 0 })
   }
+
   const resume = (): void => {
     if (running) return
     running = true
@@ -167,8 +168,45 @@ function createBowlingGame(host: HTMLElement, options?: MiniGameMountOptions): M
     loop.markDirty()
   }
 
+  // Pointer aiming: click (or drag) on the lane to point the throw at the
+  // pointer — the same interaction the pool game taught. Only while aiming.
+  let aiming = false
+  const aimAtPointer = (event: PointerEvent): boolean => {
+    if (state.phase !== 'aiming') return false
+    const rect = canvas.getBoundingClientRect()
+    const lx = ((event.clientX - rect.left) * LOGICAL_W) / rect.width
+    const ly = ((event.clientY - rect.top) * LOGICAL_H) / rect.height
+    const lane = laneFromLogical(lx, ly)
+    // Angle from the ball toward the pointer; 0 = straight up the lane.
+    const bx = LANE_W / 2
+    const by = FOUL_Y - BALL_RADIUS - 4
+    const angle = Math.atan2(lane.x - bx, by - lane.y)
+    state.aimAngle = Math.min(MAX_AIM, Math.max(-MAX_AIM, angle))
+    loop.markDirty()
+    return true
+  }
+  const onPointerDown = (event: PointerEvent): void => {
+    if (state.phase === 'levelWon' || state.phase === 'gameOver') return
+    if (aimAtPointer(event)) {
+      aiming = true
+      canvas.setPointerCapture(event.pointerId)
+    }
+  }
+  const onPointerMove = (event: PointerEvent): void => {
+    if (aiming) aimAtPointer(event)
+  }
+  const onPointerUp = (event: PointerEvent): void => {
+    if (!aiming) return
+    aiming = false
+    if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId)
+  }
+
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
+  canvas.addEventListener('pointerdown', onPointerDown)
+  canvas.addEventListener('pointermove', onPointerMove)
+  canvas.addEventListener('pointerup', onPointerUp)
+  canvas.addEventListener('pointercancel', onPointerUp)
   focusGameHost(host)
   running = true
   loop.start()
@@ -183,6 +221,10 @@ function createBowlingGame(host: HTMLElement, options?: MiniGameMountOptions): M
       fit.dispose()
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
+      canvas.removeEventListener('pointerdown', onPointerDown)
+      canvas.removeEventListener('pointermove', onPointerMove)
+      canvas.removeEventListener('pointerup', onPointerUp)
+      canvas.removeEventListener('pointercancel', onPointerUp)
     },
   }
 }
@@ -192,6 +234,6 @@ export const bowlingGame: MiniGameDefinition = {
   title: '迷你保龄球 Bowling',
   icon: '🎳',
   description: '瞄准蓄力掷球，勾球旋转一击全倒，真实十瓶计分冲满分。',
-  controls: ['← →：瞄准（±25°）', '空格：按住蓄力，松开掷球', 'A / D：蓄力时设置勾球方向', 'P：暂停 · R：重开本关'],
+  controls: ['← → 或点击/拖拽球道：瞄准（±25°）', '空格：按住蓄力，松开掷球', 'A / D：蓄力时设置勾球方向', 'P：暂停 · R：重开本关'],
   create: createBowlingGame,
 }

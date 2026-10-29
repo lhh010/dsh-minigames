@@ -15,7 +15,7 @@ import type {
   MiniGameMountOptions,
 } from '../types.ts'
 import {
-  computeScore, connectedCount, extendPath, grabPath, isWon,
+  computeScore, connectedCount, extendPath, grabPath, isWon, pathComplete,
   levelPairs, levelSize, puzzleFromSeed, type CellPaths, type FlowPuzzle,
 } from './logic.ts'
 import { cellAt, cellCenter, logicalH, logicalW, renderFlow } from './render.ts'
@@ -46,6 +46,11 @@ function createFlowGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
   let advanceAt = 0
   let advanceRemaining = 0
   let lastScoreLevel = -1
+  /** Hint overlay: the color whose solution path flashes (−1 = none). */
+  let hintColor = -1
+  let hintTimer = 0
+  /** Any hint used this level → the time bonus is forfeited on win. */
+  let hintUsed = false
   const particles = createParticles()
 
   function makePuzzle(lv: number): FlowPuzzle {
@@ -76,6 +81,9 @@ function createFlowGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     elapsedSecs = 0
     shownSec = -1
     elapsed = '0:00'
+    hintColor = -1
+    hintTimer = 0
+    hintUsed = false
     refit(puzzle.size)
     loop.markDirty()
   }
@@ -100,6 +108,7 @@ function createFlowGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     connected: `${connectedCount(puzzle, paths)}/${puzzle.dots.length}`,
     solved,
     paused: false,
+    hintColor: hintTimer > 0 ? hintColor : -1,
   })
 
   const checkSolved = (): void => {
@@ -108,7 +117,11 @@ function createFlowGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     dragging = -1
     if (level !== lastScoreLevel) {
       lastScoreLevel = level
-      options?.onScore?.(computeScore(level + 1, elapsedSecs))
+      // A hint forfeits the time bonus — the base score stands.
+      const score = hintUsed
+        ? computeScore(level + 1, Infinity)
+        : computeScore(level + 1, elapsedSecs)
+      options?.onScore?.(score)
     }
     const center = cellCenter(puzzle.size, Math.floor((puzzle.size * puzzle.size) / 2))
     particles.burst(center.x, center.y, THEME.gold, 20, 170)
@@ -174,6 +187,21 @@ function createFlowGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()
+    } else if (event.code === 'KeyH') {
+      // Hint: flash one unfinished color's solution path for 2.5s. Any hint
+      // this level forfeits the time bonus (base score stands). Answers the
+      // "this level feels unsolvable" wall with proof it is not.
+      if (!running || solved || puzzle.solution.length === 0) return
+      event.preventDefault()
+      let target = -1
+      for (let c = 0; c < puzzle.dots.length; c += 1) {
+        if (!pathComplete(puzzle, c, paths[c] ?? null)) { target = c; break }
+      }
+      if (target === -1) return
+      hintColor = target
+      hintTimer = 2.5
+      hintUsed = true
+      loop.markDirty()
     }
   }
 
@@ -189,8 +217,16 @@ function createFlowGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
         loop.markDirty()
       }
     }
+    if (hintTimer > 0) {
+      hintTimer -= f.dt
+      if (hintTimer <= 0) {
+        hintTimer = 0
+        hintColor = -1
+      }
+      loop.markDirty()
+    }
     const animating = particles.size() > 0
-    if (f.render || animating) {
+    if (f.render || animating || hintTimer > 0) {
       renderFlow(ctx, view())
       particles.tick(ctx, f.dt * 1000)
       if (animating) loop.markDirty()
@@ -258,6 +294,6 @@ export const flowGame: MiniGameDefinition = {
   title: '管道连线 Flow',
   icon: '🔵',
   description: '把同色圆点用管道连起来并填满整个棋盘，管道路径不能交叉重叠。',
-  controls: ['从圆点拖动画线，松开保留', '回到自己的线上可截断', 'R：重开本关', 'P：暂停'],
+  controls: ['从圆点拖动画线，松开保留', '回到自己的线上可截断', 'H：提示一条解线（弃时间奖励）', 'R：重开本关 · P：暂停'],
   create: createFlowGame,
 }

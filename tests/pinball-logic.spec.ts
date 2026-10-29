@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  BALL_R, BALLS_PER_GAME, BANK_BONUS, BUMPER_POINTS, BUMPER_PRESETS, FLIPPER_R,
-  PLUNGER_MAX_SPEED, PLUNGER_MIN_SPEED, TABLE_H, TARGET_POINTS, TILT_SECONDS, TRAP_HITS, TRAP_WINDOW, WALL_E,
+  BALL_R, BALLS_PER_GAME, BANK_BONUS, BUMPER_POINTS, BUMPER_PRESETS, FARM_HITS, FARM_WINDOW, FLIPPER_R,
+  PLUNGER_MAX_SPEED, PLUNGER_MIN_SPEED, TABLE_H, TARGET_POINTS, TILT_SECONDS, WALL_E,
   ballInLaunchZone, bounceOffPoint, closestPointOnSegment, createGame, hashRun,
   levelThreshold, mulberry32, nudge, plungerRelease, restart, resolveFlipper,
   setFlipper, step, togglePause, type PinballState,
@@ -383,7 +383,7 @@ describe('pinball pause and restart', () => {
       // The wall bounces it straight back onto the bumper (trap geometry).
       onBumper()
     }
-    expect(hits).toBeGreaterThanOrEqual(TRAP_HITS)
+    expect(hits).toBeGreaterThanOrEqual(FARM_HITS)
     expect(s.bumpers[0]!.sated).toBe(true)
     // Once sated, further "returns" farm nothing beyond a small margin.
     const sated = s.score
@@ -392,9 +392,33 @@ describe('pinball pause and restart', () => {
     // Staying genuinely clear for TRAP_CLEAR+ seconds un-sates it.
     s.ball.x = 20
     s.ball.y = 20
-    run(s, 0.6)
+    run(s, 1.4)
     expect(s.bumpers[0]!.sated).toBe(false)
     expect(s.score - score0).toBeGreaterThan(0)
+  })
+
+  it('alternating sling kicks also sate (rolling window catches A↔B orbits)', () => {
+    const s = game(13)
+    s.ball.vx = 0
+    s.ball.vy = 0
+    // Ping-pong the ball between the two slings on their cooldown cadence:
+    // each sling scores ~1 hit per cycle, spread beyond a reset window — the
+    // rolling window must still sate them.
+    const L = s.slings[0]!
+    const R = s.slings[1]!
+    let side = 0
+    for (let f = 0; f < Math.round(6 * 60); f += 1) {
+      if (f % 24 === 0) {
+        side = 1 - side
+        const sl = side === 0 ? L : R
+        s.ball.x = (sl.ax + sl.bx) / 2
+        s.ball.y = (sl.ay + sl.by) / 2 - BALL_R + 1
+        s.ball.vx = 0
+        s.ball.vy = 0
+      }
+      step(s, 1 / 60)
+    }
+    expect(L.sated || R.sated).toBe(true)
   })
 
   it('ball search rescues a ball wedged at rest outside the lane', () => {

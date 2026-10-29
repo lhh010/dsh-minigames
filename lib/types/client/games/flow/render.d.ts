@@ -18,6 +18,8 @@ export interface FlowView {
     connected: string;
     solved: boolean;
     paused: boolean;
+    /** Hint flash: the color whose solution path renders dashed (-1 = none). */
+    hintColor: number;
 }
 export declare function logicalW(size: number): number;
 export declare function logicalH(size: number): number;

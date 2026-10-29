@@ -24,6 +24,8 @@ export interface FlowView {
   connected: string
   solved: boolean
   paused: boolean
+  /** Hint flash: the color whose solution path renders dashed (-1 = none). */
+  hintColor: number
 }
 
 export function logicalW(size: number): number {
@@ -138,6 +140,31 @@ export function renderFlow(ctx: CanvasRenderingContext2D, view: FlowView): void 
 
   hudPair(ctx, MARGIN, 22, `${view.levelLabel} `, `${view.connected} 已连 · ${view.elapsed}`, 'left', THEME.gold)
   hudPair(ctx, w - MARGIN, 22, '解 ', view.puzzle.unique ? '唯一' : '多', 'right', view.puzzle.unique ? THEME.good : THEME.textMuted)
+
+  // Hint flash: the selected color's stored solution, dashed and pulsing,
+  // drawn over everything but under the overlays.
+  if (view.hintColor >= 0 && view.hintColor < puzzle.solution.length) {
+    const color = THEME.accents[view.hintColor % THEME.accents.length]!
+    const cells = puzzle.solution[view.hintColor]!
+    ctx.save()
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.strokeStyle = color
+    ctx.globalAlpha = 0.85
+    ctx.lineWidth = CELL * 0.22
+    ctx.setLineDash([CELL * 0.5, CELL * 0.35])
+    glow(ctx, color, 10)
+    ctx.beginPath()
+    const first = cellCenter(size, cells[0]!)
+    ctx.moveTo(first.x, first.y)
+    for (let i = 1; i < cells.length; i += 1) {
+      const p = cellCenter(size, cells[i]!)
+      ctx.lineTo(p.x, p.y)
+    }
+    ctx.stroke()
+    ctx.restore()
+    noGlow(ctx)
+  }
 
   if (view.solved) {
     drawOverlay(ctx, w, h, '连通！', '即将进入下一关 · R 重开本关', THEME.good)
