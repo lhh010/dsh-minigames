@@ -60,6 +60,12 @@ export const NUDGE_WINDOW = 5
 export const TILT_SECONDS = 2
 /** Ball is lost once its center sinks this far past the bottom. */
 export const DRAIN_Y = TABLE_H + 30
+/** Ball-search: a resting ball outside the lane is nudged after this long. */
+export const STUCK_RESCUE_S = 1.5
+/** Failed-rescue cap: beyond this many kicks the ball counts as lost. */
+export const STUCK_KICK_MAX = 3
+/** Ball-search rescue impulse (px/s). */
+export const RESCUE_KICK = 320
 /** Score needed to advance from level l (cumulative within one game). */
 export function levelThreshold(level: number): number {
   return 2000 * level
@@ -167,6 +173,10 @@ export interface PinballState {
   nudges: number[]
   /** Tilt penalty remaining (s); flippers are disabled while > 0. */
   tiltTimer: number
+  /** Ball-search: seconds the ball has spent near rest outside the lane. */
+  stuckT: number
+  /** Ball-search kicks spent on this ball; 3 failed rescues drain it. */
+  stuckKicks: number
   time: number
   msg: string
   msgTimer: number
@@ -286,6 +296,8 @@ export function createGame(level: number, seed: number): PinballState {
     plungerHeld: false,
     nudges: [],
     tiltTimer: 0,
+    stuckT: 0,
+    stuckKicks: 0,
     time: 0,
     msg: `第 ${level} 关 · ${levelThreshold(level)} 分升级`,
     msgTimer: 2.5,
@@ -548,6 +560,36 @@ export function step(state: PinballState, dt: number): void {
     state.msgTimer = 2
     state.events.push({ kind: 'levelUp', level: state.level })
   }
+
+  // Ball search: a ball resting outside the launch lane is either drained
+  // territory or a wedge the flippers cannot reach (sling corner, bumper
+  // pocket). Real tables run a search pulse; here a timed nudge rescues it,
+  // and after three failed rescues the ball counts as lost.
+  if (state.result === 'playing' && !ballInLaunchZone(state.ball) && !state.plungerHeld) {
+    const sp = Math.hypot(state.ball.vx, state.ball.vy)
+    if (sp <= REST_SPEED * 1.5) {
+      state.stuckT += dt
+      if (state.stuckT >= STUCK_RESCUE_S) {
+        state.stuckT = 0
+        state.stuckKicks += 1
+        if (state.stuckKicks > STUCK_KICK_MAX) {
+          state.stuckKicks = 0
+          loseBall(state)
+        } else {
+          // Deterministic rescue impulse: mostly up with a seeded jitter.
+          const angle = -Math.PI / 2 + (state.rng() - 0.5) * 1.2
+          state.ball.vx += Math.cos(angle) * RESCUE_KICK
+          state.ball.vy += Math.sin(angle) * RESCUE_KICK
+          state.events.push({ kind: 'bumper', x: state.ball.x, y: state.ball.y })
+        }
+      }
+    } else {
+      state.stuckT = 0
+      if (sp > REST_SPEED * 4) state.stuckKicks = 0
+    }
+  } else {
+    state.stuckT = 0
+  }
 }
 
 /** Ball drained: consume a ball, respawn in the lane or end the game. */
@@ -565,6 +607,8 @@ function loseBall(state: PinballState): void {
   state.ball.vx = 0
   state.ball.vy = 0
   state.plunger = 0
+  state.stuckT = 0
+  state.stuckKicks = 0
   state.msg = `损失一球 · 剩 ${state.ballsLeft} 球`
   state.msgTimer = 2
 }

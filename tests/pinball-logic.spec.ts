@@ -396,4 +396,45 @@ describe('pinball pause and restart', () => {
     expect(s.bumpers[0]!.sated).toBe(false)
     expect(s.score - score0).toBeGreaterThan(0)
   })
+
+  it('ball search rescues a ball wedged at rest outside the lane', () => {
+    const s = game(11)
+    // Wedge: a ball pinned at rest in dead territory (sling corner) —
+    // position AND velocity re-pinned each frame, as a true wedge is.
+    const pin = (): void => {
+      s.ball.x = 90
+      s.ball.y = 545
+      s.ball.vx = 0
+      s.ball.vy = 0
+    }
+    pin()
+    for (let f = 0; f < Math.round(2.2 * 60); f += 1) {
+      step(s, 1 / 60)
+      pin()
+    }
+    // The rescue window elapsed at least once: the kick counter advanced.
+    expect(s.stuckKicks).toBeGreaterThanOrEqual(1)
+  })
+
+  it('three failed ball-search rescues count the ball as lost', () => {
+    const s = game(11)
+    const balls0 = s.ballsLeft
+    const pin = (): void => {
+      s.ball.x = 90
+      s.ball.y = 545
+      s.ball.vx = 0
+      s.ball.vy = 0
+    }
+    pin()
+    let drained = false
+    for (let f = 0; f < Math.round(9 * 60) && !drained; f += 1) {
+      step(s, 1 / 60)
+      if (s.ballsLeft < balls0) drained = true
+      else pin()
+    }
+    expect(drained).toBe(true)
+    // The respawned ball in the launch lane is NOT stuck-searched.
+    expect(ballInLaunchZone(s.ball)).toBe(true)
+    expect(s.stuckKicks).toBe(0)
+  })
 })

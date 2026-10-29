@@ -59,6 +59,12 @@ export declare const NUDGE_WINDOW = 5;
 export declare const TILT_SECONDS = 2;
 /** Ball is lost once its center sinks this far past the bottom. */
 export declare const DRAIN_Y: number;
+/** Ball-search: a resting ball outside the lane is nudged after this long. */
+export declare const STUCK_RESCUE_S = 1.5;
+/** Failed-rescue cap: beyond this many kicks the ball counts as lost. */
+export declare const STUCK_KICK_MAX = 3;
+/** Ball-search rescue impulse (px/s). */
+export declare const RESCUE_KICK = 320;
 /** Score needed to advance from level l (cumulative within one game). */
 export declare function levelThreshold(level: number): number;
 /** Anti-trap: this many hits within TRAP_WINDOW seconds sates the bumper;
@@ -174,6 +180,10 @@ export interface PinballState {
     nudges: number[];
     /** Tilt penalty remaining (s); flippers are disabled while > 0. */
     tiltTimer: number;
+    /** Ball-search: seconds the ball has spent near rest outside the lane. */
+    stuckT: number;
+    /** Ball-search kicks spent on this ball; 3 failed rescues drain it. */
+    stuckKicks: number;
     time: number;
     msg: string;
     msgTimer: number;
