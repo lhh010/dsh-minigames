@@ -65,6 +65,14 @@ export function levelThreshold(level: number): number {
   return 2000 * level
 }
 
+/** Anti-trap: this many hits within TRAP_WINDOW seconds sates the bumper;
+ * it stops kicking/scoring until the ball stays clear for TRAP_CLEAR seconds. */
+export const TRAP_HITS = 3
+export const TRAP_WINDOW = 1.0
+export const TRAP_CLEAR = 0.35
+/** While sated the bumper only nudges the ball out (no kick, no score). */
+export const SATED_E = 0.45
+
 export type PinballResult = 'playing' | 'paused' | 'gameOver'
 
 export interface Ball {
@@ -80,6 +88,14 @@ export interface Bumper {
   r: number
   /** Re-trigger cooldown remaining (s). */
   cd: number
+  /** Hits inside the current anti-trap window (resets after TRAP_WINDOW). */
+  trapHits: number
+  /** Time accumulated in the current anti-trap window (s). */
+  trapT: number
+  /** Sated: rapid re-hits detected — bumper goes quiet until the ball leaves. */
+  sated: boolean
+  /** Continuous time the ball has stayed clear of this bumper's margin (s). */
+  clearT: number
 }
 
 export interface Sling {
@@ -207,7 +223,7 @@ export const BUMPER_PRESETS: { x: number; y: number }[][] = [
 
 function makeBumpers(level: number): Bumper[] {
   const preset = BUMPER_PRESETS[(level - 1) % BUMPER_PRESETS.length]!
-  return preset.map(p => ({ x: p.x, y: p.y, r: 16, cd: 0 }))
+  return preset.map(p => ({ x: p.x, y: p.y, r: 16, cd: 0, trapHits: 0, trapT: 0, sated: false, clearT: TRAP_CLEAR }))
 }
 
 /** Slingshot active faces (the angled kickers above each flipper). */
@@ -434,15 +450,44 @@ export function step(state: PinballState, dt: number): void {
     for (const w of state.walls) collideWall(ball, w)
 
     for (const b of state.bumpers) {
+      // Anti-trap bookkeeping: a ball orbiting between a bumper and a wall
+      // re-triggers every cooldown and farms score forever. Three hits inside
+      // one window sate the bumper — quiet until the ball stays clear.
+      b.trapT += h
+      if (b.trapT >= TRAP_WINDOW) { b.trapT = 0; b.trapHits = 0 }
+      const nearR = BALL_R + b.r + 8
+      const dxw = ball.x - b.x
+      const dyw = ball.y - b.y
+      if (dxw * dxw + dyw * dyw < nearR * nearR) {
+        b.clearT = 0
+      } else {
+        b.clearT += h
+        if (b.sated && b.clearT >= TRAP_CLEAR) {
+          b.sated = false
+          b.trapHits = 0
+          b.trapT = 0
+        }
+      }
       const cp = { x: b.x, y: b.y }
       const dx = ball.x - b.x
       const dy = ball.y - b.y
       if (dx * dx + dy * dy >= (BALL_R + b.r) * (BALL_R + b.r)) continue
+      if (b.sated) {
+        // Quiet separation only: no kick, no score, no orbit.
+        bounceOffPoint(ball, BALL_R + b.r, SATED_E, 0, cp.x, cp.y)
+        continue
+      }
       if (b.cd <= 0) {
         b.cd = BUMPER_COOLDOWN
         bounceOffPoint(ball, BALL_R + b.r, BUMPER_E, BUMPER_KICK, cp.x, cp.y)
         state.score += BUMPER_POINTS
         state.events.push({ kind: 'bumper', x: b.x, y: b.y })
+        b.trapHits += 1
+        if (b.trapHits >= TRAP_HITS) {
+          b.trapHits = 0
+          b.sated = true
+          b.clearT = 0
+        }
       } else {
         // Cooldown: separate positions only, no re-kick and no re-score.
         bounceOffPoint(ball, BALL_R + b.r, 0, 0, cp.x, cp.y)

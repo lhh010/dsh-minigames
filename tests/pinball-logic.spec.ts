@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   BALL_R, BALLS_PER_GAME, BANK_BONUS, BUMPER_POINTS, BUMPER_PRESETS, FLIPPER_R,
-  PLUNGER_MAX_SPEED, PLUNGER_MIN_SPEED, TABLE_H, TARGET_POINTS, TILT_SECONDS, WALL_E,
+  PLUNGER_MAX_SPEED, PLUNGER_MIN_SPEED, TABLE_H, TARGET_POINTS, TILT_SECONDS, TRAP_HITS, TRAP_WINDOW, WALL_E,
   ballInLaunchZone, bounceOffPoint, closestPointOnSegment, createGame, hashRun,
   levelThreshold, mulberry32, nudge, plungerRelease, restart, resolveFlipper,
   setFlipper, step, togglePause, type PinballState,
@@ -355,5 +355,45 @@ describe('pinball pause and restart', () => {
     expect(s.score).toBe(0)
     expect(s.ballsLeft).toBe(BALLS_PER_GAME)
     expect(s.result).toBe('playing')
+  })
+
+  it('a bumper trapped against a wall stops farming score (anti-trap sating)', () => {
+    // Simulate the trapped geometry deterministically: every time the bumper
+    // kicks the ball away, the "wall" puts it right back (in-game this is a
+    // corner orbit). Three rapid hits inside TRAP_WINDOW must sate it.
+    const s = game(7)
+    s.ball.vx = 0
+    s.ball.vy = 0
+    const onBumper = (): void => {
+      const b = s.bumpers[0]!
+      s.ball.x = b.x
+      s.ball.y = b.y + (BALL_R + b.r) - 1
+      // The wall bounce kills the outward velocity — the ball returns to the
+      // bumper with a fresh (approaching) velocity each cycle.
+      s.ball.vx = 0
+      s.ball.vy = 0
+    }
+    const score0 = s.score
+    let hits = 0
+    onBumper()
+    for (let f = 0; f < Math.round(1.0 * 60); f += 1) {
+      const before = s.score
+      step(s, 1 / 60)
+      if (s.score > before) hits += 1
+      // The wall bounces it straight back onto the bumper (trap geometry).
+      onBumper()
+    }
+    expect(hits).toBeGreaterThanOrEqual(TRAP_HITS)
+    expect(s.bumpers[0]!.sated).toBe(true)
+    // Once sated, further "returns" farm nothing beyond a small margin.
+    const sated = s.score
+    for (let f = 0; f < 30; f += 1) { step(s, 1 / 60); onBumper() }
+    expect(s.score - sated).toBeLessThanOrEqual(BUMPER_POINTS * 2)
+    // Staying genuinely clear for TRAP_CLEAR+ seconds un-sates it.
+    s.ball.x = 20
+    s.ball.y = 20
+    run(s, 0.6)
+    expect(s.bumpers[0]!.sated).toBe(false)
+    expect(s.score - score0).toBeGreaterThan(0)
   })
 })

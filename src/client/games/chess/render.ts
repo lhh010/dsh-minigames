@@ -160,10 +160,16 @@ export function renderChess(ctx: CanvasRenderingContext2D, view: ChessView): voi
       ctx.fillText(GLYPH[p], cx, cy)
       noGlow(ctx)
     } else {
-      ctx.fillStyle = '#14141c'
-      glow(ctx, 'rgba(242,242,248,0.28)', 4)
+      // Black pieces on dark squares (#1b1b26) were near-invisible as a
+      // bare #14141c fill. Draw a light outline first (strokeText), then
+      // the dark fill — a white-ringed black piece that reads on both
+      // square colors.
+      ctx.lineWidth = 2.5
+      ctx.lineJoin = 'round'
+      ctx.strokeStyle = 'rgba(235,235,245,0.92)'
+      ctx.strokeText(GLYPH[p], cx, cy)
+      ctx.fillStyle = '#101018'
       ctx.fillText(GLYPH[p], cx, cy)
-      noGlow(ctx)
     }
   }
   ctx.textBaseline = 'alphabetic'

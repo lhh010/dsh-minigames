@@ -61,6 +61,13 @@ export declare const TILT_SECONDS = 2;
 export declare const DRAIN_Y: number;
 /** Score needed to advance from level l (cumulative within one game). */
 export declare function levelThreshold(level: number): number;
+/** Anti-trap: this many hits within TRAP_WINDOW seconds sates the bumper;
+ * it stops kicking/scoring until the ball stays clear for TRAP_CLEAR seconds. */
+export declare const TRAP_HITS = 3;
+export declare const TRAP_WINDOW = 1;
+export declare const TRAP_CLEAR = 0.35;
+/** While sated the bumper only nudges the ball out (no kick, no score). */
+export declare const SATED_E = 0.45;
 export type PinballResult = 'playing' | 'paused' | 'gameOver';
 export interface Ball {
     x: number;
@@ -74,6 +81,14 @@ export interface Bumper {
     r: number;
     /** Re-trigger cooldown remaining (s). */
     cd: number;
+    /** Hits inside the current anti-trap window (resets after TRAP_WINDOW). */
+    trapHits: number;
+    /** Time accumulated in the current anti-trap window (s). */
+    trapT: number;
+    /** Sated: rapid re-hits detected — bumper goes quiet until the ball leaves. */
+    sated: boolean;
+    /** Continuous time the ball has stayed clear of this bumper's margin (s). */
+    clearT: number;
 }
 export interface Sling {
     ax: number;

@@ -80,6 +80,8 @@ export interface SolveResult {
     solutions: number;
     /** True when the node budget ran out before the search space closed. */
     exhausted: boolean;
+    /** Nodes visited (0 on early stop at two solutions). */
+    nodes: number;
 }
 /**
  * Count solutions up to two via DFS with pruning.
@@ -94,11 +96,22 @@ export interface SolveResult {
 export declare function solveCount(puzzle: FlowPuzzle, maxNodes?: number): SolveResult;
 /** Generation attempts per puzzle: uniqueness re-rolls, larger boards fewer. */
 export declare function attemptCap(size: number): number;
+/** Solver node budget per board size: decisions on 8×8 need ~1M nodes. */
+export declare function solveBudget(size: number): number;
+/**
+ * Generation budget per board size, in TOTAL solver nodes across all re-roll
+ * attempts (a deterministic proxy for wall-clock: proofs cost seconds each on
+ * big boards, so the loop is budget-boxed rather than count-boxed — same seed
+ * always replays the same rolls in the same order).
+ */
+export declare function genNodeBudget(size: number): number;
 /**
  * Generate a puzzle deterministically from `seed`.
  *
  * Re-rolls derived seeds until the solver proves exactly one solution
- * (unique: true); after the attempt cap the first solvable roll ships with
- * unique: false (the 多解 badge).
+ * (unique: true); the loop stops at the attempt cap OR the cumulative node
+ * budget, whichever first — on big boards proofs cost ~1M nodes each, so the
+ * budget bounds the hang. After that the first solvable roll ships with
+ * unique: false (the 多解 badge). Fully deterministic: no wall-clock input.
  */
 export declare function puzzleFromSeed(seed: number, size: number, pairs: number, requireUnique?: boolean): FlowPuzzle;

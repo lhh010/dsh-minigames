@@ -209,6 +209,8 @@ export interface SolveResult {
   solutions: number
   /** True when the node budget ran out before the search space closed. */
   exhausted: boolean
+  /** Nodes visited (0 on early stop at two solutions). */
+  nodes: number
 }
 
 /** Sentinel: stop the DFS (two solutions found or budget exhausted). */
@@ -327,7 +329,7 @@ export function solveCount(puzzle: FlowPuzzle, maxNodes = 60_000): SolveResult {
 
   const done = dfsColor(0)
   void done
-  return { solutions, exhausted }
+  return { solutions, exhausted, nodes }
 }
 
 /** Generation attempts per puzzle: uniqueness re-rolls, larger boards fewer. */
@@ -335,22 +337,43 @@ export function attemptCap(size: number): number {
   return size <= 6 ? 40 : size <= 8 ? 25 : 12
 }
 
+/** Solver node budget per board size: decisions on 8×8 need ~1M nodes. */
+export function solveBudget(size: number): number {
+  return size <= 5 ? 60_000 : size === 6 ? 150_000 : size === 7 ? 400_000 : size === 8 ? 800_000 : 700_000
+}
+
+/**
+ * Generation budget per board size, in TOTAL solver nodes across all re-roll
+ * attempts (a deterministic proxy for wall-clock: proofs cost seconds each on
+ * big boards, so the loop is budget-boxed rather than count-boxed — same seed
+ * always replays the same rolls in the same order).
+ */
+export function genNodeBudget(size: number): number {
+  return size <= 7 ? 400_000 : 600_000
+}
+
 /**
  * Generate a puzzle deterministically from `seed`.
  *
  * Re-rolls derived seeds until the solver proves exactly one solution
- * (unique: true); after the attempt cap the first solvable roll ships with
- * unique: false (the 多解 badge).
+ * (unique: true); the loop stops at the attempt cap OR the cumulative node
+ * budget, whichever first — on big boards proofs cost ~1M nodes each, so the
+ * budget bounds the hang. After that the first solvable roll ships with
+ * unique: false (the 多解 badge). Fully deterministic: no wall-clock input.
  */
 export function puzzleFromSeed(seed: number, size: number, pairs: number, requireUnique = true): FlowPuzzle {
   const attempts = requireUnique ? attemptCap(size) : 1
+  const budget = genNodeBudget(size)
+  let spent = 0
   let fallback: FlowPuzzle | null = null
   for (let s = 0; s < attempts; s += 1) {
     const roll = tryGenerate((seed + s * 0x9e3779b9) >>> 0, size, pairs)
     if (roll === null) continue
     if (fallback === null) fallback = roll
-    const { solutions, exhausted } = solveCount(roll)
+    const { solutions, exhausted, nodes } = solveCount(roll, solveBudget(size))
+    spent += nodes
     if (!exhausted && solutions === 1) return { ...roll, unique: true }
+    if (spent >= budget) break
   }
   if (fallback !== null) return fallback
   // Guaranteed partition: vertical stripes, each snaked top-to-bottom. Always
