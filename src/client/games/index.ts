@@ -51,6 +51,10 @@ import { pianoGame } from './piano/index.ts'
 import { zumaGame } from './zuma/index.ts'
 import { poolGame } from './pool/index.ts'
 import { tdGame } from './td/index.ts'
+import { chessGame } from './chess/index.ts'
+import { pinballGame } from './pinball/index.ts'
+import { flowGame } from './flow/index.ts'
+import { bowlingGame } from './bowling/index.ts'
 
 export { getGames, getGame } from './registry.ts'
 export { registerGame } from './registry.ts'
@@ -76,6 +80,7 @@ export function registerBuiltinGames(): void {
     racingGame,
     bubbleGame, bomberGame, pianoGame,
     zumaGame, poolGame, tdGame,
+    chessGame, pinballGame, flowGame, bowlingGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
