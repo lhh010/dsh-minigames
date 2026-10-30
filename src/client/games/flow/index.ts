@@ -202,6 +202,15 @@ function createFlowGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
       hintTimer = 2.5
       hintUsed = true
       loop.markDirty()
+    } else if (event.code === 'BracketLeft' || event.code === 'BracketRight') {
+      // 切换关卡：只在已通关范围内（1..persisted），跳转=全新开始该关。
+      event.preventDefault()
+      clearTimeout(advanceTimer)
+      advanceTimer = 0
+      advanceRemaining = 0
+      const max = Math.min(readLevel('flow'), 5)
+      const next = level + (event.code === 'BracketRight' ? 1 : -1)
+      if (next >= 0 && next < max) startLevel(next)
     }
   }
 
@@ -294,6 +303,6 @@ export const flowGame: MiniGameDefinition = {
   title: '管道连线 Flow',
   icon: '🔵',
   description: '把同色圆点用管道连起来并填满整个棋盘，管道路径不能交叉重叠。',
-  controls: ['从圆点拖动画线，松开保留', '回到自己的线上可截断', 'H：提示一条解线（弃时间奖励）', 'R：重开本关 · P：暂停'],
+  controls: ['从圆点拖动画线，松开保留', '回到自己的线上可截断', 'H：提示一条解线（弃时间奖励）', 'R：重开本关 · [ ]：切换关卡 · P：暂停'],
   create: createFlowGame,
 }
