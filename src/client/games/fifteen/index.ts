@@ -4,8 +4,10 @@
  * in the pressed direction, clicking an adjacent tile slides it; Z/Backspace
  * undoes, R restarts the CURRENT level (same seed → same scramble); levels
  * grow 3×3 → 4×4 → 5×5 and auto-advance 1.5s after the win overlay via the
- * stored-remainder pattern; P toggles pause. The highest level reached
- * persists per game id, so re-entering resumes where the player left off.
+ * stored-remainder pattern; P toggles pause. [ / ] jump between unlocked
+ * levels (bounded to the persisted highest reached). The highest level
+ * reached persists per game id, so re-entering resumes where the player
+ * left off.
  */
 import type {
   MiniGameDefinition,
@@ -133,6 +135,15 @@ function createFifteenGame(host: HTMLElement, options?: MiniGameMountOptions): M
       advanceRemaining = 0
       winText = null
       startLevel(level)
+    } else if (event.code === 'BracketLeft' || event.code === 'BracketRight') {
+      event.preventDefault()
+      // 切换关卡：先取消待跳转的自动推进计时器，再从全新关卡开始。
+      clearTimeout(advanceTimer)
+      advanceTimer = 0
+      advanceRemaining = 0
+      const max = readLevel('fifteen')
+      const next = level + (event.code === 'BracketRight' ? 1 : -1)
+      if (next >= 1 && next <= max) startLevel(next)
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()
@@ -214,6 +225,6 @@ export const fifteenGame: MiniGameDefinition = {
   title: '数字华容道 15-Puzzle',
   icon: '🔢',
   description: '滑动数字方块，把打乱的盘面恢复成 1 到 N 的顺序，关卡从 3×3 递进到 5×5。',
-  controls: ['方向键：向该方向滑动紧邻空格的方块（也可点击）', 'Z / Backspace：撤销一步', 'R：重开本关', 'P：暂停'],
+  controls: ['方向键：向该方向滑动紧邻空格的方块（也可点击）', 'Z / Backspace：撤销一步', 'R：重开本关', '[ ]：切换关卡（已通关范围）', 'P：暂停'],
   create: createFifteenGame,
 }

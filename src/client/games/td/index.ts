@@ -71,6 +71,15 @@ function createTdGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGa
     reportScore()
   }
 
+  /** Jump to a level within cleared progress ([ ] navigation). */
+  const jumpLevel = (target: number): void => {
+    state = createState(state.seed, target)
+    selectedKind = null
+    selectedTowerId = null
+    lastScore = -1
+    reportScore()
+  }
+
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
     const k = event.code
@@ -90,6 +99,13 @@ function createTdGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGa
         if (state.result === 'none') sendWaveEarly(state)
         break
       case 'KeyR': restart(); break
+      case 'BracketLeft': case 'BracketRight': {
+        // 切换关卡：只在已通关范围内（1..persisted）。
+        const max = readLevel(GAME_ID)
+        const next = state.level + (event.code === 'BracketRight' ? 1 : -1)
+        if (!state.endless && next >= 1 && next <= max) jumpLevel(next)
+        break
+      }
       case 'Enter': case 'NumpadEnter':
         if (state.result === 'lose') restart()
         break
@@ -181,12 +197,12 @@ export const tdGame: MiniGameDefinition = {
   id: 'td',
   title: '塔防',
   icon: '🏹',
-  description: '在固定路径旁建塔：箭塔速射、冰霜减速、炮塔溅射，守住十波敌人即可进入下一关。',
+  description: '在固定路径旁建塔：箭塔速射、冰霜减速、炮塔溅射，守住十波敌人过关；第五关后进入无尽模式——敌人血量指数增长，看你能撑多少波。',
   controls: [
     '1/2/3 或点工具栏：选塔 · 点击空地建造',
     '点已有塔查看射程 · U 升级（最多3级）· X 出售',
     '空格：提前开战/战斗中召唤下一波（按剩余秒数奖励金币，叠波更难）',
-    'R：重开本关 · P：暂停 · 失败后 Enter 重开',
+    'R：重开本关 · [ ]：切换已通关关卡 · P：暂停',
   ],
   create: createTdGame,
 }

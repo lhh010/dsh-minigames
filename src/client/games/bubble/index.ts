@@ -2,7 +2,8 @@
  * 泡泡龙 game definition: wires the pure hex-grid logic into a
  * {@link MiniGameInstance} — ← → fine-aim (or mouse move), Space/click fires
  * the loaded bubble, P pauses (panel pause works too), R restarts the
- * CURRENT level (same seed → the same initial board). Clearing the field
+ * CURRENT level (same seed → the same initial board), [ / ] jump between
+ * unlocked levels. Clearing the field
  * auto-advances 1.5s later (stored-remainder pattern keeps the advance
  * timer frozen across pauses); level progress persists via level-progress.
  */
@@ -106,6 +107,17 @@ function createBubbleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
         else fire(state)
         break
       case 'KeyR': restart(); break
+      // 跳关：在已解锁范围内上一关 / 下一关（fresh start，同 R 语义）。
+      case 'BracketLeft':
+      case 'BracketRight': {
+        event.preventDefault()
+        const target = state.level + (event.code === 'BracketRight' ? 1 : -1)
+        if (target >= 1 && target <= readLevel(GAME_ID)) {
+          state.level = target
+          restart()
+        }
+        break
+      }
       case 'KeyP': case 'Escape':
         if (!event.repeat) togglePauseLocal()
         break
@@ -220,6 +232,7 @@ export const bubbleGame: MiniGameDefinition = {
     '← →：微调瞄准 · 鼠标移动：指向',
     'Space / 点击：发射',
     'R：重开本关 · P：暂停',
+    '[ / ]：切换关卡（已解锁范围内）',
   ],
   create: createBubbleGame,
 }

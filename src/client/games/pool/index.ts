@@ -162,6 +162,14 @@ function createPoolGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     loop.markDirty()
   }
 
+  /** Jump to a level within cleared progress ([ ] navigation). */
+  const jumpLevel = (target: number): void => {
+    state = createLevel(target, startSeed)
+    lastScore = -1
+    reportScore()
+    loop.markDirty()
+  }
+
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
     const k = event.code
@@ -192,6 +200,15 @@ function createPoolGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
           loop.markDirty()
         }
         break
+      case 'BracketLeft': case 'BracketRight': {
+        // 切换关卡：只在已通关范围内（1..persisted）。
+        if (!event.repeat) {
+          const max = readLevel(GAME_ID)
+          const next = state.level + (event.code === 'BracketRight' ? 1 : -1)
+          if (next >= 1 && next <= max) jumpLevel(next)
+        }
+        break
+      }
       case 'KeyP': case 'Escape':
         if (!event.repeat) togglePauseLocal()
         break

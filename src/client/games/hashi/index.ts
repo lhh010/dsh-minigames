@@ -138,6 +138,17 @@ function createHashiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       startLevel(level) // same seed → same puzzle
       return
     }
+    if (event.code === 'BracketLeft' || event.code === 'BracketRight') {
+      // 切换关卡：只在已通关范围内（1..persisted）。
+      event.preventDefault()
+      clearTimeout(advanceTimer)
+      advanceTimer = 0
+      advanceRemaining = 0
+      const max = Math.min(readLevel('hashi'), LEVEL_SIZES.length)
+      const next = level + (event.code === 'BracketRight' ? 1 : -1)
+      if (next >= 1 && next <= max) startLevel(next)
+      return
+    }
     if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()

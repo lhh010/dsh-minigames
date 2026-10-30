@@ -2,7 +2,8 @@
  * Zuma game definition: wires the pure state machine into a
  * {@link MiniGameInstance} — ← → fine-aim (2.2 rad/s) or mouse aim,
  * Space/click fires, R restarts the CURRENT level (same per-level seed, so
- * the chain replays identically), P pauses (panel pause works too, lightsout
+ * the chain replays identically), [ / ] jump between unlocked levels
+ * (bounded to the persisted highest reached), P pauses (panel pause works too, lightsout
  * stored-remainder pattern: the final paused frame stays on canvas). WebAudio
  * plops/explosion sounds are synthesized (no assets), initialized on the
  * first start gesture.
@@ -110,7 +111,7 @@ function createZumaGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
     const k = event.code
-    if (k === 'ArrowLeft' || k === 'ArrowRight' || k === 'Space' || k === 'Enter') event.preventDefault()
+    if (k === 'ArrowLeft' || k === 'ArrowRight' || k === 'Space' || k === 'Enter' || k === 'BracketLeft' || k === 'BracketRight') event.preventDefault()
     switch (k) {
       case 'ArrowLeft': input.left = true; break
       case 'ArrowRight': input.right = true; break
@@ -123,6 +124,21 @@ function createZumaGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
       case 'KeyR':
         if (!event.repeat && state.result !== 'ready') { initAudio(); restartLevel() }
         break
+      case 'BracketLeft': case 'BracketRight': {
+        // 切换关卡：同一关卡种子全新开局；暂停中跳关后保持暂停。
+        if (!event.repeat && state.result !== 'ready') {
+          initAudio()
+          const max = readLevel(GAME_ID)
+          const next = state.level + (k === 'BracketRight' ? 1 : -1)
+          if (next >= 1 && next <= max) {
+            const wasPaused = state.result === 'paused'
+            startLevel(state, next)
+            state.result = wasPaused ? 'paused' : 'playing'
+            loop.markDirty()
+          }
+        }
+        break
+      }
       case 'KeyP':
         if (!event.repeat && state.result !== 'ready') togglePauseLocal()
         break
@@ -220,7 +236,7 @@ export const zumaGame: MiniGameDefinition = {
   controls: [
     '← →：瞄准 · 空格：发射',
     '鼠标移动瞄准 · 点击发射',
-    'R：重开本关 · P：暂停',
+    'R：重开本关 · [ ]：切换关卡（已通关范围） · P：暂停',
   ],
   create: createZumaGame,
 }

@@ -267,6 +267,9 @@ export interface TdState {
   spawnTimer: number
   /** Whether the final queued enemy of this wave is a brute. */
   brutePending: boolean
+  /** Endless mode: entered after clearing wave 10 of level LEVEL_WRAP; the
+   * wave counter keeps climbing with exponentially scaling enemy HP. */
+  endless: boolean
   result: TdResult
   t: number
   nextId: number
@@ -278,12 +281,22 @@ export function waveSize(wave: number): number {
   return Math.min(4 + wave, 20)
 }
 
+/** Endless HP growth per extra wave beyond the level-5 campaign (×1.22). */
+export const ENDLESS_HP_GROWTH = 1.22
+/** Endless speed growth per extra wave (×1.03, capped at 2× base). */
+export const ENDLESS_SPEED_GROWTH = 1.03
+
 function waveHp(wave: number, level: number): number {
-  return 30 * (1 + 0.25 * wave) * (1 + 0.6 * (level - 1))
+  const base = 30 * (1 + 0.25 * Math.min(wave, WAVES_PER_LEVEL)) * (1 + 0.6 * (level - 1))
+  if (wave <= WAVES_PER_LEVEL) return base
+  // Endless: exponential growth per wave past the campaign table.
+  return base * Math.pow(ENDLESS_HP_GROWTH, wave - WAVES_PER_LEVEL)
 }
 
 function waveSpeed(wave: number, level: number): number {
-  return (0.8 + 0.03 * wave) * (1 + 0.12 * (level - 1))
+  const base = (0.8 + 0.03 * Math.min(wave, WAVES_PER_LEVEL)) * (1 + 0.12 * (level - 1))
+  if (wave <= WAVES_PER_LEVEL) return base
+  return Math.min(base * 2, base * Math.pow(ENDLESS_SPEED_GROWTH, wave - WAVES_PER_LEVEL))
 }
 
 /** Gold granted for killing an enemy during wave `wave`. */
@@ -316,6 +329,7 @@ function resetBoard(state: TdState, level: number): void {
   state.spawnQueue = 0
   state.spawnTimer = 0
   state.brutePending = false
+  state.endless = false
 }
 
 /** A fresh game state at `level` (defaults to 1) on the seeded map. */
@@ -339,6 +353,7 @@ export function createState(seed: number, level = 1): TdState {
     spawnQueue: 0,
     spawnTimer: 0,
     brutePending: false,
+    endless: false,
     result: 'none',
     t: 0,
     nextId: 1,
@@ -382,7 +397,7 @@ export function startWave(state: TdState): void {
     beginWave(state)
     return
   }
-  if (state.phase === 'wave' && state.spawnQueue === 0 && state.wave < WAVES_PER_LEVEL) {
+  if (state.phase === 'wave' && state.spawnQueue === 0 && (state.endless || state.wave < WAVES_PER_LEVEL)) {
     state.wave += 1
     beginWave(state)
   }
@@ -404,7 +419,7 @@ export function sendWaveEarly(state: TdState): void {
     startWave(state)
     return
   }
-  if (state.phase === 'wave' && state.spawnQueue === 0 && state.wave < WAVES_PER_LEVEL) {
+  if (state.phase === 'wave' && state.spawnQueue === 0 && (state.endless || state.wave < WAVES_PER_LEVEL)) {
     const bonus = earlySendBonus(state.callTimer)
     state.gold += bonus
     state.score += bonus
@@ -554,14 +569,34 @@ export function explode(state: TdState, x: number, y: number, dmg: number, splas
 }
 
 function advanceLevel(state: TdState): void {
-  resetBoard(state, (state.level % LEVEL_WRAP) + 1)
+  if (state.level >= LEVEL_WRAP) {
+    // Campaign complete: enter ENDLESS on the same map — the wave counter
+    // keeps climbing past 10 with exponential HP. Towers, gold, and lives
+    // carry over (this IS the survival challenge).
+    state.endless = true
+    state.wave += 1
+    state.phase = 'build'
+    state.buildTimer = BUILD_TIME
+    state.callTimer = CALL_TIME
+    return
+  }
+  resetBoard(state, state.level + 1)
   state.lives = START_LIVES
+  state.endless = false
 }
 
 function waveCleared(state: TdState): void {
   const bonus = waveClearBonus(state.wave)
   state.gold += bonus
   state.score += bonus
+  if (state.endless) {
+    // Endless: never advances level again — just the next harder wave.
+    state.wave += 1
+    state.phase = 'build'
+    state.buildTimer = BUILD_TIME
+    state.callTimer = CALL_TIME
+    return
+  }
   if (state.wave >= WAVES_PER_LEVEL) {
     advanceLevel(state)
     return

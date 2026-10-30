@@ -6,7 +6,9 @@
  * 1.5s later (stored-remainder pattern keeps the advance timer paused-safe).
  * The highest level reached persists through the shared level-progress
  * helper, so a remount resumes there instead of restarting at level 1.
- * P toggles pause; R restarts the CURRENT level (same seed → same pattern).
+ * P toggles pause; R restarts the CURRENT level (same seed → same pattern);
+ * [ / ] jump between unlocked levels (bounded to the persisted highest
+ * reached).
  */
 import type {
   MiniGameDefinition,
@@ -69,6 +71,7 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
     cells = emptyCells()
     cursor = { r: 0, c: 0 }
     elapsed = 0
+    shownSec = 0
     winText = null
     loop.markDirty()
   }
@@ -131,6 +134,17 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
       advanceTimer = 0
       advanceRemaining = 0
       startLevel(level) // same seed → same pattern
+      return
+    }
+    if (event.code === 'BracketLeft' || event.code === 'BracketRight') {
+      event.preventDefault()
+      // 切换关卡：先取消待跳转的自动推进计时器，再从全新关卡开始。
+      clearTimeout(advanceTimer)
+      advanceTimer = 0
+      advanceRemaining = 0
+      const max = readLevel('nonogram')
+      const next = level + (event.code === 'BracketRight' ? 1 : -1)
+      if (next >= 1 && next <= max) startLevel(next)
       return
     }
     if (event.code === 'KeyP') {
@@ -226,6 +240,7 @@ export const nonogramGame: MiniGameDefinition = {
     '右键 / Shift+空格：标记 ✗',
     '方向键：移动光标',
     'R：重开本关',
+    '[ ]：切换关卡（已通关范围）',
     'P：暂停',
   ],
   create: createNonogramGame,

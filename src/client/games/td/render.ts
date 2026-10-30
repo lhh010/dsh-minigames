@@ -212,14 +212,14 @@ function drawHud(ctx: CanvasRenderingContext2D, view: TdView): void {
   ctx.textAlign = 'left'
   hudPair(ctx, 10, 27, '金币', String(state.gold), 'left', THEME.gold)
   hudPair(ctx, 100, 27, '生命', `${'❤'.repeat(state.lives) || '—'}`, 'left', state.lives > 1 ? THEME.bad : THEME.text)
-  hudPair(ctx, 186, 27, '波次', `${state.wave}/10`)
-  hudPair(ctx, 264, 27, '关卡', String(state.level))
+  hudPair(ctx, 186, 27, '波次', state.endless ? `${state.wave} ∞` : `${state.wave}/10`)
+  hudPair(ctx, 264, 27, '关卡', state.endless ? '无尽' : String(state.level))
   hudPair(ctx, LOGICAL_W - 10, 27, '分数', String(state.score), 'right')
   if (state.phase === 'build') {
     // Right-aligned next to 分数, separated from the left cluster: the old
     // center anchor overlapped 波次/关卡.
     hudPair(ctx, LOGICAL_W - 130, 27, '来袭', `${Math.ceil(state.buildTimer)}s`, 'right', THEME.textMuted)
-  } else if (state.phase === 'wave' && state.spawnQueue === 0 && state.enemies.length > 0 && state.wave < WAVES_PER_LEVEL) {
+  } else if (state.phase === 'wave' && state.spawnQueue === 0 && state.enemies.length > 0 && (state.endless || state.wave < WAVES_PER_LEVEL)) {
     // Combat early-call window: the shrinking bonus for overlapping the next
     // wave onto the fight (Space = call now).
     const bonus = earlySendBonus(state.callTimer)

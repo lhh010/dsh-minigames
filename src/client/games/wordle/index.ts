@@ -2,7 +2,8 @@
  * Wordle 猜词游戏定义：把纯判定逻辑接成 {@link MiniGameInstance} ——
  * 物理 A–Z/Enter/Backspace 与屏幕键盘点击双输入，任意等长纯字母词均合法，
  * 无效输入抖动提示且不消耗行；关卡按 4/5/6 字母循环推进，连胜通过 onScore 上报。
- * 关卡进度经共享 level-progress 助手持久化，重进从最高关继续；P 暂停 / 继续。
+ * 关卡进度经共享 level-progress 助手持久化，重进从最高关继续；[ / ]
+ * 在已通关范围内切换关卡（重开全新一局，连胜保持）；P 暂停 / 继续。
  */
 import type {
   MiniGameDefinition,
@@ -176,6 +177,18 @@ function createWordleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       togglePause()
       return
     }
+    if (event.code === 'BracketLeft' || event.code === 'BracketRight') {
+      event.preventDefault()
+      // 切换关卡：跳到已通关范围内的目标关，全新一局，连胜保持。
+      const max = readLevel('wordle')
+      const next = level + (event.code === 'BracketRight' ? 1 : -1)
+      if (next >= 1 && next <= max) {
+        level = next
+        newRound()
+        loop.markDirty()
+      }
+      return
+    }
     if (letter !== null) {
       event.preventDefault()
       if (running && status === 'playing') inputKey(letter)
@@ -256,6 +269,6 @@ export const wordleGame: MiniGameDefinition = {
   title: 'Wordle 猜词',
   icon: '🔤',
   description: '按关卡猜 4/5/6 字母单词，任意等长字母词都可提交，绿=位置对，黄=字母对，灰=没有。',
-  controls: ['键盘 / 点击屏幕键盘：输入', 'Enter：提交 · Backspace：删除', '空格 / 点击：再来一局', 'R：重开本关 · P：暂停'],
+  controls: ['键盘 / 点击屏幕键盘：输入', 'Enter：提交 · Backspace：删除', '空格 / 点击：再来一局', 'R：重开本关 · [ ]：切换关卡（已通关范围） · P：暂停'],
   create: createWordleGame,
 }

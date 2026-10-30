@@ -6,7 +6,8 @@
  * level is 1-based; the highest level reached persists through the shared
  * level-progress helper, so a remount resumes there instead of restarting
  * at the first puzzle. P toggles pause (run clock and advance timer freeze
- * via the stored-remainder pattern); R restarts the CURRENT level.
+ * via the stored-remainder pattern); R restarts the CURRENT level; [ / ]
+ * jump between unlocked levels (bounded to the persisted highest reached).
  */
 import type {
   MiniGameDefinition,
@@ -141,6 +142,15 @@ function createSlitherlinkGame(host: HTMLElement, options?: MiniGameMountOptions
       advanceTimer = 0
       advanceRemaining = 0
       startLevel(level)
+    } else if (event.code === 'BracketLeft' || event.code === 'BracketRight') {
+      event.preventDefault()
+      // 切换关卡：先取消待跳转的自动推进计时器，再从全新关卡开始。
+      clearTimeout(advanceTimer)
+      advanceTimer = 0
+      advanceRemaining = 0
+      const max = readLevel('slitherlink') - 1 // 0-based index bound
+      const next = level + (event.code === 'BracketRight' ? 1 : -1)
+      if (next >= 0 && next <= max) startLevel(next)
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()
@@ -240,6 +250,6 @@ export const slitherlinkGame: MiniGameDefinition = {
   title: '数回 Slitherlink',
   icon: '⭕',
   description: '画一条闭合线圈：每个数字表示它四周边线的条数，5×5 起步逐关变大。',
-  controls: ['左键：画线/取消', '右键或 Shift+左键：标记叉', 'R：重开本关', 'P：暂停'],
+  controls: ['左键：画线/取消', '右键或 Shift+左键：标记叉', 'R：重开本关', '[ ]：切换关卡（已通关范围）', 'P：暂停'],
   create: createSlitherlinkGame,
 }

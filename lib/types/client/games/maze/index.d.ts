@@ -6,8 +6,9 @@
  * back to L1. On win: overlay 「第 X 关完成 · Y 步（最短 Z 步）」+ particles +
  * onScore(level), auto-advance 1.5s later. Turn-based; no undo (movement is
  * free) and P toggles pause — panel-driven pause freezes the auto-advance via
- * the stored-remainder pattern. The highest level reached persists per game
- * id, so re-entering resumes where the player left off.
+ * the stored-remainder pattern. [ / ] jump between unlocked levels (bounded
+ * to the persisted highest reached). The highest level reached persists per
+ * game id, so re-entering resumes where the player left off.
  */
 import type { MiniGameDefinition } from '../types.ts';
 export declare const mazeGame: MiniGameDefinition;

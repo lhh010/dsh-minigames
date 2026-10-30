@@ -180,6 +180,15 @@ function createChessGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     if (event.code === 'KeyR') {
       event.preventDefault()
       restart()
+    } else if (event.code === 'BracketLeft' || event.code === 'BracketRight') {
+      // 跳关：在已解锁 AI 棋力档位间切换（fresh start，同 R 语义）。
+      event.preventDefault()
+      const max = Math.min(readLevel(GAME_ID), LEVEL_DEPTH.length)
+      const target = level + (event.code === 'BracketRight' ? 1 : -1)
+      if (target >= 1 && target <= max) {
+        level = target
+        restart()
+      }
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()
@@ -288,6 +297,6 @@ export const chessGame: MiniGameDefinition = {
   title: '国际象棋',
   icon: '♞',
   description: '执白对弈 α-β 剪枝搜索的 AI：四档棋力（深度 2→5），支持王车易位、吃过路兵、升变与三次重复判和。',
-  controls: ['点击棋子再点目标格：走子', '升变时点击选择新棋子', 'R：重开本局', 'P：暂停'],
+  controls: ['点击棋子再点目标格：走子', '升变时点击选择新棋子', 'R：重开本局', '[ / ]：切换棋力档位（已解锁范围内）', 'P：暂停'],
   create: createChessGame,
 }

@@ -4,7 +4,8 @@
  * clicks flash red and add +500ms to the run; the timer starts on the first
  * click; finishing fires onScore with a faster-is-higher time score, bursts
  * particles, and auto-advances 1.5s later. R restarts the CURRENT level
- * (deterministic per-level seed → the same shuffle). Panel-driven pause
+ * (deterministic per-level seed → the same shuffle); [ / ] jump between
+ * unlocked levels (bounded to the persisted highest reached). Panel-driven pause
  * and the P hotkey freeze both the run clock and the advance timer via
  * the stored-remainder pattern. The highest level reached persists through
  * the shared level-progress helper, so a remount resumes there instead of
@@ -62,6 +63,7 @@ function createSchulteGame(host: HTMLElement, options?: MiniGameMountOptions): M
     pausedElapsed = 0
     wrong = null
     winText = null
+    shownTenth = 0
     loop.markDirty()
   }
 
@@ -119,6 +121,15 @@ function createSchulteGame(host: HTMLElement, options?: MiniGameMountOptions): M
       advanceTimer = 0
       advanceRemaining = 0
       startLevel(level)
+    } else if (event.code === 'BracketLeft' || event.code === 'BracketRight') {
+      event.preventDefault()
+      // 切换关卡：先取消待跳转的自动推进计时器，再从全新关卡开始。
+      clearTimeout(advanceTimer)
+      advanceTimer = 0
+      advanceRemaining = 0
+      const max = readLevel('schulte')
+      const next = level + (event.code === 'BracketRight' ? 1 : -1)
+      if (next >= 1 && next <= max) startLevel(next)
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()
@@ -206,6 +217,6 @@ export const schulteGame: MiniGameDefinition = {
   title: '舒尔特方格 Schulte Grid',
   icon: '🔲',
   description: '按 1 到 N² 的顺序依次点击打乱数字，越快越好。',
-  controls: ['点击 / 触摸：按顺序点数字', 'R：重开本关', 'P：暂停'],
+  controls: ['点击 / 触摸：按顺序点数字', 'R：重开本关', '[ ]：切换关卡（已通关范围）', 'P：暂停'],
   create: createSchulteGame,
 }

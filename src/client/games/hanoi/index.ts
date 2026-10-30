@@ -171,6 +171,15 @@ function createHanoiGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       advanceTimer = 0
       advanceRemaining = 0
       startLevel(level)
+    } else if (event.code === 'BracketLeft' || event.code === 'BracketRight') {
+      // 切换关卡：只在已通关范围内（1..persisted）。
+      event.preventDefault()
+      clearTimeout(advanceTimer)
+      advanceTimer = 0
+      advanceRemaining = 0
+      const max = Math.min(readLevel('hanoi'), LEVEL_DISCS.length)
+      const next = level + (event.code === 'BracketRight' ? 1 : -1)
+      if (next >= 1 && next <= max) startLevel(next)
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()

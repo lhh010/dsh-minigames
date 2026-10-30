@@ -3,7 +3,8 @@
  * {@link MiniGameInstance} — ←/→ aim (±25°), hold Space to charge the power
  * meter and release to throw, A/D set the hook spin while charging, P pauses
  * (panel pause works too), R restarts the current level with the identical
- * rack sequence. Strike/spare/pin events burst particles; level progress
+ * rack sequence, [ / ] jump between unlocked levels (same run seed).
+ * Strike/spare/pin events burst particles; level progress
  * persists through the shared level store (gameId 'bowling').
  */
 import type { MiniGameDefinition, MiniGameInstance, MiniGameMountOptions } from '../types.ts'
@@ -111,6 +112,18 @@ function createBowlingGame(host: HTMLElement, options?: MiniGameMountOptions): M
       restartLevel(state)
       reportScore()
       loop.markDirty()
+      return
+    }
+    // 跳关：在已解锁范围内上一关 / 下一关（同 R 语义，同一 run seed）。
+    if (event.code === 'BracketLeft' || event.code === 'BracketRight') {
+      event.preventDefault()
+      const target = state.level + (event.code === 'BracketRight' ? 1 : -1)
+      const max = readLevel(GAME_ID)
+      if (target >= 1 && target <= max) {
+        Object.assign(state, createLevel(target, state.seed))
+        reportScore()
+        loop.markDirty()
+      }
       return
     }
     if (event.code === 'Space') {
@@ -234,6 +247,6 @@ export const bowlingGame: MiniGameDefinition = {
   title: '迷你保龄球 Bowling',
   icon: '🎳',
   description: '瞄准蓄力掷球，勾球旋转一击全倒，真实十瓶计分冲满分。',
-  controls: ['← → 或点击/拖拽球道：瞄准（±25°）', '空格：按住蓄力，松开掷球', 'A / D：蓄力时设置勾球方向', 'P：暂停 · R：重开本关'],
+  controls: ['← → 或点击/拖拽球道：瞄准（±25°）', '空格：按住蓄力，松开掷球', 'A / D：蓄力时设置勾球方向', 'P：暂停 · R：重开本关', '[ / ]：切换关卡（已解锁范围内）'],
   create: createBowlingGame,
 }

@@ -6,8 +6,9 @@
  * back to L1. On win: overlay 「第 X 关完成 · Y 步（最短 Z 步）」+ particles +
  * onScore(level), auto-advance 1.5s later. Turn-based; no undo (movement is
  * free) and P toggles pause — panel-driven pause freezes the auto-advance via
- * the stored-remainder pattern. The highest level reached persists per game
- * id, so re-entering resumes where the player left off.
+ * the stored-remainder pattern. [ / ] jump between unlocked levels (bounded
+ * to the persisted highest reached). The highest level reached persists per
+ * game id, so re-entering resumes where the player left off.
  */
 import type {
   MiniGameDefinition,
@@ -120,14 +121,20 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
         advanceTimer = 0
       }
       advanceRemaining = 0
-      const { w, h } = levelSize(level)
-      maze = generateMaze(levelSeed(level), w, h)
-      shortest = solveLength(maze)
-      player = { x: 0, y: 0 }
-      trail.length = 0
-      moves = 0
-      winText = null
-      loop.markDirty()
+      startLevel(level) // same seed → the same maze
+      return
+    }
+    if (event.code === 'BracketLeft' || event.code === 'BracketRight') {
+      event.preventDefault()
+      // 切换关卡：先取消待跳转的自动推进计时器，再从全新关卡开始。
+      if (advanceTimer !== 0) {
+        window.clearTimeout(advanceTimer)
+        advanceTimer = 0
+      }
+      advanceRemaining = 0
+      const max = Math.min(readLevel('maze'), 5)
+      const next = level + (event.code === 'BracketRight' ? 1 : -1)
+      if (next >= 1 && next <= max) startLevel(next)
       return
     }
     if (event.code === 'KeyP') {
@@ -199,6 +206,6 @@ export const mazeGame: MiniGameDefinition = {
   title: '迷宫',
   icon: '🌀',
   description: '随机完美迷宫：穿过唯一通路走到右下角出口，5 关逐渐变大。',
-  controls: ['方向键 / WASD：移动', 'R：重开本关（同一迷宫）', 'P：暂停'],
+  controls: ['方向键 / WASD：移动', 'R：重开本关（同一迷宫）', '[ ]：切换关卡（已通关范围）', 'P：暂停'],
   create: createMazeGame,
 }

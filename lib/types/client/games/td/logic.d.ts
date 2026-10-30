@@ -152,6 +152,9 @@ export interface TdState {
     spawnTimer: number;
     /** Whether the final queued enemy of this wave is a brute. */
     brutePending: boolean;
+    /** Endless mode: entered after clearing wave 10 of level LEVEL_WRAP; the
+     * wave counter keeps climbing with exponentially scaling enemy HP. */
+    endless: boolean;
     result: TdResult;
     t: number;
     nextId: number;
@@ -159,6 +162,10 @@ export interface TdState {
 }
 /** Enemy count of wave `wave`. */
 export declare function waveSize(wave: number): number;
+/** Endless HP growth per extra wave beyond the level-5 campaign (×1.22). */
+export declare const ENDLESS_HP_GROWTH = 1.22;
+/** Endless speed growth per extra wave (×1.03, capped at 2× base). */
+export declare const ENDLESS_SPEED_GROWTH = 1.03;
 /** Gold granted for killing an enemy during wave `wave`. */
 export declare function killGold(wave: number): number;
 /** Gold granted for clearing wave `wave`. */

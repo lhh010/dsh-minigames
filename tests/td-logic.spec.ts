@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  BUILD_TIME, CALL_TIME, GRID_H, GRID_W, START_GOLD, START_LIVES, WAVES_PER_LEVEL,
+  BUILD_TIME, CALL_TIME, ENDLESS_HP_GROWTH, ENDLESS_SPEED_GROWTH, GRID_H, GRID_W, START_GOLD, START_LIVES, WAVES_PER_LEVEL,
   buildTower, canBuild, createState, earlySendBonus, enemySpeed, explode, generatePath,
   hitEnemy, killGold, mapSeed, mulberry32, pathLength, pathTilesOf, positionAt, restartLevel,
   sellTower, sendWaveEarly, startWave, step, towerStats, upgradeCost, upgradeTower, waveClearBonus, waveSize,
@@ -358,6 +358,47 @@ describe('td determinism', () => {
     const a = mulberry32(99)
     const b = mulberry32(99)
     for (let i = 0; i < 10; i += 1) expect(a()).toBe(b())
+  })
+
+  it('endless mode: wave 10 of level 5 flows into endless, HP grows exponentially', () => {
+    const s = createState(5, 5) // level 5
+    // Force-win waves 1..10 by killing spawns instantly.
+    for (let wave = 1; wave <= 10; wave += 1) {
+      if (s.phase === 'build') startWave(s)
+      for (let i = 0; i < 60 * 60 && s.phase === 'wave'; i += 1) {
+        for (const e of s.enemies) if (e.alive) e.hp = 0
+        s.spawnQueue = 0
+        step(s, 1 / 60)
+      }
+    }
+    // After clearing wave 10 on level 5: endless, same map, wave 11 pending.
+    expect(s.endless).toBe(true)
+    expect(s.level).toBe(5)
+    expect(s.wave).toBe(11)
+    expect(s.phase).toBe('build')
+    // HP growth: wave 15 / wave 11 = growth^4 (exponential per extra wave).
+    expect(ENDLESS_HP_GROWTH).toBeGreaterThan(1)
+    expect(ENDLESS_SPEED_GROWTH).toBeGreaterThan(1)
+  })
+
+  it('endless never advances the level again; waves keep climbing', () => {
+    const s = createState(9, 5)
+    s.endless = true
+    s.wave = 12
+    s.phase = 'wave'
+    s.spawnQueue = 1
+    s.spawnTimer = 0
+    let reachedBuild = false
+    for (let i = 0; i < 60 * 5 && !reachedBuild; i += 1) {
+      for (const e of s.enemies) if (e.alive) e.hp = 0
+      s.spawnQueue = 0
+      step(s, 1 / 60)
+      reachedBuild = (s.phase as string) === 'build'
+    }
+    expect(reachedBuild).toBe(true)
+    expect(s.endless).toBe(true)
+    expect(s.level).toBe(5)
+    expect(s.wave).toBe(13)
   })
 
   it('combat early-call overlaps the next wave onto survivors (harder, paid)', () => {

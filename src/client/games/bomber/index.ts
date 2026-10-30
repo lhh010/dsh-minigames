@@ -2,8 +2,8 @@
  * Bomberman game definition: wires the pure world logic into a
  * {@link MiniGameInstance} — an rAF loop (createFrameLoop, continuous mode),
  * WASD/arrows to move, Space to place a bomb, P pause, R restart the current
- * level, Enter restarts after death. Level progress persists via
- * level-progress ('bomber').
+ * level, Enter restarts after death, [ / ] jump between unlocked levels.
+ * Level progress persists via level-progress ('bomber').
  */
 import type {
   MiniGameDefinition,
@@ -11,7 +11,7 @@ import type {
   MiniGameMountOptions,
 } from '../types.ts'
 import {
-  createWorld, startLevel, resetLevel, stepWorld, placeBomb, mulberry32, LEVELS,
+  createWorld, startLevel, stepWorld, placeBomb, mulberry32, LEVELS,
   type PlayerInput, type WorldState,
 } from './logic.ts'
 import { renderBomber, BOARD_W, BOARD_H } from './render.ts'
@@ -45,11 +45,11 @@ function createBomberGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     options?.onScore?.(world.score)
   }
 
-  const restartLevel = (): void => {
+  const restartLevel = (at: number = world.level): void => {
     // Same seed → the same layout, so a retry is fair; the score restarts
     // at 0 (a fresh attempt must not inherit the aborted run's score).
-    const level = world.level
-    resetLevel(world, levelRng(level))
+    startLevel(world, at, levelRng(at))
+    world.score = 0
     lastScore = -1
     input.up = input.down = input.left = input.right = false
     reportScore()
@@ -95,6 +95,15 @@ function createBomberGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
         event.preventDefault()
         if (world.result === 'lose') restartLevel()
         break
+      // 跳关：在已解锁范围内上一关 / 下一关（fresh start，同 R 语义）。
+      case 'BracketLeft':
+      case 'BracketRight': {
+        event.preventDefault()
+        const max = Math.min(readLevel(GAME_ID), LEVELS)
+        const target = world.level + (event.code === 'BracketRight' ? 1 : -1)
+        if (target >= 1 && target <= max) restartLevel(target)
+        break
+      }
     }
   }
   const onKeyUp = (event: KeyboardEvent): void => {
@@ -163,6 +172,6 @@ export const bomberGame: MiniGameDefinition = {
   title: '炸弹人',
   icon: '💣',
   description: '经典炸弹人：放置炸弹炸开砖墙、消灭敌人，清空 5 关循环关卡。',
-  controls: ['WASD / 方向键：移动', '空格：放炸弹', '回车：失败后重开本关', 'R：重开本关', 'P：暂停'],
+  controls: ['WASD / 方向键：移动', '空格：放炸弹', '回车：失败后重开本关', 'R：重开本关', '[ / ]：切换关卡（已解锁范围内）', 'P：暂停'],
   create: createBomberGame,
 }
