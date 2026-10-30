@@ -53,9 +53,40 @@ function createFlowGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
   let hintUsed = false
   const particles = createParticles()
 
+  /**
+   * Puzzle cache + background pregeneration: generation on big boards runs
+   * a uniqueness solver for seconds (7×7 ~1s, 8×8 up to 5s) — synchronous
+   * generation on start/level-change froze the whole panel. Puzzles are
+   * deterministic per level, so each is generated once per page lifetime and
+   * the NEXT level's puzzle is pregenerated in the background right after
+   * the current one becomes interactive.
+   */
+  const puzzleCache = new Map<number, FlowPuzzle>()
+  const pregenTimer = { id: 0 }
+
   function makePuzzle(lv: number): FlowPuzzle {
+    const hit = puzzleCache.get(lv)
+    if (hit !== undefined) return hit
     const display = lv + 1
-    return puzzleFromSeed(display * 0x9e3779b9, levelSize(display), levelPairs(display))
+    const p = puzzleFromSeed(display * 0x9e3779b9, levelSize(display), levelPairs(display))
+    puzzleCache.set(lv, p)
+    return p
+  }
+
+  /** Pregenerate `lv` off the interaction path (setTimeout ≈ next idle turn). */
+  function pregenerate(lv: number): void {
+    if (puzzleCache.has(lv) || lv < 0) return
+    const display = lv + 1
+    if (display > 5 && puzzleCache.size > 0) {
+      // Wrapped past the last level: nothing new to pregenerate (levels wrap
+      // 5×5→9×9 and all five cached already).
+    }
+    window.clearTimeout(pregenTimer.id)
+    pregenTimer.id = window.setTimeout(() => {
+      if (puzzleCache.has(lv)) return
+      const p = puzzleFromSeed(display * 0x9e3779b9, levelSize(display), levelPairs(display))
+      puzzleCache.set(lv, p)
+    }, 150)
   }
 
   const initialFit = fitCanvas(host, canvas, logicalW(puzzle.size), logicalH(puzzle.size))
@@ -85,6 +116,9 @@ function createFlowGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     hintTimer = 0
     hintUsed = false
     refit(puzzle.size)
+    // The next level is deterministic too — warm it in the background so
+    // the next transition is instant.
+    pregenerate(level + 1)
     loop.markDirty()
   }
 

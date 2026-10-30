@@ -170,6 +170,12 @@ function drawAim(ctx: CanvasRenderingContext2D, state: BowlingState): void {
   ctx.closePath()
   ctx.fill()
   noGlow(ctx)
+  // Precise aim readout right under the ball: signed degrees to 0.1°.
+  const deg = (a * 180) / Math.PI
+  ctx.font = '600 12px system-ui, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillStyle = THEME.text
+  ctx.fillText(`${deg >= 0 ? '+' : ''}${deg.toFixed(1)}°`, bx, by + BALL_RADIUS * SCALE + 16)
 }
 
 function drawMeters(ctx: CanvasRenderingContext2D, state: BowlingState): void {

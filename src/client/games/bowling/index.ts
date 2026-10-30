@@ -22,8 +22,10 @@ import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 const GAME_ID = 'bowling'
 /** Keyboard charge rate (power per second while Space is held). */
 const CHARGE_RATE = 0.85
-/** Aim rotation rate (radians per second while ←/→ is held). */
-const AIM_RATE = 2.0
+/** Aim tap nudge (radians per keydown — fine-grained stepping). */
+const AIM_NUDGE = (1.5 * Math.PI) / 180
+/** Aim rotation rate while the key is HELD (radians per second — slow sweep). */
+const AIM_RATE = 0.35
 /** Spin adjustment rate (spin units per second while A/D is held). */
 const SPIN_RATE = 1.6
 
@@ -142,9 +144,17 @@ function createBowlingGame(host: HTMLElement, options?: MiniGameMountOptions): M
       return
     }
     if (state.phase === 'paused' || state.phase === 'levelWon' || state.phase === 'gameOver') return
-    if (event.code === 'ArrowLeft') { event.preventDefault(); keys.left = true }
-    else if (event.code === 'ArrowRight') { event.preventDefault(); keys.right = true }
-    else if (event.code === 'KeyA') { event.preventDefault(); keys.spinL = true }
+    if (event.code === 'ArrowLeft' || event.code === 'ArrowRight') {
+      event.preventDefault()
+      // 点按=精细步进（1.5°），按住=慢速连续旋转——两种粒度。
+      if (!event.repeat) {
+        const nudge = event.code === 'ArrowLeft' ? -AIM_NUDGE : AIM_NUDGE
+        state.aimAngle = Math.min(MAX_AIM, Math.max(-MAX_AIM, state.aimAngle + nudge))
+        loop.markDirty()
+      }
+      if (event.code === 'ArrowLeft') keys.left = true
+      else keys.right = true
+    } else if (event.code === 'KeyA') { event.preventDefault(); keys.spinL = true }
     else if (event.code === 'KeyD') { event.preventDefault(); keys.spinR = true }
     loop.markDirty()
   }
@@ -247,6 +257,6 @@ export const bowlingGame: MiniGameDefinition = {
   title: '迷你保龄球 Bowling',
   icon: '🎳',
   description: '瞄准蓄力掷球，勾球旋转一击全倒，真实十瓶计分冲满分。',
-  controls: ['← → 或点击/拖拽球道：瞄准（±25°）', '空格：按住蓄力，松开掷球', 'A / D：蓄力时设置勾球方向', 'P：暂停 · R：重开本关', '[ / ]：切换关卡（已解锁范围内）'],
+  controls: ['← → 点按=1.5°微调 / 按住=慢转（或点击拖拽球道）', '空格：按住蓄力，松开掷球', 'A / D：蓄力时设置勾球方向', 'P：暂停 · R：重开本关', '[ / ]：切换关卡（已解锁范围内）'],
   create: createBowlingGame,
 }
