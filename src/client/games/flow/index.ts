@@ -33,8 +33,8 @@ function createFlowGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
   host.replaceChildren(canvas)
   // Persisted level is 1-based; this game's level index is 0-based.
   let level = readLevel('flow') - 1
-  let puzzle: FlowPuzzle = makePuzzle(level)
-  let paths: CellPaths = puzzle.dots.map(() => null)
+  let puzzle: FlowPuzzle
+  let paths: CellPaths
   let dragging = -1
   let hoverCell = -1
   let solved = false
@@ -64,6 +64,12 @@ function createFlowGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
   const puzzleCache = new Map<number, FlowPuzzle>()
   const pregenTimer = { id: 0 }
 
+  // Initial puzzle AFTER the cache exists (TDZ: makePuzzle reads
+  // puzzleCache, which the old top-of-function call ran before its
+  // declaration — ReferenceError killed the whole bundle at load).
+  puzzle = makePuzzle(level)
+  paths = puzzle.dots.map(() => null)
+
   function makePuzzle(lv: number): FlowPuzzle {
     const hit = puzzleCache.get(lv)
     if (hit !== undefined) return hit
@@ -72,7 +78,6 @@ function createFlowGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     puzzleCache.set(lv, p)
     return p
   }
-
   /** Pregenerate `lv` off the interaction path (setTimeout ≈ next idle turn). */
   function pregenerate(lv: number): void {
     if (puzzleCache.has(lv) || lv < 0) return
