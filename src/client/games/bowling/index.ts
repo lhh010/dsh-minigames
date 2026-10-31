@@ -24,8 +24,7 @@ const GAME_ID = 'bowling'
 const CHARGE_RATE = 0.85
 /** Aim tap nudge (radians per keydown — fine-grained stepping). */
 const AIM_NUDGE = (0.2 * Math.PI) / 180
-/** Aim rotation rate while the key is HELD (radians per second — slow sweep). */
-const AIM_RATE = 0.35
+/** Aim rotation is pure tap-stepping (see AIM_NUDGE); no held sweep. */
 /** Spin adjustment rate (spin units per second while A/D is held). */
 const SPIN_RATE = 1.6
 
@@ -81,8 +80,6 @@ function createBowlingGame(host: HTMLElement, options?: MiniGameMountOptions): M
     if (!running) return
     const dt = f.dt
     if (state.phase === 'aiming') {
-      if (keys.left) state.aimAngle = Math.max(-MAX_AIM, state.aimAngle - AIM_RATE * dt)
-      if (keys.right) state.aimAngle = Math.min(MAX_AIM, state.aimAngle + AIM_RATE * dt)
       if (keys.charge) state.power = Math.min(1, state.power + CHARGE_RATE * dt)
       if (keys.spinL) state.spin = Math.max(-1, state.spin - SPIN_RATE * dt)
       if (keys.spinR) state.spin = Math.min(1, state.spin + SPIN_RATE * dt)
@@ -91,7 +88,7 @@ function createBowlingGame(host: HTMLElement, options?: MiniGameMountOptions): M
     handleEvents()
     if (state.phase === 'levelWon' || state.phase === 'gameOver') reportScore()
     // Continuous while anything moves/animates; otherwise repaint on change.
-    if (state.phase === 'rolling' || keys.left || keys.right || keys.charge || keys.spinL
+    if (state.phase === 'rolling' || keys.charge || keys.spinL
       || keys.spinR || state.msgTimer > 0 || particles.size() > 0) loop.markDirty()
     if (f.render) {
       renderBowling(ctx, { state, paused: false, best: 0 })
@@ -146,17 +143,13 @@ function createBowlingGame(host: HTMLElement, options?: MiniGameMountOptions): M
     if (state.phase === 'paused' || state.phase === 'levelWon' || state.phase === 'gameOver') return
     if (event.code === 'ArrowLeft' || event.code === 'ArrowRight') {
       event.preventDefault()
-      // 点按=精细步进（1.5°），按住=慢速连续旋转——两种粒度。
-      if (!event.repeat) {
-        const nudge = event.code === 'ArrowLeft' ? -AIM_NUDGE : AIM_NUDGE
-        state.aimAngle = Math.min(MAX_AIM, Math.max(-MAX_AIM, state.aimAngle + nudge))
-        loop.markDirty()
-      }
-      if (event.code === 'ArrowLeft') keys.left = true
-      else keys.right = true
+      // 纯步进：每次按键（含系统自动重复）恰好 0.2°——无连续扫描，
+      // 点按即所见即所得。
+      const nudge = event.code === 'ArrowLeft' ? -AIM_NUDGE : AIM_NUDGE
+      state.aimAngle = Math.min(MAX_AIM, Math.max(-MAX_AIM, state.aimAngle + nudge))
+      loop.markDirty()
     } else if (event.code === 'KeyA') { event.preventDefault(); keys.spinL = true }
     else if (event.code === 'KeyD') { event.preventDefault(); keys.spinR = true }
-    loop.markDirty()
   }
 
   const onKeyUp = (event: KeyboardEvent): void => {
@@ -257,6 +250,6 @@ export const bowlingGame: MiniGameDefinition = {
   title: '迷你保龄球 Bowling',
   icon: '🎳',
   description: '瞄准蓄力掷球，勾球旋转一击全倒，真实十瓶计分冲满分。',
-  controls: ['← → 点按=0.2°微调 / 按住=慢转（或点击拖拽球道）', '空格：按住蓄力，松开掷球', 'A / D：蓄力时设置勾球方向', 'P：暂停 · R：重开本关', '[ / ]：切换关卡（已解锁范围内）'],
+  controls: ['← → 每按一次=0.2°（按住自动重复步进；或点击拖拽球道）', '空格：按住蓄力，松开掷球', 'A / D：蓄力时设置勾球方向', 'P：暂停 · R：重开本关', '[ / ]：切换关卡（已解锁范围内）'],
   create: createBowlingGame,
 }
