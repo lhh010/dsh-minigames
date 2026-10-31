@@ -1,0 +1,46 @@
+# Auto-release: on every push to main (canonical lhh010 mirror), make sure
+# the package.json version has a compatibility.json row and a vX.Y.Z tag.
+# The row lands as a commit ("release: compatibility 补登 …") when missing,
+# and the tag is created on the resulting HEAD — so a plain version-bump
+# push is always a complete, installable release.
+name: auto-release
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  tag-and-compat:
+    if: github.repository == 'lhh010/dsh-minigames'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Ensure compatibility row and tag for the package version
+        run: |
+          set -e
+          VER="$(node -p "require('./package.json').version")"
+          TAG="v$VER"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "tag $TAG already exists; nothing to do"
+            exit 0
+          fi
+          if node scripts/add-compat-row.mjs "$TAG" | grep -q 'added'; then
+            git config user.name 'dsh-minigames release bot'
+            git config user.email 'actions@users.noreply.github.com'
+            git add compatibility.json
+            git commit -m "release: compatibility 补登 $TAG 版本行"
+            git push origin main
+          fi
+          # Tag the commit that introduced this version in package.json —
+          # NOT the pushed HEAD, which may be later docs/sync commits
+          # (the v0.9.0 mis-tag lesson).
+          SHA="$(git log --format=%H -1 -S '\"version\": \"'"$VER"'\"' -- package.json || true)"
+          if [ -z "$SHA" ]; then SHA="$(git rev-parse HEAD)"; fi
+          git tag "$TAG" "$SHA"
+          git push origin "refs/tags/$TAG"
+          echo "released $TAG at $SHA"
