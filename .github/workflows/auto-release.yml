@@ -38,9 +38,8 @@ jobs:
           fi
           # Tag the commit that introduced this version in package.json —
           # NOT the pushed HEAD, which may be later docs/sync commits
-          # (the v0.9.0 mis-tag lesson).
-          SHA="$(git log --format=%H -1 -S '\"version\": \"'"$VER"'\"' -- package.json || true)"
-          if [ -z "$SHA" ]; then SHA="$(git rev-parse HEAD)"; fi
-          git tag "$TAG" "$SHA"
+          # (the v0.9.0 mis-tag lesson; v0.10.2 was mis-tagged the same way
+          # by broken shell quoting, hence the helper script).
+          SHA="$(node scripts/find-release-commit.mjs "$VER")"
           git push origin "refs/tags/$TAG"
           echo "released $TAG at $SHA"
