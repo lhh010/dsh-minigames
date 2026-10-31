@@ -45,6 +45,22 @@ export function mulberry32(seed: number): () => number {
   }
 }
 
+/**
+ * Cached per-size neighbor tables for solver hot paths. Generation visits
+ * millions of nodes and each used to allocate fresh neighbor arrays via
+ * {@link neighbors}; the shared tables keep per-node work allocation-free
+ * (same cell order, so search results are bit-identical).
+ */
+const neighborTables = new Map<number, number[][]>()
+function neighborTable(size: number): number[][] {
+  let table = neighborTables.get(size)
+  if (table === undefined) {
+    table = Array.from({ length: size * size }, (_, cell) => neighbors(size, cell))
+    neighborTables.set(size, table)
+  }
+  return table
+}
+
 /** Orthogonal neighbors of a cell (grid edges only). */
 export function neighbors(size: number, cell: number): number[] {
   const r = Math.floor(cell / size)
@@ -91,19 +107,22 @@ export function computeScore(level: number, seconds: number): number {
  */
 export function findDeadCell(
   size: number,
-  occ: readonly number[],
+  occ: readonly number[] | Int32Array,
   head = -1,
   endpoints: readonly number[] = [],
 ): number {
   const total = size * size
-  const isEndpoint = new Set(endpoints)
+  const table = neighborTable(size)
   for (let cell = 0; cell < total; cell += 1) {
     if (occ[cell] !== -1) continue
     let count = 0
-    for (const n of neighbors(size, cell)) {
+    for (const n of table[cell]!) {
       if (occ[n] === -1 || n === head) count += 1
     }
-    const need = isEndpoint.has(cell) ? 1 : 2
+    let need = 2
+    for (const e of endpoints) {
+      if (e === cell) { need = 1; break }
+    }
     if (count < need) return cell
   }
   return -1
@@ -230,10 +249,19 @@ export function solveCount(puzzle: FlowPuzzle, maxNodes = 60_000): SolveResult {
   const { size, dots } = puzzle
   const total = size * size
   const colors = dots.length
-  const occ = new Array<number>(total).fill(-1)
+  const table = neighborTable(size)
+  const occ = new Int32Array(total).fill(-1)
   // Cell → owning color for every dot; paths may never pass through a
   // foreign dot (the game rejects those cells, so the solver must too).
   const dotColor = new Int8Array(total).fill(-1)
+  // Reused flood scratch: stamp-marked visited (no per-call allocation) and a
+  // stack big enough for every free cell plus the occupied seed heads.
+  const visited = new Int32Array(total)
+  const stack = new Int32Array(total + 8)
+  let stamp = 0
+  // prune()'s reused seed/endpoint arrays, lazily sized once per solveCount.
+  let seedsScratch: number[] | undefined
+  let endpointsScratch: number[] | undefined
   for (let c = 0; c < colors; c += 1) {
     dotColor[dots[c]![0]!] = c
     dotColor[dots[c]![1]!] = c
@@ -243,20 +271,24 @@ export function solveCount(puzzle: FlowPuzzle, maxNodes = 60_000): SolveResult {
   let exhausted = false
 
   /** Flood free cells from `seeds` (seed cells themselves may be occupied). */
-  const flood = (seeds: number[]): Uint8Array => {
-    const visited = new Uint8Array(total)
-    const stack: number[] = []
+  const flood = (seeds: readonly number[]): boolean => {
+    stamp += 1
+    let sp = 0
     for (const s of seeds) {
-      if (occ[s] === -1 && !visited[s]) { visited[s] = 1; stack.push(s) }
-      else if (occ[s] !== -1) stack.push(s) // e.g. the head: passable origin
-    }
-    while (stack.length > 0) {
-      const cur = stack.pop()!
-      for (const n of neighbors(size, cur)) {
-        if (occ[n] === -1 && !visited[n]) { visited[n] = 1; stack.push(n) }
+      if (occ[s] === -1) {
+        if (visited[s] !== stamp) { visited[s] = stamp; stack[sp] = s; sp += 1 }
+      } else {
+        stack[sp] = s; sp += 1 // e.g. the head: passable origin
       }
     }
-    return visited
+    while (sp > 0) {
+      sp -= 1
+      const cur = stack[sp]!
+      for (const n of table[cur]!) {
+        if (occ[n] === -1 && visited[n] !== stamp) { visited[n] = stamp; stack[sp] = n; sp += 1 }
+      }
+    }
+    return true
   }
 
   /**
@@ -269,17 +301,32 @@ export function solveCount(puzzle: FlowPuzzle, maxNodes = 60_000): SolveResult {
   const prune = (color: number, head: number): boolean => {
     const partner = dots[color]![1]!
     if (occ[partner] !== -1) return true
-    const seeds = [head, partner]
-    const endpoints = [partner]
+    // Reused seed/endpoint buffers (max: head + partner + every later pair).
+    if (seedsScratch === undefined) {
+      const cap = 2 + 2 * colors
+      seedsScratch = new Array<number>(cap).fill(0)
+      endpointsScratch = new Array<number>(cap).fill(0)
+    }
+    const seeds = seedsScratch!
+    const endpoints = endpointsScratch!
+    seeds[0] = head
+    seeds[1] = partner
+    endpoints[0] = partner
+    let len = 2
     for (let c = color + 1; c < colors; c += 1) {
       const [da, db] = dots[c]!
       if (occ[da] !== -1 || occ[db] !== -1) return true
-      seeds.push(da, db)
-      endpoints.push(da, db)
+      seeds[len] = da
+      seeds[len + 1] = db
+      endpoints[len] = da
+      endpoints[len + 1] = db
+      len += 2
     }
-    const visited = flood(seeds)
+    seeds.length = len
+    endpoints.length = len
+    flood(seeds)
     for (let i = 0; i < total; i += 1) {
-      if (occ[i] === -1 && !visited[i]) return true
+      if (occ[i] === -1 && visited[i] !== stamp) return true
     }
     return findDeadCell(size, occ, head, endpoints) !== -1
   }
@@ -305,7 +352,7 @@ export function solveCount(puzzle: FlowPuzzle, maxNodes = 60_000): SolveResult {
       exhausted = true
       return STOP
     }
-    for (const n of neighbors(size, head)) {
+    for (const n of table[head]!) {
       if (n === partner) {
         path.push(n)
         occ[n] = color
@@ -446,6 +493,7 @@ function tryGenerate(seed: number, size: number, pairs: number): FlowPuzzle | nu
     }
     if (starts.length < pairs) continue
     const occupied = new Array<number>(total).fill(-1)
+    const table = neighborTable(size)
     const paths: number[][] = starts.map(s => [s])
     starts.forEach((s, p) => { occupied[s] = p })
     let free = total - pairs
@@ -458,7 +506,7 @@ function tryGenerate(seed: number, size: number, pairs: number): FlowPuzzle | nu
       let bestScore = Infinity
       for (let p = 0; p < paths.length; p += 1) {
         const head = paths[p]![paths[p]!.length - 1]!
-        const opts = neighbors(size, head).filter(n => occupied[n] === -1)
+        const opts = table[head]!.filter(n => occupied[n] === -1)
         if (opts.length === 0) continue
         const score = opts.length + rng() * 0.5
         if (score < bestScore) { bestScore = score; best = p; bestOpts = opts }

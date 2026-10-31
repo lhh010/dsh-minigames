@@ -50,7 +50,7 @@ export declare function computeScore(level: number, seconds: number): number;
  * need only ≥1 — they terminate their path. Sound necessary condition used
  * by the solver's dead-end pruning; a pure helper for tests.
  */
-export declare function findDeadCell(size: number, occ: readonly number[], head?: number, endpoints?: readonly number[]): number;
+export declare function findDeadCell(size: number, occ: readonly number[] | Int32Array, head?: number, endpoints?: readonly number[]): number;
 /**
  * Begin (or re-grab) a color's path at a dot cell.
  *

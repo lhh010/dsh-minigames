@@ -16,8 +16,9 @@ import type {
 } from '../types.ts'
 import {
   computeScore, connectedCount, extendPath, grabPath, isWon, pathComplete,
-  levelPairs, levelSize, puzzleFromSeed, type CellPaths, type FlowPuzzle,
+  levelPairs, levelSize, type CellPaths, type FlowPuzzle,
 } from './logic.ts'
+import { EMBEDDED_PUZZLES } from './puzzles.ts'
 import { cellAt, cellCenter, logicalH, logicalW, renderFlow } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
@@ -53,45 +54,21 @@ function createFlowGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
   let hintUsed = false
   const particles = createParticles()
 
-  /**
-   * Puzzle cache + background pregeneration: generation on big boards runs
-   * a uniqueness solver for seconds (7×7 ~1s, 8×8 up to 5s) — synchronous
-   * generation on start/level-change froze the whole panel. Puzzles are
-   * deterministic per level, so each is generated once per page lifetime and
-   * the NEXT level's puzzle is pregenerated in the background right after
-   * the current one becomes interactive.
-   */
-  const puzzleCache = new Map<number, FlowPuzzle>()
-  const pregenTimer = { id: 0 }
-
-  // Initial puzzle AFTER the cache exists (TDZ: makePuzzle reads
-  // puzzleCache, which the old top-of-function call ran before its
+  // Initial puzzle AFTER the table lookup helper exists (TDZ: makePuzzle
+  // reads EMBEDDED_PUZZLES, which the old top-of-function call ran before its
   // declaration — ReferenceError killed the whole bundle at load).
   puzzle = makePuzzle(level)
   paths = puzzle.dots.map(() => null)
 
+  /**
+   * The embedded board for 0-based level `lv` (instant, no generation).
+   * Levels cycle the five boards — sizes and pairs already wrap
+   * 5×5→9×9 in logic.ts, so the cycle keeps the same difficulty ramp.
+   */
   function makePuzzle(lv: number): FlowPuzzle {
-    const hit = puzzleCache.get(lv)
-    if (hit !== undefined) return hit
     const display = lv + 1
-    const p = puzzleFromSeed(display * 0x9e3779b9, levelSize(display), levelPairs(display))
-    puzzleCache.set(lv, p)
-    return p
-  }
-  /** Pregenerate `lv` off the interaction path (setTimeout ≈ next idle turn). */
-  function pregenerate(lv: number): void {
-    if (puzzleCache.has(lv) || lv < 0) return
-    const display = lv + 1
-    if (display > 5 && puzzleCache.size > 0) {
-      // Wrapped past the last level: nothing new to pregenerate (levels wrap
-      // 5×5→9×9 and all five cached already).
-    }
-    window.clearTimeout(pregenTimer.id)
-    pregenTimer.id = window.setTimeout(() => {
-      if (puzzleCache.has(lv)) return
-      const p = puzzleFromSeed(display * 0x9e3779b9, levelSize(display), levelPairs(display))
-      puzzleCache.set(lv, p)
-    }, 150)
+    const slot = ((display - 1) % EMBEDDED_PUZZLES.length + EMBEDDED_PUZZLES.length) % EMBEDDED_PUZZLES.length
+    return EMBEDDED_PUZZLES[slot]!
   }
 
   const initialFit = fitCanvas(host, canvas, logicalW(puzzle.size), logicalH(puzzle.size))
@@ -121,9 +98,6 @@ function createFlowGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
     hintTimer = 0
     hintUsed = false
     refit(puzzle.size)
-    // The next level is deterministic too — warm it in the background so
-    // the next transition is instant.
-    pregenerate(level + 1)
     loop.markDirty()
   }
 
