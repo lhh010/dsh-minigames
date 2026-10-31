@@ -35,7 +35,7 @@ describe('tents logic', () => {
   })
 
   it('every level size generates a solvable puzzle with matching clue sums', () => {
-    for (let lv = 1; lv <= 5; lv += 1) {
+    for (let lv = 1; lv <= 10; lv += 1) {
       const p = puzzleFromSeed(lv * 0x9e3779b9, levelSize(lv), levelTrees(lv))
       expect(p).not.toBeNull()
       const puzzle = p!

@@ -169,7 +169,7 @@ function createTentsGame(host: HTMLElement, options?: MiniGameMountOptions): Min
       clearTimeout(advanceTimer)
       advanceTimer = 0
       advanceRemaining = 0
-      const max = Math.min(readLevel('tents'), 5)
+      const max = Math.min(readLevel('tents'), 10)
       const next = level + (event.code === 'BracketRight' ? 1 : -1)
       if (next >= 0 && next < max) startLevel(next)
     } else if (event.code.startsWith('Arrow') || event.code === 'Space' || event.code === 'Enter') {

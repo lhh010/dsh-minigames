@@ -179,7 +179,7 @@ function createShikakuGame(host: HTMLElement, options?: MiniGameMountOptions): M
       clearTimeout(advanceTimer)
       advanceTimer = 0
       advanceRemaining = 0
-      const max = Math.min(readLevel('shikaku'), 5)
+      const max = Math.min(readLevel('shikaku'), 10)
       const next = level + (event.code === 'BracketRight' ? 1 : -1)
       if (next >= 0 && next < max) startLevel(next)
     } else if (event.code === 'KeyZ' || event.code === 'Backspace') {

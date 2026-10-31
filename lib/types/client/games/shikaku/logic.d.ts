@@ -11,8 +11,8 @@
  * solution is proven, otherwise the seed advances — after the attempt cap
  * the first roll ships with a 多解 badge (the flow pattern).
  */
-/** Board edge lengths of the five levels. */
-export declare const LEVEL_SIZES: readonly [6, 7, 8, 9, 10];
+/** Board edge lengths of the ten levels. */
+export declare const LEVEL_SIZES: readonly [6, 7, 8, 9, 10, 9, 10, 11, 11, 12];
 /** A rectangle as inclusive corners [r1, c1, r2, c2]. */
 export type Rect = readonly [number, number, number, number];
 /** A generated level: clue cells plus one valid partition. */
@@ -31,7 +31,7 @@ export interface ShikakuPuzzle {
 }
 /** mulberry32 PRNG: small, fast, deterministic per seed. */
 export declare function mulberry32(seed: number): () => number;
-/** Board edge length of a 1-based level (levels wrap after 10×10). */
+/** Board edge length of a 1-based level (levels wrap after the 10th). */
 export declare function levelSize(level: number): number;
 /** Win score: base 100×level plus a time bonus that decays 5/second. */
 export declare function computeScore(level: number, seconds: number): number;

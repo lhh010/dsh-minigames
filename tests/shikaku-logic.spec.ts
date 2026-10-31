@@ -28,7 +28,7 @@ describe('shikaku logic', () => {
   })
 
   it('every level size generates a puzzle whose own partition wins', () => {
-    for (let lv = 1; lv <= 5; lv += 1) {
+    for (let lv = 1; lv <= 10; lv += 1) {
       const p = puzzleFromSeed(lv * 0x9e3779b9, levelSize(lv))
       expect(p.size).toBe(levelSize(lv))
       expect(isWon(p.size, p.solution)).toBe(true)
@@ -43,7 +43,7 @@ describe('shikaku logic', () => {
   })
 
   it('generated levels solve with at least one solution', () => {
-    for (let lv = 1; lv <= 5; lv += 1) {
+    for (let lv = 1; lv <= 10; lv += 1) {
       const p = puzzleFromSeed(lv * 0x9e3779b9, levelSize(lv))
       const r = solveCount(p, 300_000)
       expect(r.exhausted).toBe(false)

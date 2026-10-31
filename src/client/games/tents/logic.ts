@@ -13,9 +13,9 @@
  * flow/slitherlink pattern).
  */
 
-/** Board edge lengths and tree counts of the five levels. */
-export const LEVEL_SIZES = [6, 7, 8, 9, 10] as const
-export const LEVEL_TREES = [8, 10, 12, 14, 16] as const
+/** Board edge lengths and tree counts of the ten levels. */
+export const LEVEL_SIZES = [6, 7, 8, 9, 10, 8, 9, 10, 11, 12] as const
+export const LEVEL_TREES = [8, 10, 12, 14, 16, 15, 18, 20, 22, 24] as const
 
 /** A generated level: trees plus the row/column tent-count clues. */
 export interface TentsPuzzle {
@@ -43,7 +43,7 @@ export function mulberry32(seed: number): () => number {
   }
 }
 
-/** Board edge length of a 1-based level (levels wrap after 10×10). */
+/** Board edge length of a 1-based level (levels wrap after the 10th). */
 export function levelSize(level: number): number {
   return LEVEL_SIZES[(level - 1) % LEVEL_SIZES.length]!
 }

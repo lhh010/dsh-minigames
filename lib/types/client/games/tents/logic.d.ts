@@ -12,9 +12,9 @@
  * the attempt cap the first solvable roll ships with a 多解 badge (the
  * flow/slitherlink pattern).
  */
-/** Board edge lengths and tree counts of the five levels. */
-export declare const LEVEL_SIZES: readonly [6, 7, 8, 9, 10];
-export declare const LEVEL_TREES: readonly [8, 10, 12, 14, 16];
+/** Board edge lengths and tree counts of the ten levels. */
+export declare const LEVEL_SIZES: readonly [6, 7, 8, 9, 10, 8, 9, 10, 11, 12];
+export declare const LEVEL_TREES: readonly [8, 10, 12, 14, 16, 15, 18, 20, 22, 24];
 /** A generated level: trees plus the row/column tent-count clues. */
 export interface TentsPuzzle {
     /** Board edge length in cells. */
@@ -30,7 +30,7 @@ export interface TentsPuzzle {
 }
 /** mulberry32 PRNG: small, fast, deterministic per seed. */
 export declare function mulberry32(seed: number): () => number;
-/** Board edge length of a 1-based level (levels wrap after 10×10). */
+/** Board edge length of a 1-based level (levels wrap after the 10th). */
 export declare function levelSize(level: number): number;
 /** Tree count of a 1-based level. */
 export declare function levelTrees(level: number): number;

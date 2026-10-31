@@ -12,8 +12,8 @@
  * the first roll ships with a 多解 badge (the flow pattern).
  */
 
-/** Board edge lengths of the five levels. */
-export const LEVEL_SIZES = [6, 7, 8, 9, 10] as const
+/** Board edge lengths of the ten levels. */
+export const LEVEL_SIZES = [6, 7, 8, 9, 10, 9, 10, 11, 11, 12] as const
 
 /** A rectangle as inclusive corners [r1, c1, r2, c2]. */
 export type Rect = readonly [number, number, number, number]
@@ -42,7 +42,7 @@ export function mulberry32(seed: number): () => number {
   }
 }
 
-/** Board edge length of a 1-based level (levels wrap after 10×10). */
+/** Board edge length of a 1-based level (levels wrap after the 10th). */
 export function levelSize(level: number): number {
   return LEVEL_SIZES[(level - 1) % LEVEL_SIZES.length]!
 }
@@ -175,7 +175,7 @@ export function solveCount(puzzle: ShikakuPuzzle, maxNodes = 60_000): SolveResul
 
 /** Generation attempts per puzzle: uniqueness re-rolls, smaller boards more. */
 export function attemptCap(size: number): number {
-  return size <= 8 ? 25 : 12
+  return size <= 8 ? 25 : 40
 }
 
 /**
@@ -204,7 +204,7 @@ export function puzzleFromSeed(seed: number, size: number): ShikakuPuzzle {
 function tryGenerate(seed: number, size: number): ShikakuPuzzle {
   const rng = mulberry32(seed)
   /** Largest allowed rectangle area (bigger rects read as boring blocks). */
-  const MAX_AREA = size <= 7 ? 8 : 10
+  const MAX_AREA = size <= 7 ? 8 : 12
   const rects: Rect[] = []
   /** Split region [r1,c1,r2,c2] either in two or keep it (if small enough). */
   const split = (r1: number, c1: number, r2: number, c2: number, depth: number): void => {
