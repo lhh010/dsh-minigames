@@ -23,7 +23,7 @@ const GAME_ID = 'bowling'
 /** Keyboard charge rate (power per second while Space is held). */
 const CHARGE_RATE = 0.85
 /** Aim tap nudge (radians per keydown — fine-grained stepping). */
-const AIM_NUDGE = (1.5 * Math.PI) / 180
+const AIM_NUDGE = (0.5 * Math.PI) / 180
 /** Aim rotation rate while the key is HELD (radians per second — slow sweep). */
 const AIM_RATE = 0.35
 /** Spin adjustment rate (spin units per second while A/D is held). */
@@ -257,6 +257,6 @@ export const bowlingGame: MiniGameDefinition = {
   title: '迷你保龄球 Bowling',
   icon: '🎳',
   description: '瞄准蓄力掷球，勾球旋转一击全倒，真实十瓶计分冲满分。',
-  controls: ['← → 点按=1.5°微调 / 按住=慢转（或点击拖拽球道）', '空格：按住蓄力，松开掷球', 'A / D：蓄力时设置勾球方向', 'P：暂停 · R：重开本关', '[ / ]：切换关卡（已解锁范围内）'],
+  controls: ['← → 点按=0.5°微调 / 按住=慢转（或点击拖拽球道）', '空格：按住蓄力，松开掷球', 'A / D：蓄力时设置勾球方向', 'P：暂停 · R：重开本关', '[ / ]：切换关卡（已解锁范围内）'],
   create: createBowlingGame,
 }
