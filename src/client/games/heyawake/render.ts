@@ -216,11 +216,11 @@ export function renderHeya(
     ctx.stroke()
   }
 
-  // 房间数字：画在房间中心格，半透明大号；该格被涂黑则不画。
+  // 房间数字：画在房间中心格，深色半透明大号（近白底上清晰）；该格被涂黑则不画。
   ctx.font = '700 ' + Math.floor(cell * 0.5) + 'px system-ui, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillStyle = 'rgba(226,226,238,0.55)'
+  ctx.fillStyle = 'rgba(52,58,96,0.72)'
   for (const room of puzzle.rooms) {
     if (room.count === undefined) continue
     const r = Math.floor((room.rect[0] + room.rect[2]) / 2)
