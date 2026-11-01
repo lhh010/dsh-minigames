@@ -1,11 +1,11 @@
 /**
  * 切水果渲染层：共享主题的深色渐变背景、白到透明的渐变刀光轨迹、
- * 带高光与叶柄的圆形水果（按种类表配色）、黑体炸弹与火花、切开的
- * 两半半圆飞散、切开/爆炸的粒子迸发、HUD（分数/连击、生命 ❤、剩余时间）、
- * 暂停与结算遮罩。
+ * 按种类表（8 种）配色的大小果、黑体炸弹与火花、切开的两半半圆飞散、
+ * 切开/爆炸的粒子迸发、上浮渐隐的飘字（同种连击 / 一刀 N 切）、
+ * HUD（分数/连击、生命 ❤、missed 计数、剩余时间）、暂停与结算遮罩。
  */
 import type { Fruit, FruitSlashState, Half } from './logic.ts'
-import { W, H, HUD_H, TRAIL_MS, FLASH_MS, FRUIT_KINDS } from './logic.ts'
+import { W, H, TRAIL_MS, FLASH_MS, FLOAT_MS, FRUIT_KINDS } from './logic.ts'
 import { THEME, accent, createParticles, drawBackground, drawOverlay, glow, hudPair, noGlow } from '../theme.ts'
 
 const TRAIL_COLOR = '#ffffff'
@@ -136,7 +136,25 @@ function drawTrail(ctx: CanvasRenderingContext2D, state: FruitSlashState): void 
 }
 
 /**
- * 渲染一帧：背景、半块、水果、炸弹、刀光、粒子、红闪、HUD、遮罩。
+ * 画飘字：金色加粗文本，随剩余寿命上浮渐隐。
+ * @param ctx - 画布上下文。
+ * @param state - 当前状态。
+ */
+function drawFloats(ctx: CanvasRenderingContext2D, state: FruitSlashState): void {
+  ctx.save()
+  ctx.textAlign = 'center'
+  ctx.font = 'bold 18px system-ui, sans-serif'
+  for (const fl of state.floats) {
+    const k = Math.max(0, Math.min(1, fl.life / FLOAT_MS))
+    ctx.globalAlpha = k
+    ctx.fillStyle = THEME.gold
+    ctx.fillText(fl.text, Math.max(40, Math.min(W - 40, fl.x)), Math.max(40, fl.y))
+  }
+  ctx.restore()
+}
+
+/**
+ * 渲染一帧：背景、半块、水果、炸弹、刀光、飘字、粒子、红闪、HUD、遮罩。
  * @param ctx - 画布上下文。
  * @param state - 当前状态。
  * @param paused - 是否显示暂停遮罩。
@@ -150,6 +168,7 @@ export function renderFruitSlash(ctx: CanvasRenderingContext2D, state: FruitSlas
     else drawFruit(ctx, f)
   }
   drawTrail(ctx, state)
+  drawFloats(ctx, state)
 
   // 消费逻辑层事件：切开迸发果色粒子，炸弹迸发红色粒子。
   for (const ev of state.events) {
@@ -184,7 +203,11 @@ export function renderFruitSlash(ctx: CanvasRenderingContext2D, state: FruitSlas
   ctx.textAlign = 'center'
   ctx.fillStyle = THEME.bad
   const hearts = state.lives >= 1 ? '❤'.repeat(state.lives) : '♡'
-  ctx.fillText(hearts, W / 2, hudY)
+  ctx.fillText(hearts, W / 2 - 22, hudY)
+  // 漏接计数（灰字，仅提示）。
+  ctx.fillStyle = THEME.textMuted
+  ctx.font = '600 11px system-ui, sans-serif'
+  ctx.fillText('漏 ' + state.missed, W / 2 + 46, hudY)
 
   if (paused) {
     drawOverlay(ctx, W, H, '暂停', '按 P 继续 · R 重开')

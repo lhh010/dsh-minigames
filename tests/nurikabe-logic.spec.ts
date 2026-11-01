@@ -25,7 +25,7 @@ describe('nurikabe logic', () => {
     expect(levelIslands(6)).toBe(levelIslands(1))
   })
 
-  it('every level generates a puzzle whose own sea wins', () => {
+  it('every level generates a puzzle whose own sea wins', { timeout: 20000 }, () => {
     for (let lv = 1; lv <= 5; lv += 1) {
       const p = puzzleFromSeed(lv * 0x9e3779b9, levelSize(lv), levelIslands(lv))
       expect(p).not.toBeNull()

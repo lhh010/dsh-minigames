@@ -1,5 +1,6 @@
 /**
- * 记独 canvas 渲染器：n×n 数字盘、玩家涂黑格、光标环、重复白格红色数字
+ * 记独 canvas 渲染器：n×n 数字盘、玩家涂黑格、光标环、重复白格红色数字、
+ * 与主白区断连的孤立白格红框警示
  * 提示与过关/暂停遮罩。无状态 —— 状态由调用方持有；使用共享视觉件
  * (../theme.ts)。
  */
@@ -68,6 +69,36 @@ function hasDuplicate(puzzle: HitoriPuzzle, blacks: ReadonlySet<number>, r: numb
 }
 
 /**
+ * 与主白区（最大白格连通块）不连通的白格集合——孤立白格警示用。
+ * 规则要求白格整体连通，被黑格围死的白格用红框提示玩家。
+ */
+function isolatedWhites(size: number, blacks: ReadonlySet<number>): Set<number> {
+  const whites: number[] = []
+  for (let i = 0; i < size * size; i += 1) if (!blacks.has(i)) whites.push(i)
+  if (whites.length === 0) return new Set()
+  // BFS from the first white; any white it cannot reach is isolated.
+  const seen = new Set<number>([whites[0]!])
+  const stack = [whites[0]!]
+  while (stack.length > 0) {
+    const cur = stack.pop()!
+    const r = Math.floor(cur / size)
+    const c = cur % size
+    const around: number[] = []
+    if (r > 0) around.push(cur - size)
+    if (r < size - 1) around.push(cur + size)
+    if (c > 0) around.push(cur - 1)
+    if (c < size - 1) around.push(cur + 1)
+    for (const n of around) {
+      if (!blacks.has(n) && !seen.has(n)) {
+        seen.add(n)
+        stack.push(n)
+      }
+    }
+  }
+  return new Set(whites.filter(cell => !seen.has(cell)))
+}
+
+/**
  * 绘制一帧。
  * @param ctx - 画布上下文。
  * @param puzzle - 当前关卡盘面。
@@ -92,6 +123,7 @@ export function renderHitori(
   hudPair(ctx, w - GAP / 2, 21, '规则', '白不重复', 'right')
 
   const hintSet = new Set(hintCells)
+  const isolated = isolatedWhites(size, blacks)
   ctx.font = '700 ' + Math.floor(cell * 0.42) + 'px system-ui, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -118,6 +150,13 @@ export function renderHitori(
       if (cursor === cellIdx) glow(ctx, THEME.text, 8)
       ctx.stroke()
       noGlow(ctx)
+      if (isolated.has(cellIdx)) {
+        // 被黑格围死、与主白区断连：红框警示（白格连通规则不满足）。
+        ctx.strokeStyle = THEME.bad
+        ctx.lineWidth = 2
+        roundRectPath(ctx, x + 3, y + 3, cell - 6, cell - 6, 6)
+        ctx.stroke()
+      }
       ctx.fillStyle = hasDuplicate(puzzle, blacks, r, c) ? THEME.bad : THEME.text
       ctx.fillText(String(puzzle.grid[r]![c]!), x + cell / 2, y + cell / 2 + 1)
     }

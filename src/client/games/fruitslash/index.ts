@@ -1,6 +1,7 @@
 /**
  * 切水果游戏定义：把纯逻辑接成 {@link MiniGameInstance}——指针按住拖动
- * 产生刀光轨迹（pointerdown/move/up），continuous 帧循环推进模拟与渲染，
+ * 产生刀光轨迹（pointerdown/move/up，一次按下到抬起为一次挥刀，抬起时
+ * 结算同种连击与一刀多切奖励），continuous 帧循环推进模拟与渲染，
  * R 重开、P 暂停，分数经 onScore 上报（最高分由面板管理）。
  */
 import type {
@@ -8,7 +9,7 @@ import type {
   MiniGameInstance,
   MiniGameMountOptions,
 } from '../types.ts'
-import { createFruitSlash, stepFruitSlash, pushTrail, W, H, type FruitSlashState } from './logic.ts'
+import { beginSwipe, createFruitSlash, pushTrail, settleSwipe, stepFruitSlash, W, H, type FruitSlashState } from './logic.ts'
 import { renderFruitSlash } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
@@ -48,6 +49,7 @@ function createFruitSlashGame(host: HTMLElement, options?: MiniGameMountOptions)
     event.preventDefault()
     canvas.setPointerCapture(event.pointerId)
     slashing = true
+    beginSwipe(state)
     const p = toLogical(event)
     pushTrail(state, p.x, p.y)
   }
@@ -58,6 +60,8 @@ function createFruitSlashGame(host: HTMLElement, options?: MiniGameMountOptions)
   }
   const onPointerUp = (): void => {
     slashing = false
+    // 抬起即结算本刀的同种连击与多切奖励（纯函数，飘字入 state.floats）。
+    settleSwipe(state)
   }
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -146,7 +150,7 @@ export const fruitslashGame: MiniGameDefinition = {
   id: 'fruitslash',
   title: '切水果 Fruit Slash',
   icon: '🍉',
-  description: '按住鼠标划出刀光切开抛来的水果，避开炸弹，连击加倍！',
-  controls: ['按住拖动：刀光切割', '水果 +10 分 · 连击加成', '炸弹或漏接扣命（3 命）· R：重开 · P：暂停'],
+  description: '按住鼠标划出刀光切开抛来的 8 种水果，避开炸弹与炸弹链，同种连击、一刀多切加倍！',
+  controls: ['按住拖动：刀光切割（一刀可多切）', '小水果分更高（西瓜+5 ~ 猕猴桃+20）· 同种连击 / 多切上浮', '炸弹或漏接直接扣命（5 命）· R：重开 · P：暂停'],
   create: createFruitSlashGame,
 }
