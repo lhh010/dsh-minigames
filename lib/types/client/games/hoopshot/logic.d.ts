@@ -24,7 +24,7 @@ export declare const MAX_DRAG = 160;
 /** 最小有效拖拽长度 px（低于视为取消）。 */
 export declare const MIN_DRAG = 14;
 /** 满力初速 px/s。 */
-export declare const MAX_SPEED = 800;
+export declare const MAX_SPEED = 1150;
 /** 重力加速度 px/s^2。 */
 export declare const GRAVITY = 980;
 /** 筐口半宽 px（筐口 = rimX ± RIM_R 的水平区间，口沿高度 rimY）。 */

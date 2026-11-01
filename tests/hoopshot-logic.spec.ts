@@ -52,7 +52,7 @@ describe('hoop shot logic', () => {
     expect(releaseAim(s)).toBe(true)
     expect(s.shots).toBe(1)
     expect(s.phase).toBe('flying')
-    expect(s.ball.vx).toBe(300) // 60/160 * 800
+    expect(s.ball.vx).toBe(60 / 160 * 1150) // 60/160 * MAX_SPEED(1150)
     expect(s.ball.vy).toBe(0)
     // 非瞄准阶段按下无效；未按下时移动无效。
     beginAim(s, 0, 0)

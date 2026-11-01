@@ -22,7 +22,7 @@ export const MAX_DRAG = 160
 /** 最小有效拖拽长度 px（低于视为取消）。 */
 export const MIN_DRAG = 14
 /** 满力初速 px/s。 */
-export const MAX_SPEED = 800
+export const MAX_SPEED = 1150
 /** 重力加速度 px/s^2。 */
 export const GRAVITY = 980
 /** 筐口半宽 px（筐口 = rimX ± RIM_R 的水平区间，口沿高度 rimY）。 */
@@ -184,7 +184,9 @@ function newRound(state: HoopShotState): void {
   const rng = state.rng
   const minX = W * 0.52
   const maxX = W - 80 - RIM_R
-  const minY = 112
+  // 筐高下限 150：更高的筐在最大力度最优弧线下也够不到（出手点在左下，
+  // 最远 474px 满力只能爬升约 375px@980 —— 150 保证所有布位都可进）。
+  const minY = 150
   const maxY = 262
   state.hoop = {
     rimX: minX + rng() * (maxX - minX),
