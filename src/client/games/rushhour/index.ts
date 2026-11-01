@@ -120,6 +120,9 @@ function createRushHourGame(host: HTMLElement, options?: MiniGameMountOptions): 
     const p = toLogical(event)
     dragX = p.x
     dragY = p.y
+    // 按下即同步当前指针位置——否则首帧 ghost 用旧拖拽位置计算会瞬移。
+    dragCurX = p.x
+    dragCurY = p.y
     const cell = cellOf(p.x, p.y)
     if (cell === null) {
       selected = null
