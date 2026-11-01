@@ -57,6 +57,9 @@ export interface SpeedSegment {
     durMs: number;
     omega: number;
 }
+/** 段间过渡的角加速度上限 rad/s²——变速/换向不再瞬跳，全程 300-700ms
+ * 可见的减速-加速过程，玩家有反应窗口读节奏。 */
+export declare const OMEGA_RAMP = 6;
 /**
  * 生成某关的角速度曲线：3 段起步，关卡升高段数增多、速度更快；
  * 第 2 关起每段有概率换向（变速+换向增加难度）。纯确定性。
@@ -96,6 +99,8 @@ export interface KnifeRingState {
     /** 当前所处段索引与段内已流逝 ms。 */
     segIndex: number;
     segMs: number;
+    /** 当前实际角速度（向目标段速度限加速度缓动，消除瞬跳）。 */
+    omegaCur: number;
     /** 已钉在盘上的刀（含预置障碍刀）。 */
     knives: PinnedKnife[];
     /** 当前关仍需插的刀数。 */

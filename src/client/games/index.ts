@@ -74,6 +74,7 @@ import { solitaireGame } from './solitaire/index.ts'
 import { invadersGame } from './invaders/index.ts'
 import { kniferingGame } from './knifering/index.ts'
 import { hoopshotGame } from './hoopshot/index.ts'
+import { movinghoopGame } from './movinghoop/index.ts'
 
 export { getGames, getGame } from './registry.ts'
 export { registerGame } from './registry.ts'
@@ -106,7 +107,7 @@ export function registerBuiltinGames(): void {
     fillominoGame, heyawakeGame, landerGame,
     fishingGame, bubblewrapGame, papertossGame,
     solitaireGame, invadersGame, kniferingGame,
-    hoopshotGame,
+    hoopshotGame, movinghoopGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
