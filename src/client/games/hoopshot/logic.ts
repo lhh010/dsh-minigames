@@ -109,6 +109,33 @@ export interface Hoop {
   rimY: number
 }
 
+/** 移动防守障碍：矩形挡板，沿轴正弦往返。 */
+export interface Obstacle {
+  /** 基准中心 x（不动轴）。 */
+  baseX: number
+  /** 基准中心 y（不动轴）。 */
+  baseY: number
+  /** 宽。 */
+  w: number
+  /** 高。 */
+  h: number
+  /** 往返轴。 */
+  axis: 'x' | 'y'
+  /** 往返振幅 px。 */
+  amp: number
+  /** 往返角速度 rad/s。 */
+  omega: number
+  /** 初相位。 */
+  phase: number
+  /** 当前中心 x（每帧更新）。 */
+  x: number
+  /** 当前中心 y（每帧更新）。 */
+  y: number
+}
+
+/** 障碍反弹法向速度保留率。 */
+export const OB_DAMP = 0.6
+
 /** 一局游戏的完整可测状态。 */
 export interface HoopShotState {
   /** 回合内已流逝 ms（渲染闪烁用）。 */
@@ -134,6 +161,8 @@ export interface HoopShotState {
   aimFrom: { x: number, y: number }
   /** 拖拽当前点。 */
   aimTo: { x: number, y: number }
+  /** 本回合移动防守障碍（难度随投数递增）。 */
+  obstacles: Obstacle[]
   events: HoopShotEvent[]
   floats: FloatText[]
   rng: () => number
@@ -196,6 +225,29 @@ function newRound(state: HoopShotState): void {
   state.aiming = false
   state.rimTouched = false
   state.ball = { x: ORIGIN.x, y: ORIGIN.y, vx: 0, vy: 0, rot: 0, vrot: 0 }
+  // 移动防守障碍：前 4 投热身没有，之后 1/2/3 块递增；布置在出手点与
+  // 篮筐之间的空中走廊，避开筐口正上方（至少留一条可行弹道走廊）。
+  const count = state.shots < 4 ? 0 : state.shots < 9 ? 1 : state.shots < 14 ? 2 : 3
+  state.obstacles = []
+  for (let i = 0; i < count; i += 1) {
+    const axis: 'x' | 'y' = rng() < 0.5 ? 'x' : 'y'
+    const w = 34 + Math.floor(rng() * 26)
+    const h = 14 + Math.floor(rng() * 10)
+    const lane = ORIGIN.x + (state.hoop.rimX - ORIGIN.x) * (0.35 + 0.3 * rng())
+    const baseY = 150 + rng() * 110
+    state.obstacles.push({
+      baseX: lane,
+      baseY,
+      w: axis === 'y' ? w : h,
+      h: axis === 'y' ? h : w,
+      axis,
+      amp: 24 + rng() * 40,
+      omega: 1.2 + rng() * 1.4,
+      phase: rng() * Math.PI * 2,
+      x: lane,
+      y: baseY,
+    })
+  }
 }
 
 /**
@@ -219,6 +271,7 @@ export function createHoopShot(seed: number): HoopShotState {
     aiming: false,
     aimFrom: { x: 0, y: 0 },
     aimTo: { x: 0, y: 0 },
+    obstacles: [],
     events: [],
     floats: [],
     rng: mulberry32(Math.floor(seed) >>> 0),
@@ -346,6 +399,29 @@ function collideRim(state: HoopShotState): void {
  * 镜像衰减（篮板反弹不算筐沿接触，不取消空心）。
  * @param state - 目标状态。
  */
+/**
+ * 障碍碰撞：圆 vs 轴对齐矩形。取穿透最小的轴推出并镜像该轴速度分量
+ * （乘 OB_DAMP 衰减），横竖往返的挡板把直线弹道变成需要读节奏的
+ * 曲线博弈。
+ */
+function collideObstacles(state: HoopShotState): void {
+  const b = state.ball
+  for (const ob of state.obstacles) {
+    const dx = b.x - ob.x
+    const dy = b.y - ob.y
+    const ox = ob.w / 2 + BALL_R - Math.abs(dx)
+    const oy = ob.h / 2 + BALL_R - Math.abs(dy)
+    if (ox <= 0 || oy <= 0) continue
+    if (ox < oy) {
+      b.x += dx >= 0 ? ox : -ox
+      b.vx = (dx >= 0 ? 1 : -1) * Math.abs(b.vx) * OB_DAMP
+    } else {
+      b.y += dy >= 0 ? oy : -oy
+      b.vy = (dy >= 0 ? 1 : -1) * Math.abs(b.vy) * OB_DAMP
+    }
+  }
+}
+
 function collideBoard(state: HoopShotState): void {
   const b = state.ball
   const { boardX, topY, bottomY } = boardOf(state.hoop)
@@ -386,6 +462,13 @@ export function stepHoopShot(state: HoopShotState, dtMs: number): void {
 
   if (state.phase === 'over') return
 
+  // 障碍每帧沿轴正弦往返（瞄准阶段也动画，玩家可以读节奏）。
+  for (const ob of state.obstacles) {
+    const off = Math.sin(state.t / 1000 * ob.omega + ob.phase) * ob.amp
+    if (ob.axis === 'x') { ob.x = ob.baseX + off; ob.y = ob.baseY }
+    else { ob.x = ob.baseX; ob.y = ob.baseY + off }
+  }
+
   // 限时倒数（瞄准、飞行、展示都计时）。
   state.timeMs -= dtMs
   if (state.timeMs <= 0) {
@@ -412,6 +495,7 @@ export function stepHoopShot(state: HoopShotState, dtMs: number): void {
 
   collideBoard(state)
   collideRim(state)
+  collideObstacles(state)
 
   // 进球：下落中球心自上而下穿过筐口区间（水平落在筐口内）。
   if (

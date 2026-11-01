@@ -21,7 +21,7 @@ import {
   dragToVelocity,
   type HoopShotState,
 } from './logic.ts'
-import { THEME, createParticles, drawBackground, drawOverlay, glow, hudPair, noGlow } from '../theme.ts'
+import { THEME, accent, createParticles, drawBackground, drawOverlay, glow, hudPair, noGlow } from '../theme.ts'
 
 // 渲染层自有的粒子系统（每个画布一个实例）。
 const particles = createParticles()
@@ -280,9 +280,39 @@ function drawHud(ctx: CanvasRenderingContext2D, state: HoopShotState): void {
  * @param state - 当前状态。
  * @param paused - 是否显示暂停遮罩。
  */
+/**
+ * 移动防守障碍：橙色警戒挡板，往返轴方向画淡色行程槽 + 两端限位块，
+ * 让玩家能读出运动范围与节奏。
+ */
+function drawObstacles(ctx: CanvasRenderingContext2D, state: HoopShotState): void {
+  for (let i = 0; i < state.obstacles.length; i += 1) {
+    const ob = state.obstacles[i]!
+    // 行程槽（往返轴的轨迹带）。
+    ctx.fillStyle = 'rgba(247,118,142,0.10)'
+    if (ob.axis === 'x') {
+      ctx.fillRect(ob.baseX - ob.amp - ob.w / 2, ob.baseY - ob.h / 2, ob.amp * 2 + ob.w, ob.h)
+    } else {
+      ctx.fillRect(ob.baseX - ob.w / 2, ob.baseY - ob.amp - ob.h / 2, ob.w, ob.amp * 2 + ob.h)
+    }
+    // 挡板本体：暗底 + 警示描边 + 条纹。
+    const x = ob.x - ob.w / 2
+    const y = ob.y - ob.h / 2
+    ctx.fillStyle = '#3a2a20'
+    ctx.fillRect(x, y, ob.w, ob.h)
+    ctx.strokeStyle = accent(4)
+    ctx.lineWidth = 2
+    ctx.strokeRect(x, y, ob.w, ob.h)
+    ctx.fillStyle = accent(4)
+    for (let s = -ob.w / 2 + 6; s < ob.w / 2 - 4; s += 10) {
+      ctx.fillRect(ob.x + s, ob.y - ob.h / 2 + 3, 4, ob.h - 6)
+    }
+  }
+}
+
 export function renderHoopShot(ctx: CanvasRenderingContext2D, state: HoopShotState, paused: boolean): void {
   drawBackground(ctx, W, H)
   drawStreet(ctx)
+  drawObstacles(ctx, state)
   drawHoop(ctx, state)
   drawAim(ctx, state)
   drawBall(ctx, state)

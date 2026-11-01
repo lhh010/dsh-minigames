@@ -110,6 +110,31 @@ export interface Hoop {
     /** 筐口高度 y（口沿所在水平线）。 */
     rimY: number;
 }
+/** 移动防守障碍：矩形挡板，沿轴正弦往返。 */
+export interface Obstacle {
+    /** 基准中心 x（不动轴）。 */
+    baseX: number;
+    /** 基准中心 y（不动轴）。 */
+    baseY: number;
+    /** 宽。 */
+    w: number;
+    /** 高。 */
+    h: number;
+    /** 往返轴。 */
+    axis: 'x' | 'y';
+    /** 往返振幅 px。 */
+    amp: number;
+    /** 往返角速度 rad/s。 */
+    omega: number;
+    /** 初相位。 */
+    phase: number;
+    /** 当前中心 x（每帧更新）。 */
+    x: number;
+    /** 当前中心 y（每帧更新）。 */
+    y: number;
+}
+/** 障碍反弹法向速度保留率。 */
+export declare const OB_DAMP = 0.6;
 /** 一局游戏的完整可测状态。 */
 export interface HoopShotState {
     /** 回合内已流逝 ms（渲染闪烁用）。 */
@@ -141,6 +166,8 @@ export interface HoopShotState {
         x: number;
         y: number;
     };
+    /** 本回合移动防守障碍（难度随投数递增）。 */
+    obstacles: Obstacle[];
     events: HoopShotEvent[];
     floats: FloatText[];
     rng: () => number;

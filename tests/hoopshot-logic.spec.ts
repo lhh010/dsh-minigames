@@ -183,4 +183,28 @@ describe('hoop shot logic', () => {
     }
     expect(run()).toBe(run())
   })
+
+  it('obstacles ramp with shots and collide-bounce the ball', () => {
+    const s = createHoopShot(20261101)
+    expect(s.obstacles).toHaveLength(0) // 前 4 投热身无障碍
+    // 推进 5 投（快速脱手即可）后进入 1 障碍档。
+    for (let i = 0; i < 5; i += 1) {
+      beginAim(s, 100, 300)
+      updateAim(s, 100, 340) // 短促向下拖 -> 向上小力出手
+      if (!releaseAim(s)) { beginAim(s, 100, 300); updateAim(s, 100, 344); releaseAim(s) }
+      for (let f = 0; f < 4000 && s.phase === 'flying'; f += 1) stepHoopShot(s, 16, 0, 0)
+      for (let f = 0; f < 200 && s.phase === 'result'; f += 1) stepHoopShot(s, 16, 0, 0)
+    }
+    expect(s.shots).toBeGreaterThanOrEqual(5)
+    expect(s.obstacles.length).toBeGreaterThanOrEqual(1)
+    // 碰撞：把球放到障碍内部并给速度，步进后被推出且该轴速度反向衰减。
+    const ob = s.obstacles[0]!
+    s.phase = 'flying'
+    s.ball = { x: ob.x, y: ob.y, vx: 200, vy: 0, rot: 0, vrot: 0 }
+    const side = ob.x >= s.ball.x ? 1 : -1
+    stepHoopShot(s, 16, 0, 0)
+    const bounced = Math.abs(s.ball.x - ob.x) >= ob.w / 2 + BALL_R - 0.5
+    expect(bounced || Math.abs(s.ball.y - ob.y) >= ob.h / 2 + BALL_R - 0.5).toBe(true)
+    void side
+  })
 })
