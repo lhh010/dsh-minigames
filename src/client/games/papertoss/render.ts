@@ -186,20 +186,21 @@ function drawAim(ctx: CanvasRenderingContext2D, state: PaperTossState): void {
   ctx.stroke()
   ctx.setLineDash([])
   if (v === null) return
-  // 预演轨迹：与 stepPaperToss 相同的积分（固定步长，纯视觉）。
+  // 预演轨迹：与 stepPaperToss 相同的积分（固定步长，纯视觉）。只画前
+  // 半程并快速淡出——完整预演会让命中与否一目了然，失去读风乐趣。
   const dt = 0.045
   let x = ORIGIN.x
   let y = ORIGIN.y
   let vx = v.vx
   let vy = v.vy
   ctx.fillStyle = THEME.accents[6]!
-  for (let i = 0; i < 22; i += 1) {
+  for (let i = 0; i < 10; i += 1) {
     vy += GRAVITY * dt
     vx += state.wind * dt
     x += vx * dt
     y += vy * dt
     if (y > FLOOR_Y || x > W || x < 0) break
-    ctx.globalAlpha = 0.9 - i * 0.035
+    ctx.globalAlpha = 0.7 - i * 0.065
     ctx.beginPath()
     ctx.arc(x, y, 2, 0, Math.PI * 2)
     ctx.fill()

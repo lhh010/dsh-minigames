@@ -76,6 +76,10 @@ export function hasObstacles(level: number): boolean {
 /** 一段恒定角速度：持续 durMs 毫秒、角速度 omega rad/s（正为顺时针）。 */
 export interface SpeedSegment { durMs: number, omega: number }
 
+/** 段间过渡的角加速度上限 rad/s²——变速/换向不再瞬跳，全程 300-700ms
+ * 可见的减速-加速过程，玩家有反应窗口读节奏。 */
+export const OMEGA_RAMP = 6
+
 /**
  * 生成某关的角速度曲线：3 段起步，关卡升高段数增多、速度更快；
  * 第 2 关起每段有概率换向（变速+换向增加难度）。纯确定性。
@@ -121,6 +125,8 @@ export interface KnifeRingState {
   /** 当前所处段索引与段内已流逝 ms。 */
   segIndex: number
   segMs: number
+  /** 当前实际角速度（向目标段速度限加速度缓动，消除瞬跳）。 */
+  omegaCur: number
   /** 已钉在盘上的刀（含预置障碍刀）。 */
   knives: PinnedKnife[]
   /** 当前关仍需插的刀数。 */
@@ -144,6 +150,7 @@ function setupLevel(state: KnifeRingState, rng: () => number): void {
   state.curve = buildSpeedCurve(rng, state.level)
   state.segIndex = 0
   state.segMs = 0
+  state.omegaCur = 0
   state.knives = []
   state.remaining = knivesFor(state.level)
   state.throwing = null
@@ -172,6 +179,7 @@ export function createKnifeRing(seed: number, round = 1): KnifeRingState {
     curve: [],
     segIndex: 0,
     segMs: 0,
+    omegaCur: 0,
     knives: [],
     remaining: 0,
     throwing: null,
@@ -228,7 +236,12 @@ export function stepKnifeRing(state: KnifeRingState, dtMs: number): void {
     state.segIndex = (state.segIndex + 1) % state.curve.length
     seg = state.curve[state.segIndex]!
   }
-  state.ringAngle = (state.ringAngle + seg.omega * (dtMs / 1000)) % (Math.PI * 2)
+  // 实际角速度向当前段目标限加速度缓动（OMEGA_RAMP rad/s²）——
+  // 段切换的变速/换向以可见的减速-加速完成，给玩家反应时间。
+  const maxStep = (OMEGA_RAMP * dtMs) / 1000
+  const diff = seg.omega - state.omegaCur
+  state.omegaCur += Math.max(-maxStep, Math.min(maxStep, diff))
+  state.ringAngle = (state.ringAngle + state.omegaCur * (dtMs / 1000)) % (Math.PI * 2)
 
   // 插刀下落动画：结束时判定。
   const th = state.throwing

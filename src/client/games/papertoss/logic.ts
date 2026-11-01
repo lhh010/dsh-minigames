@@ -295,20 +295,22 @@ export function stepPaperToss(state: PaperTossState, dtMs: number): void {
   if (state.phase !== 'flying') return
 
   const b = state.ball
+  const prevY = b.y
   b.vy += GRAVITY * dt
   b.vx += state.wind * dt
   b.x += b.vx * dt
   b.y += b.vy * dt
   b.rot += b.vrot * dt
 
-  // 进篓：下落中球心进入篓口矩形（水平在内、越过口沿附近）。
+  // 进篓：球心在同一帧内自上而下穿过篓口平面（水平严格在口内）——
+  // 侧向擦口、上抛穿带都不算，必须真正落进篓里。
   const mouthY = binMouthY()
   if (
     b.vy > 0
-    && b.x >= state.binX + 2
-    && b.x <= state.binX + BIN_W - 2
-    && b.y >= mouthY - MOUTH_TOL
-    && b.y <= mouthY + BALL_R + MOUTH_TOL
+    && prevY <= mouthY
+    && b.y > mouthY
+    && b.x >= state.binX + 4
+    && b.x <= state.binX + BIN_W - 4
   ) {
     settleRound(state, true)
     return

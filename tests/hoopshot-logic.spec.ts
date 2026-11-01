@@ -192,8 +192,8 @@ describe('hoop shot logic', () => {
       beginAim(s, 100, 300)
       updateAim(s, 100, 340) // 短促向下拖 -> 向上小力出手
       if (!releaseAim(s)) { beginAim(s, 100, 300); updateAim(s, 100, 344); releaseAim(s) }
-      for (let f = 0; f < 4000 && s.phase === 'flying'; f += 1) stepHoopShot(s, 16, 0, 0)
-      for (let f = 0; f < 200 && s.phase === 'result'; f += 1) stepHoopShot(s, 16, 0, 0)
+      for (let f = 0; f < 4000 && s.phase === 'flying'; f += 1) stepHoopShot(s, 16)
+      for (let f = 0; f < 200 && s.phase === 'result'; f += 1) stepHoopShot(s, 16)
     }
     expect(s.shots).toBeGreaterThanOrEqual(5)
     expect(s.obstacles.length).toBeGreaterThanOrEqual(1)
@@ -202,7 +202,7 @@ describe('hoop shot logic', () => {
     s.phase = 'flying'
     s.ball = { x: ob.x, y: ob.y, vx: 200, vy: 0, rot: 0, vrot: 0 }
     const side = ob.x >= s.ball.x ? 1 : -1
-    stepHoopShot(s, 16, 0, 0)
+    stepHoopShot(s, 16)
     const bounced = Math.abs(s.ball.x - ob.x) >= ob.w / 2 + BALL_R - 0.5
     expect(bounced || Math.abs(s.ball.y - ob.y) >= ob.h / 2 + BALL_R - 0.5).toBe(true)
     void side
