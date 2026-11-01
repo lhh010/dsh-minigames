@@ -67,6 +67,9 @@ import { fruitslashGame } from './fruitslash/index.ts'
 import { fillominoGame } from './fillomino/index.ts'
 import { heyawakeGame } from './heyawake/index.ts'
 import { landerGame } from './lander/index.ts'
+import { fishingGame } from './fishing/index.ts'
+import { bubblewrapGame } from './bubblewrap/index.ts'
+import { papertossGame } from './papertoss/index.ts'
 
 export { getGames, getGame } from './registry.ts'
 export { registerGame } from './registry.ts'
@@ -97,6 +100,7 @@ export function registerBuiltinGames(): void {
     nurikabeGame, skyscrapersGame, kakuroGame,
     dominosaGame, hitoriGame, fruitslashGame,
     fillominoGame, heyawakeGame, landerGame,
+    fishingGame, bubblewrapGame, papertossGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
