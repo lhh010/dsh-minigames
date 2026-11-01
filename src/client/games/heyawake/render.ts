@@ -19,7 +19,9 @@ const ROOM_LINE = 2.5
 /** 房间内部格线线宽。 */
 const CELL_LINE = 1
 /** 玩家涂黑格颜色。 */
-const BLACK_FILL = '#26263a'
+/** 黑白对比：白格近白、黑格纯黑，一眼区分。 */
+const WHITE_FILL = '#e6e9f2'
+const BLACK_FILL = '#0a0a12'
 
 /** 格边长随盘面增大而缩小（6→50, 8→42, 10→36）。 */
 export function cellSize(size: number): number {
@@ -141,8 +143,8 @@ export function renderHeya(
   const roomOf = roomIndexMap(puzzle)
   const isolated = isolatedWhites(size, blacks)
 
-  // 盘面底：整块白底，涂黑格单独覆盖。
-  ctx.fillStyle = THEME.panel
+  // 盘面底：整块近白底，涂黑格单独覆盖。
+  ctx.fillStyle = WHITE_FILL
   ctx.fillRect(origin.x, origin.y, board, board)
   for (let cellIdx = 0; cellIdx < size * size; cellIdx += 1) {
     if (!blacks.has(cellIdx)) continue
@@ -153,8 +155,8 @@ export function renderHeya(
     ctx.fillRect(x, y, cell, cell)
   }
 
-  // 房间内部细格线：相邻格同房间时才画。
-  ctx.strokeStyle = THEME.panelEdge
+  // 房间内部细格线：相邻格同房间时才画（浅灰，压在近白底上清晰）。
+  ctx.strokeStyle = 'rgba(90,96,130,0.35)'
   ctx.lineWidth = CELL_LINE
   ctx.beginPath()
   for (let r = 0; r < size; r += 1) {
@@ -178,7 +180,7 @@ export function renderHeya(
   ctx.stroke()
 
   // 房间粗边界：相邻格不同房间的接缝 + 盘外沿一圈。
-  ctx.strokeStyle = 'rgba(226,226,238,0.6)'
+  ctx.strokeStyle = 'rgba(70,76,110,0.9)'
   ctx.lineWidth = ROOM_LINE
   ctx.beginPath()
   for (let r = 0; r < size; r += 1) {

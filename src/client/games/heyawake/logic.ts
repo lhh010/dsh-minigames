@@ -259,18 +259,24 @@ function tryGenerate(seed: number, size: number): HeyaPuzzle | null {
     const w = c2 - c1 + 1
     const canH = h >= 2
     const canV = w >= 2
-    // Stop at 1×n / n×1 strips or randomly on small rooms (area ≤ 6);
-    // bigger rooms always split so partitions stay roomy.
-    if ((!canH && !canV) || (h * w <= size && depth > 0 && rng() < 0.35)) {
+    // Stop on unsplittable cells or randomly once rooms are modest
+    // (area ≤ 2×size, strips included) — keeps rooms chunky and readable.
+    if ((!canH && !canV) || (h * w <= 2 * size && depth > 0 && rng() < 0.55)) {
       rects.push([r1, c1, r2, c2])
       return
     }
+    // Mid-biased cuts keep rooms square-ish instead of shaving 1-cell slivers.
+    const midCut = (len: number, lo: number): number => {
+      const half = Math.floor(len / 2)
+      const jitter = Math.floor((rng() - 0.5) * Math.min(2, len - 2))
+      return lo + Math.max(1, Math.min(len - 1, half + jitter))
+    }
     if (canH && (!canV || rng() < 0.5)) {
-      const cut = r1 + 1 + Math.floor(rng() * (h - 1))
+      const cut = midCut(h, r1)
       split(r1, c1, cut - 1, c2, depth + 1)
       split(cut, c1, r2, c2, depth + 1)
     } else {
-      const cut = c1 + 1 + Math.floor(rng() * (w - 1))
+      const cut = midCut(w, c1)
       split(r1, c1, r2, cut - 1, depth + 1)
       split(r1, cut, r2, c2, depth + 1)
     }
