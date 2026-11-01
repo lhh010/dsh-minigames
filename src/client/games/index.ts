@@ -61,6 +61,9 @@ import { froggerGame } from './frogger/index.ts'
 import { nurikabeGame } from './nurikabe/index.ts'
 import { skyscrapersGame } from './skyscrapers/index.ts'
 import { kakuroGame } from './kakuro/index.ts'
+import { dominosaGame } from './dominosa/index.ts'
+import { hitoriGame } from './hitori/index.ts'
+import { fruitslashGame } from './fruitslash/index.ts'
 
 export { getGames, getGame } from './registry.ts'
 export { registerGame } from './registry.ts'
@@ -89,6 +92,7 @@ export function registerBuiltinGames(): void {
     chessGame, pinballGame, flowGame, bowlingGame,
     tentsGame, shikakuGame, froggerGame,
     nurikabeGame, skyscrapersGame, kakuroGame,
+    dominosaGame, hitoriGame, fruitslashGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
