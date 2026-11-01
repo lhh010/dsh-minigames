@@ -223,9 +223,10 @@ export function solveCount(puzzle: HeyaPuzzle, maxNodes = 120_000): SolveResult 
   return { solutions, exhausted, nodes }
 }
 
-/** Generation attempts per puzzle. */
+/** Generation attempts per puzzle (density carries the difficulty;
+ * uniqueness probing is skipped beyond a small budget for speed). */
 export function attemptCap(size: number): number {
-  return size <= 8 ? 20 : 12
+  return size <= 7 ? 8 : 3
 }
 
 /**
@@ -240,7 +241,7 @@ export function puzzleFromSeed(seed: number, size: number): HeyaPuzzle | null {
     const roll = tryGenerate((seed + s * 0x9e3779b9) >>> 0, size)
     if (roll === null) continue
     if (fallback === null) fallback = roll
-    const { solutions, exhausted } = solveCount(roll, size <= 7 ? 120_000 : 50_000)
+    const { solutions, exhausted } = solveCount(roll, 30_000)
     if (!exhausted && solutions === 1) return { ...roll, unique: true }
   }
   return fallback
@@ -312,14 +313,26 @@ function tryGenerate(seed: number, size: number): HeyaPuzzle | null {
   })
   // Choose counts: ~60% of rooms constrained (1 or 2), rest unconstrained.
   const counts: (number | undefined)[] = roomCells.map(cells => {
-    if (rng() < 0.4) return undefined
-    const maxByCells = Math.min(2, Math.floor((cells.length + 1) / 2))
-    if (maxByCells < 1) return 0
-    return Math.floor(rng() * (maxByCells + 1))
+    // Difficulty ramps with board size (level proxy): bigger boards keep
+    // more rooms numbered and reach deeper black counts (up to half the
+    // room's cells — the no-touch ceiling).
+    const numberRatio = Math.min(0.85, 0.55 + (size - 6) * 0.08)
+    if (rng() > numberRatio) return undefined
+    const ceiling = Math.ceil(cells.length / 2)
+    if (ceiling < 1) return 0
+    // Upper-half bias keeps rooms demanding (more forced reasoning).
+    return Math.max(1, Math.floor((ceiling + 1) / 2 + rng() * ((ceiling + 1) / 2)))
   })
   // Shade each room to its count without touching blacks (including across
-  // room borders); randomized greedy, reject on failure.
-  for (let i = 0; i < rects.length; i += 1) {
+  // room borders); numbered rooms place FIRST so constraints are never
+  // starved by unconstrained extras, randomized greedy otherwise.
+  const order = Array.from({ length: rects.length }, (_, i) => i)
+  for (let i = order.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[order[i], order[j]] = [order[j]!, order[i]!]
+  }
+  order.sort((a, b) => (counts[b] === undefined ? 0 : 1) - (counts[a] === undefined ? 0 : 1))
+  for (const i of order) {
     const want = counts[i]!
     if (want === undefined) {
       // Unconstrained room: at most one black (higher density strands whites).

@@ -59,7 +59,8 @@ export interface SolveResult {
  * + undecided). Returns count with budget status.
  */
 export declare function solveCount(puzzle: HeyaPuzzle, maxNodes?: number): SolveResult;
-/** Generation attempts per puzzle. */
+/** Generation attempts per puzzle (density carries the difficulty;
+ * uniqueness probing is skipped beyond a small budget for speed). */
 export declare function attemptCap(size: number): number;
 /**
  * Generate a puzzle deterministically from seed. Re-rolls until the solver
