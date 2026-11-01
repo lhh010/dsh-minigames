@@ -35,6 +35,9 @@ export const TENSION_FALL = 58
 export const TENSION_GAIN = 1.9
 /** 按住时的张力缓解基值（拉力低于它收线反而降压）。 */
 export const REEL_EASE = 22
+/** 按住时的张力保底增益（拉力再低也至少涨这么多/s）——死按不放必然断线，
+ * 必须在张力高时松线回落，形成收-放节奏。 */
+export const HOLD_MIN_GAIN = 7
 /** 飘字存活时长 ms。 */
 export const FLOAT_MS = 1400
 
@@ -286,8 +289,9 @@ export function stepFishing(state: FishingState, dtMs: number, holding: boolean)
   state.pullNow = pull
 
   if (holding) {
-    // 收线：距离减少，张力按 (拉力-缓解) 上升，鱼体力随对抗消耗。
-    state.tension += (pull - REEL_EASE) * TENSION_GAIN * dt
+    // 收线：距离减少，张力按 (拉力-缓解) 上升（保底 HOLD_MIN_GAIN），
+    // 鱼体力随对抗消耗——死按不放张力只增不减，必须适时松线。
+    state.tension += Math.max(HOLD_MIN_GAIN, pull - REEL_EASE) * TENSION_GAIN * dt
     state.distance -= REEL_SPEED * dt
     fish.stamina = Math.max(0, fish.stamina - (9 + pull * 0.16) * dt)
   } else {

@@ -33,6 +33,9 @@ export declare const TENSION_FALL = 58;
 export declare const TENSION_GAIN = 1.9;
 /** 按住时的张力缓解基值（拉力低于它收线反而降压）。 */
 export declare const REEL_EASE = 22;
+/** 按住时的张力保底增益（拉力再低也至少涨这么多/s）——死按不放必然断线，
+ * 必须在张力高时松线回落，形成收-放节奏。 */
+export declare const HOLD_MIN_GAIN = 7;
 /** 飘字存活时长 ms。 */
 export declare const FLOAT_MS = 1400;
 /**
