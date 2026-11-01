@@ -13,7 +13,9 @@ export const H = 640
 /** 重力加速度 px/s^2。 */
 export const GRAVITY = 1500
 /** 触板起跳速度 px/s（向上）。 */
-export const BOUNCE_VY = 560
+/** 起跳速度：最大跳高 = BOUNCE_VY²/2g ≈ 163px > 2×GAP（128px），保证
+ * 可以跳过一格危险平台（尖刺/碎裂）而不是被单链平台逼死。 */
+export const BOUNCE_VY = 700
 /** 横向加速度 px/s^2。 */
 export const LATERAL_ACC = 1600
 /** 横向速度上限 px/s。 */
@@ -74,7 +76,18 @@ export interface Platform {
  * @param index - 段号（从 0 起，0 与 1 恒为普通出生平台）。
  * @returns 平台数据。
  */
+const platformCache = new Map<number, Platform>()
+
 export function platformAt(seed: number, index: number): Platform {
+  const key = (Math.floor(seed) << 16) ^ index
+  const hit = platformCache.get(key)
+  if (hit !== undefined) return hit
+  const built = buildPlatform(seed, index)
+  platformCache.set(key, built)
+  return built
+}
+
+function buildPlatform(seed: number, index: number): Platform {
   const rng = mulberry32((Math.floor(seed) * 131 + index * 7919) >>> 0)
   const y = BASE_Y - index * GAP
   const t = Math.min(1, (index * GAP) / RARITY_SCALE)
@@ -83,9 +96,11 @@ export function platformAt(seed: number, index: number): Platform {
     const w = index === 0 ? 150 : 92
     return { index, y, w, kind: 'normal', x: W / 2 - w / 2, speed: 0, phase: 0 }
   }
-  // 单次掷点按累计阈值分段：尖刺 → 移动 → 易碎 → 普通。
+  // 单次掷点按累计阈值分段：尖刺 → 移动 → 易碎 → 普通。连续两块尖刺
+  // 即使能跳过一格也会形成无落脚墙，直接禁掉。
   const roll = rng()
-  const pSpiky = 0.05 + 0.10 * t
+  const prev = platformAt(seed, index - 1)
+  const pSpiky = prev.kind === 'spiky' ? 0 : 0.05 + 0.10 * t
   const pMoving = 0.10 + 0.10 * t
   const pCrumbly = 0.12 + 0.12 * t
   let kind: PlatformKind = 'normal'
@@ -93,7 +108,15 @@ export function platformAt(seed: number, index: number): Platform {
   else if (roll < pSpiky + pMoving) kind = 'moving'
   else if (roll < pSpiky + pMoving + pCrumbly) kind = 'crumbly'
   const w = kind === 'normal' ? Math.round(88 - 24 * t + rng() * 18) : 68
-  const x = margin + rng() * (W - margin * 2 - w)
+  // 横向位置：相对上一块平台的有界偏移（±X_REACH 内），保证单次跳跃
+  // 横向可达——随机全宽布位会出现在起跳点对角、水平够不着的无解平台。
+  const X_REACH = 150
+  // 上一块平台的活动中心（moving 平台以振荡中心为基准，而非 t=0 位置）。
+  const prevSpan = W - margin * 2 - prev.w
+  const prevX = prev.kind === 'moving' ? margin + prevSpan / 2 : prev.x
+  const span = W - margin * 2 - w
+  const desired = prevX + (rng() * 2 - 1) * X_REACH
+  const x = margin + Math.max(0, Math.min(span, desired - margin))
   if (kind === 'moving') {
     return { index, y, w, kind, x, speed: 0.9 + 0.8 * t + rng() * 0.3, phase: rng() * Math.PI * 2 }
   }

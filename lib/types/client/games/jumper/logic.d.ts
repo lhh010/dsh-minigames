@@ -11,7 +11,9 @@ export declare const H = 640;
 /** 重力加速度 px/s^2。 */
 export declare const GRAVITY = 1500;
 /** 触板起跳速度 px/s（向上）。 */
-export declare const BOUNCE_VY = 560;
+/** 起跳速度：最大跳高 = BOUNCE_VY²/2g ≈ 163px > 2×GAP（128px），保证
+ * 可以跳过一格危险平台（尖刺/碎裂）而不是被单链平台逼死。 */
+export declare const BOUNCE_VY = 700;
 /** 横向加速度 px/s^2。 */
 export declare const LATERAL_ACC = 1600;
 /** 横向速度上限 px/s。 */
@@ -52,13 +54,6 @@ export interface Platform {
     /** moving 平台横移初相位 rad（其余为 0）。 */
     phase: number;
 }
-/**
- * 生成第 index 段平台（seed+段号确定性；同 seed 同段号结果恒定）。
- * 高度越高（段号越大）：尖刺 / 移动 / 易碎占比越高，普通平台越窄。
- * @param seed - 外部种子。
- * @param index - 段号（从 0 起，0 与 1 恒为普通出生平台）。
- * @returns 平台数据。
- */
 export declare function platformAt(seed: number, index: number): Platform;
 /**
  * 平台在时刻 tMs 的左边缘 x（moving 平台在其活动区间内正弦横移）。
