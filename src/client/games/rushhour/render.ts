@@ -96,12 +96,14 @@ function drawVehicle(ctx: CanvasRenderingContext2D, vehicle: Vehicle, selected: 
  * @param state - 当前状态。
  * @param selected - 选中车辆索引（null 为未选中）。
  * @param paused - 是否暂停。
+ * @param dragPreview - 拖拽实时预览：被拖车辆将落在的目标位置（null 无拖拽）。
  */
 export function renderRushHour(
   ctx: CanvasRenderingContext2D,
   state: RushHourState,
   selected: number | null,
   paused: boolean,
+  dragPreview: { idx: number, pos: number } | null = null,
 ): void {
   drawBackground(ctx, W, H)
 
@@ -138,12 +140,32 @@ export function renderRushHour(
   ctx.fillText('→ →', BOARD_X + SIZE * CELL + 5, exitY + CELL / 2)
   ctx.textBaseline = 'alphabetic'
 
-  // 车辆（红车最后画，压住相邻描边）。
+  // 车辆（红车最后画，压住相邻描边）。拖拽预览：被拖车画在目标位置并
+  // 在原位留半透明残影，其余车照常。
   for (let i = 0; i < state.vehicles.length; i += 1) {
-    if (!state.vehicles[i]!.red) drawVehicle(ctx, state.vehicles[i]!, selected === i)
+    if (state.vehicles[i]!.red) continue
+    const dragging = dragPreview !== null && dragPreview.idx === i
+    if (dragging) {
+      const ghost = { ...state.vehicles[i]!, pos: dragPreview.pos }
+      ctx.globalAlpha = 0.25
+      drawVehicle(ctx, state.vehicles[i]!, false)
+      ctx.globalAlpha = 1
+      drawVehicle(ctx, ghost, true)
+    } else {
+      drawVehicle(ctx, state.vehicles[i]!, selected === i)
+    }
   }
   const red = state.vehicles[0]!
-  drawVehicle(ctx, red, selected === 0)
+  const redDragging = dragPreview !== null && dragPreview.idx === 0
+  if (redDragging) {
+    const ghost = { ...red, pos: dragPreview!.pos }
+    ctx.globalAlpha = 0.25
+    drawVehicle(ctx, red, false)
+    ctx.globalAlpha = 1
+    drawVehicle(ctx, ghost, true)
+  } else {
+    drawVehicle(ctx, red, selected === 0)
+  }
 
   // 过关庆祝粒子（won 时持续迸发）。
   if (state.won && !paused) {

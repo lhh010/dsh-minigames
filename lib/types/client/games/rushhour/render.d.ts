@@ -11,5 +11,9 @@ import { type RushHourState } from './logic.ts';
  * @param state - 当前状态。
  * @param selected - 选中车辆索引（null 为未选中）。
  * @param paused - 是否暂停。
+ * @param dragPreview - 拖拽实时预览：被拖车辆将落在的目标位置（null 无拖拽）。
  */
-export declare function renderRushHour(ctx: CanvasRenderingContext2D, state: RushHourState, selected: number | null, paused: boolean): void;
+export declare function renderRushHour(ctx: CanvasRenderingContext2D, state: RushHourState, selected: number | null, paused: boolean, dragPreview?: {
+    idx: number;
+    pos: number;
+} | null): void;

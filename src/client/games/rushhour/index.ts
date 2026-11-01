@@ -54,6 +54,9 @@ function createRushHourGame(host: HTMLElement, options?: MiniGameMountOptions): 
   let dragVehicle: number | null = null
   let dragX = 0
   let dragY = 0
+  /** 拖拽当前指针位置（实时预览用）。 */
+  let dragCurX = 0
+  let dragCurY = 0
 
   // 指针位置（CSS 像素）→ 逻辑坐标。
   const toLogical = (event: PointerEvent): { x: number, y: number } => {
@@ -125,9 +128,10 @@ function createRushHourGame(host: HTMLElement, options?: MiniGameMountOptions): 
     }
     const hit = vehicleAt(state.vehicles, cell.row, cell.col)
     if (hit !== null) {
-      // 命中车辆：切换选中并开始潜在拖拽。
+      // 命中车辆：切换选中并开始潜在拖拽；捕获指针，滑出画布也不丢事件。
       selected = selected === hit ? null : hit
       dragVehicle = hit
+      try { canvas.setPointerCapture(event.pointerId) } catch { /* 指针已释放 */ }
       loop.markDirty()
       return
     }
@@ -141,21 +145,45 @@ function createRushHourGame(host: HTMLElement, options?: MiniGameMountOptions): 
     loop.markDirty()
   }
 
-  const onPointerUp = (event: PointerEvent): void => {
-    if (paused || state.won || dragVehicle === null) {
-      dragVehicle = null
-      return
-    }
-    const p = toLogical(event)
+  /** 拖拽中的实时目标位置（受当前占用与边界夹取），null = 未在拖拽。 */
+  const dragTargetPos = (): { idx: number, pos: number } | null => {
+    if (dragVehicle === null) return null
     const vehicle = state.vehicles[dragVehicle]!
-    const dx = p.x - dragX
-    const dy = p.y - dragY
-    dragVehicle = null
-    if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return
-    // 按位移量换算目标位置（moveVehicle 自带路径阻挡校验与夹取失败）。
+    const dx = dragCurX - dragX
+    const dy = dragCurY - dragY
     const offset = vehicle.horizontal ? Math.round(dx / CELL) : Math.round(dy / CELL)
-    if (offset === 0) return
-    applyMove(state.vehicles.indexOf(vehicle), vehicle.pos + offset)
+    if (offset === 0) return { idx: dragVehicle, pos: vehicle.pos }
+    // 逐格推进到最远可行位置（同 moveVehicle 的阻挡语义，但不落盘）。
+    const step = offset > 0 ? 1 : -1
+    let pos = vehicle.pos
+    for (let i = 0; i < Math.abs(offset); i += 1) {
+      const next = moveVehicle(state, dragVehicle, pos + step)
+      if (next === null) break
+      pos = next.vehicles[dragVehicle]!.pos
+    }
+    return { idx: dragVehicle, pos }
+  }
+
+  const onPointerMove = (event: PointerEvent): void => {
+    if (dragVehicle === null || paused || state.won) return
+    const p = toLogical(event)
+    dragCurX = p.x
+    dragCurY = p.y
+    loop.markDirty()
+  }
+
+  const onPointerUp = (event: PointerEvent): void => {
+    if (dragVehicle !== null && !paused && !state.won) {
+      const p = toLogical(event)
+      dragCurX = p.x
+      dragCurY = p.y
+      const target = dragTargetPos()
+      if (target !== null && target.pos !== state.vehicles[target.idx]!.pos) {
+        applyMove(target.idx, target.pos)
+      }
+    }
+    dragVehicle = null
+    try { canvas.releasePointerCapture(event.pointerId) } catch { /* 未捕获 */ }
     loop.markDirty()
   }
 
@@ -221,7 +249,7 @@ function createRushHourGame(host: HTMLElement, options?: MiniGameMountOptions): 
   const frame = (f: FrameInfo): void => {
     if (!running) return
     reportScore()
-    if (f.render) renderRushHour(ctx, state, selected, paused)
+    if (f.render) renderRushHour(ctx, state, selected, paused, dragTargetPos())
   }
   const loop = createFrameLoop(frame, { mode: 'dirty' })
 
@@ -230,7 +258,7 @@ function createRushHourGame(host: HTMLElement, options?: MiniGameMountOptions): 
     paused = true
     running = false
     loop.pause()
-    renderRushHour(ctx, state, selected, true)
+    renderRushHour(ctx, state, selected, true, null)
   }
   const resume = (): void => {
     if (running) return
@@ -244,7 +272,9 @@ function createRushHourGame(host: HTMLElement, options?: MiniGameMountOptions): 
   }
 
   canvas.addEventListener('pointerdown', onPointerDown)
+  canvas.addEventListener('pointermove', onPointerMove)
   canvas.addEventListener('pointerup', onPointerUp)
+  canvas.addEventListener('pointercancel', onPointerUp)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   running = true
