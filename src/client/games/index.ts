@@ -75,6 +75,12 @@ import { invadersGame } from './invaders/index.ts'
 import { kniferingGame } from './knifering/index.ts'
 import { hoopshotGame } from './hoopshot/index.ts'
 import { movinghoopGame } from './movinghoop/index.ts'
+import { rushhourGame } from './rushhour/index.ts'
+import { skiGame } from './ski/index.ts'
+import { suikaGame } from './suika/index.ts'
+import { taijiGame } from './taiji/index.ts'
+import { jumperGame } from './jumper/index.ts'
+import { eggcatcherGame } from './eggcatcher/index.ts'
 
 export { getGames, getGame } from './registry.ts'
 export { registerGame } from './registry.ts'
@@ -108,6 +114,8 @@ export function registerBuiltinGames(): void {
     fishingGame, bubblewrapGame, papertossGame,
     solitaireGame, invadersGame, kniferingGame,
     hoopshotGame, movinghoopGame,
+    rushhourGame, skiGame, suikaGame,
+    taijiGame, jumperGame, eggcatcherGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
