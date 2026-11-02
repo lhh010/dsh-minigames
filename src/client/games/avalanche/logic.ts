@@ -240,7 +240,8 @@ export function segmentGroundY(seg: AvaSegment, worldX: number): number {
 
 /**
  * 确定性生成一段地形：折线起伏（末点落在趋势线上保证与下一段连续）、
- * 可选跳台凸起、2~4 个障碍（避开跳台）、一组金币、偶发一个骑乘伙伴。
+ * 可选跳台凸起、随段号递增的障碍（开局 0~1 个热身，20 段后 2~5 个）、
+ * 一组金币、偶发一个骑乘伙伴。
  * @param seed - 一局种子。
  * @param index - 段号（≥0）。
  * @param startY - 段起点世界 y（= 上一段末点）。
@@ -267,7 +268,13 @@ export function generateSegment(seed: number, index: number, startY: number): Av
   }
   const rampX = rampK >= 0 ? index * SEG_W + rampK * STEP : -1
   const obstacles: AvaObstacle[] = []
-  const obstacleCount = 2 + Math.floor(rng() * 3)
+  // 障碍密度随段号（滑行距离）递增：前 4 段 0~1 个热身，4-12 段 1~2 个，
+  // 12-24 段 2~3 个，之后 2~5 个满配。
+  let obstacleCount: number
+  if (index < 4) obstacleCount = Math.floor(rng() * 2)
+  else if (index < 12) obstacleCount = 1 + Math.floor(rng() * 2)
+  else if (index < 24) obstacleCount = 2 + Math.floor(rng() * 2)
+  else obstacleCount = 2 + Math.floor(rng() * 4)
   for (let i = 0; i < obstacleCount; i += 1) {
     const kind: ObstacleKind = rng() < 0.6 ? 'tree' : 'rock'
     const r = kind === 'tree' ? 13 : 11

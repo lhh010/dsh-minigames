@@ -226,7 +226,8 @@ export declare const IDLE_INPUT: AvaInput;
 export declare function segmentGroundY(seg: AvaSegment, worldX: number): number;
 /**
  * 确定性生成一段地形：折线起伏（末点落在趋势线上保证与下一段连续）、
- * 可选跳台凸起、2~4 个障碍（避开跳台）、一组金币、偶发一个骑乘伙伴。
+ * 可选跳台凸起、随段号递增的障碍（开局 0~1 个热身，20 段后 2~5 个）、
+ * 一组金币、偶发一个骑乘伙伴。
  * @param seed - 一局种子。
  * @param index - 段号（≥0）。
  * @param startY - 段起点世界 y（= 上一段末点）。
