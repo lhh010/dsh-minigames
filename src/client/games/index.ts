@@ -86,6 +86,10 @@ import { slitherGame } from './slither/index.ts'
 import { danmakuGame } from './danmaku/index.ts'
 import { suguruGame } from './suguru/index.ts'
 import { avalancheGame } from './avalanche/index.ts'
+import { puyoGame } from './puyo/index.ts'
+import { mahjongGame } from './mahjong/index.ts'
+import { minigolfGame } from './minigolf/index.ts'
+import { jungleGame } from './jungle/index.ts'
 
 export { getGames, getGame } from './registry.ts'
 export { registerGame } from './registry.ts'
@@ -123,6 +127,7 @@ export function registerBuiltinGames(): void {
     taijiGame, jumperGame, eggcatcherGame,
     xiangqiGame, slitherGame, danmakuGame, suguruGame,
     avalancheGame,
+    puyoGame, mahjongGame, minigolfGame, jungleGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
