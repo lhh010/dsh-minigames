@@ -171,7 +171,7 @@ export const avalancheGame: MiniGameDefinition = {
   controls: [
     '↑ / 空格 / W：起跳（在跳台上起跳更高）',
     '空中 ←→ / AD：控制姿态，落地保持平衡；长滞空自动翻滚特技 +50',
-    '撞树/岩石翻滚减速，雪崩追近；骑企鹅加速+免撞一次，骑雪人免撞两次；金币 +10',
+    '撞岩石会翻滚减速（树可穿过），雪崩追近；骑企鹅加速+免撞一次，骑雪人免撞两次；金币 +10',
     'R：重开 · P：暂停',
   ],
   create: createAvalancheGame,
