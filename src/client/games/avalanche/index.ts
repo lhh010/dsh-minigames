@@ -11,6 +11,7 @@ import type {
 import {
   createAvalanche,
   stepAvalanche,
+  totalScore,
   W,
   H,
   type AvaState,
@@ -79,8 +80,9 @@ function createAvalancheGame(host: HTMLElement, options?: MiniGameMountOptions):
     held.delete(event.code)
   }
 
+  /** 每帧向上报最新总分（与逻辑层 totalScore 同口径）。 */
   const reportScore = (): void => {
-    const score = Math.floor(state.px / 10) + state.coinScore + state.trickScore
+    const score = totalScore(state)
     if (score === lastScore) return
     lastScore = score
     options?.onScore?.(score)
@@ -93,7 +95,8 @@ function createAvalancheGame(host: HTMLElement, options?: MiniGameMountOptions):
     stepAvalanche(state, f.dt * 1000, { jump: jumpQueued, left, right })
     jumpQueued = false
     reportScore()
-    if (f.render) renderAvalanche(ctx, state, false)
+    // 传真实帧间隔驱动渲染层动画（粒子/相机/过渡），暂停时传 0 冻结。
+    if (f.render) renderAvalanche(ctx, state, false, f.dt * 1000)
   }
   const loop = createFrameLoop(frame)
 
@@ -128,8 +131,14 @@ function createAvalancheGame(host: HTMLElement, options?: MiniGameMountOptions):
     loop.start()
   }
 
+  // 切走标签页/失焦时自动暂停，避免后台跳帧把雪崩送到脸上。
+  const onBlur = (): void => {
+    if (running) pause()
+  }
+
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
+  window.addEventListener('blur', onBlur)
   focusGameHost(host)
   running = true
   loop.start()
@@ -145,6 +154,7 @@ function createAvalancheGame(host: HTMLElement, options?: MiniGameMountOptions):
       fit.dispose()
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('blur', onBlur)
     },
   }
 }
