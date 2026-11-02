@@ -35,6 +35,9 @@ function createAvalancheGame(host: HTMLElement, options?: MiniGameMountOptions):
   const fit = fitCanvas(host, canvas, W, H)
   if (fit === null) throw new Error('dsh-minigames: avalanche needs a 2d canvas context')
   const ctx = fit.ctx
+  // 画布按比例居中后与宿主之间的空隙用天空同系渐变填充——高度受限的
+  // 面板里露出的不再是页面底色。
+  host.style.background = 'linear-gradient(180deg, #584a7d 0%, #a06a8f 45%, #e8a87c 80%, #d8d3e8 100%)'
 
   const seed = dailySeed()
   let round = 0
@@ -152,6 +155,7 @@ function createAvalancheGame(host: HTMLElement, options?: MiniGameMountOptions):
       running = false
       loop.destroy()
       fit.dispose()
+      host.style.background = ''
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)

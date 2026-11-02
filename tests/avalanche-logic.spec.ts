@@ -117,7 +117,7 @@ describe('avalanche logic', () => {
     expect(maxSpeed(p)).toBe(BASE_MAX_SPEED + 80)
     const pseg = p.segments.get(0)!
     pseg.obstacles.length = 0
-    pseg.obstacles.push({ x: p.px + 40, kind: 'tree', r: 13 })
+    pseg.obstacles.push({ x: p.px + 40, kind: 'rock', r: 12 }) // 树不再碰撞，用石头验证免撞
     const pvx = p.vx
     guard = 0
     while (!p.events.some((e) => e.type === 'shield') && guard < 200) { stepAvalanche(p, 16, IDLE_INPUT); guard += 1 }

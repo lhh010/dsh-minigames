@@ -135,16 +135,17 @@ function createXiangqiGame(host: HTMLElement, options?: MiniGameMountOptions): M
     loop.markDirty()
   }
 
-  /** 悔棋：取消思考并回退到玩家上一手之前（最多两步）。 */
+  /** 悔棋：取消思考并回退到玩家上一手之前（AI 已应手则弹两手，未应弹一手）。 */
   const undo = (): void => {
     if (history.length === 0) return
     stepper = null
     thinking = false
     aiAt = 0
+    // 栈顶 turn = 红 表示 AI 已应手（该局面轮玩家）——先弹掉 AI 的着，
+    // 再弹掉玩家那一手；若 AI 还未应手（栈顶 turn = 黑）只弹玩家一手。
+    const top = history[history.length - 1]
+    if (top !== undefined && top.pos.turn === 'r') history.pop()
     history.pop()
-    const last = history[history.length - 1]
-    // 若刚弹掉的是 AI 的着（其后继局面 turn 为红），再弹掉玩家的着。
-    if (last !== undefined && last.pos.turn === 'r') history.pop()
     const now = history[history.length - 1]
     pos = now === undefined ? startPos : now.pos
     lastMove = now === undefined ? null : now.move

@@ -25,7 +25,7 @@ export declare const START_Y = 210;
 /** 基础坡降（每 px 世界 y 增量，正 = 下坡加速）。 */
 export declare const BASE_SLOPE = 0.3;
 /** 段内起伏幅度 px。 */
-export declare const WOBBLE = 34;
+export declare const WOBBLE = 26;
 /** 跳台凸起高度 px。 */
 export declare const RAMP_H = 74;
 /** 跳台判定半径 px（在此范围内起跳获得更高初速）。 */

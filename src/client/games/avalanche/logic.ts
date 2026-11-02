@@ -26,7 +26,7 @@ export const START_Y = 210
 /** 基础坡降（每 px 世界 y 增量，正 = 下坡加速）。 */
 export const BASE_SLOPE = 0.3
 /** 段内起伏幅度 px。 */
-export const WOBBLE = 34
+export const WOBBLE = 26
 /** 跳台凸起高度 px。 */
 export const RAMP_H = 74
 /** 跳台判定半径 px（在此范围内起跳获得更高初速）。 */
@@ -252,10 +252,15 @@ export function generateSegment(seed: number, index: number, startY: number): Av
   const K = SEG_W / STEP
   const drop = SEG_W * BASE_SLOPE + (rng() - 0.5) * 80
   const heights: number[] = []
+  let prevY = startY
   for (let k = 0; k <= K; k += 1) {
     let y = startY + drop * (k / K)
     if (k > 0 && k < K) y += (rng() - 0.5) * 2 * WOBBLE
+    // 坡面只降不升（y 向下为正）：任何折点都不高于前一点—— uphill 会
+    // 让撞石头减速后的玩家卡在坡前过不去。
+    y = Math.max(y, prevY)
     heights.push(y)
+    prevY = y
   }
   const hasRamp = rng() < 0.45
   const rampK = hasRamp ? 2 + Math.floor(rng() * (K - 3)) : -1
@@ -500,6 +505,7 @@ export function stepAvalanche(state: AvaState, dtMs: number, input: AvaInput): v
     const seg = state.segments.get(i)!
     if (state.crashGraceMs <= 0 && state.py > groundYAt(state, state.px) - 18) {
       for (const obs of seg.obstacles) {
+        if (obs.kind === 'tree') continue // 树是装饰不碰撞——只有石头会让人摔倒
         const oy = segmentGroundY(seg, obs.x)
         if (Math.hypot(state.px - obs.x, state.py - oy) < obs.r + PLAYER_R - 2) {
           crash(state)
