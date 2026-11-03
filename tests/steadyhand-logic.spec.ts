@@ -103,4 +103,27 @@ describe('steadyhand logic', () => {
     stepSteadyHand(s, 160)
     expect(s.levelMs).toBeGreaterThan(0)
   })
+
+  it('after shock the run pauses until the ring returns to the respawn marker', () => {
+    const s = createSteadyHand(1)
+    setPointer(s, -1000, -1000)
+    for (let i = 0; i < 200; i += 1) stepSteadyHand(s, 16)
+    setPointer(s, s.track.points[0]!.x, s.track.points[0]!.y)
+    for (let i = 0; i < 600 && !s.armed; i += 1) stepSteadyHand(s, 16)
+    expect(s.armed).toBe(true)
+    // 触发一次触电：甩出轨道。
+    for (let i = 0; i < Math.ceil(GRACE_MS / 16) + 2; i += 1) stepSteadyHand(s, 16)
+    setPointer(s, -1000, -1000)
+    let shocked = false
+    for (let i = 0; i < 6000 && !shocked; i += 1) {
+      stepSteadyHand(s, 16)
+      shocked = s.flashMs > 0
+    }
+    expect(shocked).toBe(true)
+    expect(s.armed).toBe(false)
+    // 环回到起点标记 → 重新就位。
+    setPointer(s, s.track.points[0]!.x, s.track.points[0]!.y)
+    for (let i = 0; i < 900 && !s.armed; i += 1) stepSteadyHand(s, 16)
+    expect(s.armed).toBe(true)
+  })
 })

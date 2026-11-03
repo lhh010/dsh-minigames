@@ -131,8 +131,9 @@ export function renderSlingshot(
   if (state.phase === 'aim' && aim !== null) {
     const v = dragToVelocity(aim.from.x - aim.to.x, aim.from.y - aim.to.y)
     const pull = v === null ? 0 : Math.min(Math.hypot(aim.to.x - aim.from.x, aim.to.y - aim.from.y), MAX_DRAG)
-    const bx = SLING.x - (v === null ? 0 : (aim.to.x - aim.from.x) * 0.4)
-    const by = SLING.y - (v === null ? 0 : (aim.to.y - aim.from.y) * 0.4)
+    // 弓兜跟拖拽方向走（往左下拉弓，鸟在弓兜被拉向左下）；发射方向相反。
+    const bx = SLING.x + (aim.to.x - aim.from.x) * 0.4
+    const by = SLING.y + (aim.to.y - aim.from.y) * 0.4
     // 皮筋。
     ctx.strokeStyle = '#4a3320'
     ctx.lineWidth = 4

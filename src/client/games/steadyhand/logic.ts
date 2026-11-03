@@ -350,17 +350,17 @@ export function levelScore(levelMs: number): number {
   return LEVEL_BASE_SCORE + Math.max(0, TIME_BONUS_MAX - Math.floor(levelMs / 100))
 }
 
-/** 触电处理：-1 命、红闪震屏、回重生点并给保护期。 */
+/** 触电处理：-1 命、红闪震屏，进入重新就位阶段——环留在触电处，
+ * 玩家必须把环带回重生点标记重新就位（不计时不判定）才继续。 */
 function shock(state: SteadyHandState): void {
   state.lives -= 1
   state.flashMs = FLASH_MS
   state.shakeMs = SHAKE_MS
   state.graceMs = GRACE_MS
   const sx = state.ringX, sy = state.ringY
-  state.ringX = state.respawnX
-  state.ringY = state.respawnY
-  state.targetX = state.respawnX
-  state.targetY = state.respawnY
+  state.armed = false
+  // aimMoved 保持 true：它只防关卡出生时 target 默认在起点的秒就位；
+  // 触电后环不在重生点，不会误就位，玩家把环带回标记即重新开跑。
   state.acc = 0
   state.events.push({ type: 'shock', x: sx, y: sy })
   if (state.lives <= 0) { state.lives = 0; state.over = true }
@@ -401,10 +401,11 @@ export function stepSteadyHand(state: SteadyHandState, dtMs: number): void {
     // 均未开始）——开局环出生在起点，但玩家指针通常还在别处，必须
     // 刻意把指针移回起点才正式开始。
     if (!state.armed) {
-      const startPt = track.points[0]!
-      const aimDist = Math.hypot(state.targetX - startPt.x, state.targetY - startPt.y)
+      // 就位目标 = 当前重生点（起点或已触达的检查点）。
+      const rx = state.respawnX, ry = state.respawnY
+      const aimDist = Math.hypot(state.targetX - rx, state.targetY - ry)
       if (aimDist > 60) state.aimMoved = true
-      const ringAt = Math.hypot(state.ringX - startPt.x, state.ringY - startPt.y) <= 22
+      const ringAt = Math.hypot(state.ringX - rx, state.ringY - ry) <= 22
       if (ringAt && state.aimMoved && aimDist <= 30) {
         state.armed = true
         state.events.push({ type: 'armed' })

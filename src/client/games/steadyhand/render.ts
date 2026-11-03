@@ -256,7 +256,7 @@ function drawLightning(ctx: CanvasRenderingContext2D, state: SteadyHandState): v
  * 起点标记：发光圆圈 + 「起点」标签；就位阶段脉冲放大并附提示文案。
  */
 function drawStart(ctx: CanvasRenderingContext2D, state: SteadyHandState): void {
-  const start = state.track.points[0]!
+  const start = { x: state.respawnX, y: state.respawnY }
   const pulse = state.armed ? 1 : 1 + 0.18 * Math.sin(state.t / 140)
   glow(ctx, START_COLOR, state.armed ? 8 : 16)
   ctx.strokeStyle = START_COLOR
@@ -272,11 +272,11 @@ function drawStart(ctx: CanvasRenderingContext2D, state: SteadyHandState): void 
   ctx.font = '600 12px system-ui, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
-  ctx.fillText('起点', start.x, start.y + 20)
+  ctx.fillText(state.checkpointTaken ? '重生点' : '起点', start.x, start.y + 20)
   if (!state.armed) {
     ctx.font = '700 16px system-ui, sans-serif'
     ctx.fillStyle = THEME.text
-    ctx.fillText('把电环移到起点开始', W / 2, H / 2 - 8)
+    ctx.fillText(state.checkpointTaken ? '触电！把电环带回重生点' : '把电环移到起点开始', W / 2, H / 2 - 8)
     ctx.font = '600 12px system-ui, sans-serif'
     ctx.fillStyle = THEME.textMuted
     ctx.fillText('就位后才开始计时与判定', W / 2, H / 2 + 16)
