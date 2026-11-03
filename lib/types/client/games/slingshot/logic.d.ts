@@ -1,11 +1,19 @@
 /**
  * 弹弓复仇 (Slingshot) pure logic. 拖拽弹弓发射鸟弹轰塌堡垒：
- * 木/石/冰材质耐久各异，块碎裂后上方失去支撑的块与猪坠落，猪被
+ * 木/石/冰材质耐久各异，块被撞碎裂后上方块自然下落、倾倒，猪被
  * 直接命中、坠落着地或被落块砸中即消灭——全部消灭过关，剩弹定星。
  *
- * 物理从简但确定：固定子步（SUBSTEP_HZ），鸟为圆形刚体，块为轴对齐
- * 矩形（受撞扣耐久、碎裂消失、失支撑整块下落），猪为圆形（受冲击/
- * 坠落消灭）。关卡为手工参数表。
+ * 物理为愤怒的小鸟式 2D 刚体：块为任意朝向的矩形（OBB），带中心
+ * 位置、线速度、角度与角速度（质量 = 材质 mass × 面积 × 密度）；
+ * 猪与鸟为圆。碰撞用 SAT（OBB-OBB 参考面/入射面裁剪出接触点，
+ * 圆-盒取最近点）+ 序列冲量求解（累积法向冲量 + 库仑摩擦）+ 直接
+ * 位置投影修正穿透（不给静止堆叠注入能量）；偏心冲量经转动惯量产
+ * 生角速度，因此撞击可倾倒、抽走底块上方自然塌落。低速且有支撑的
+ * 刚体休眠（速度清零、位移为零），失去接触或受冲量即唤醒。固定
+ * 子步 (SUBSTEP_HZ) + 纯浮点运算保证同输入逐位一致的确定性重放。
+ * 关卡开局做一次确定性落位：把表中互相嵌入/悬空的块去重叠、落到
+ * 支撑面、重心对准支撑区间，再用真实子步预落座到全场休眠（LEVELS
+ * 表本身不变，玩家看到的第一帧就是静止的堆叠）。
  */
 export declare const W = 640;
 export declare const H = 420;
@@ -22,7 +30,7 @@ export declare const MAX_SPEED = 950;
 export declare const GRAVITY = 900;
 export declare const BALL_R = 10;
 export declare const PIG_R = 13;
-/** 冲击阈值：鸟命中速度低于它不造成伤害（轻擦）。 */
+/** 冲击阈值：法向接近速度低于它不造成伤害（轻擦）。 */
 export declare const IMPACT_MIN = 90;
 /** 材质：耐久与质量系数（石最硬最重、冰最脆最轻）。 */
 export type Material = 'wood' | 'stone' | 'ice';
@@ -31,7 +39,7 @@ export interface MaterialSpec {
     readonly mass: number;
 }
 export declare const MATERIALS: Record<Material, MaterialSpec>;
-/** 矩形块（静态受撞；失支撑后 vy>0 变为下落刚体）。 */
+/** 矩形刚体块：x/y 为中心，可平移与旋转。 */
 export interface Block {
     x: number;
     y: number;
@@ -39,16 +47,31 @@ export interface Block {
     h: number;
     mat: Material;
     hp: number;
-    /** 下落速度（0 = 静态支撑中）。 */
+    vx: number;
     vy: number;
+    angle: number;
+    av: number;
     broken: boolean;
+    /** 休眠：低速且有支撑持续时冻结速度，静止堆叠位移为零。 */
+    asleep: boolean;
+    /** 低速持续的子步计数。 */
+    still: number;
 }
-/** 猪：被直接命中 / 坠落着地 / 被落块砸中即消灭。 */
+/** 猪圆形刚体：被直接命中 / 坠落着地 / 被落块砸中即消灭。 */
 export interface Pig {
     x: number;
     y: number;
+    vx: number;
     vy: number;
     dead: boolean;
+    asleep: boolean;
+    still: number;
+}
+export interface BirdBody {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
 }
 export type SlingshotEvent = {
     type: 'break';
@@ -79,14 +102,11 @@ export interface SlingshotState {
     blocks: Block[];
     pigs: Pig[];
     /** 飞行中的鸟（null = 待发射）。 */
-    bird: {
-        x: number;
-        y: number;
-        vx: number;
-        vy: number;
-    } | null;
+    bird: BirdBody | null;
     events: SlingshotEvent[];
     stars: number;
+    /** 鸟低速持续的子步计数（滞留判定用）。 */
+    birdSlow: number;
 }
 /** mulberry32 PRNG：小、快、确定性。 */
 export declare function mulberry32(seed: number): () => number;
@@ -95,7 +115,7 @@ export declare function dragToVelocity(dx: number, dy: number): {
     vx: number;
     vy: number;
 } | null;
-/** 一块静态块的布局描述（关卡表用）。 */
+/** 一块静态块的布局描述（关卡表用，x/y 为左上角）。 */
 export interface BlockSpec {
     x: number;
     y: number;
@@ -113,16 +133,16 @@ export interface LevelSpec {
     birds: number;
 }
 export declare const LEVELS: readonly LevelSpec[];
+/**
+ * 推进一帧（内部按 SUBSTEP_HZ 固定子步）：刚体积分、碰撞冲量、
+ * 耐久碎裂、猪消灭。
+ */
+export declare function stepSlingshot(state: SlingshotState, dtMs: number): void;
 /** 开一关。 */
 export declare function createSlingshot(seed: number, level: number): SlingshotState;
 /** 发射：设置鸟初速（phase 必须为 aim 且有剩弹）。 */
 export declare function launch(state: SlingshotState, vx: number, vy: number): boolean;
 /** 星级：剩弹 2+ 三星、1 二星、0 一星。 */
 export declare function starsFor(state: SlingshotState): number;
-/**
- * 推进一帧（内部按 SUBSTEP_HZ 固定子步）：鸟飞行与碰撞、块耐久与
- * 碎裂、失支撑检测（块/猪下落）、猪消灭、终局结算。
- */
-export declare function stepSlingshot(state: SlingshotState, dtMs: number): void;
-/** 包装 step：物理后结算终局（导出给测试用的纯入口）。 */
+/** 包装 step：物理后结算终局（测试与主循环共用的纯入口）。 */
 export declare function stepAndJudge(state: SlingshotState, dtMs: number): void;

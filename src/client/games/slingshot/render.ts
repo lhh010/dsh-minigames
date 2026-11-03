@@ -54,30 +54,35 @@ export function renderSlingshot(
     ctx.setLineDash([])
   }
 
-  // 块。
+  // 块（按 angle 旋转绘制，x/y 为中心）。
   for (const block of state.blocks) {
     if (block.broken) continue
     const k = crackK(block)
+    const hw = block.w / 2
+    const hh = block.h / 2
+    ctx.save()
+    ctx.translate(block.x, block.y)
+    ctx.rotate(block.angle)
     ctx.fillStyle = MAT_COLORS[block.mat]
-    roundRectPath(ctx, block.x, block.y, block.w, block.h, 4)
+    roundRectPath(ctx, -hw, -hh, block.w, block.h, 4)
     ctx.fill()
     if (block.mat === 'ice') {
       ctx.fillStyle = 'rgba(255,255,255,0.35)'
-      roundRectPath(ctx, block.x + 3, block.y + 3, block.w - 6, Math.max(3, block.h / 3), 3)
+      roundRectPath(ctx, -hw + 3, -hh + 3, block.w - 6, Math.max(3, block.h / 3), 3)
       ctx.fill()
     } else if (block.mat === 'wood') {
       ctx.strokeStyle = 'rgba(90,60,25,0.5)'
       ctx.lineWidth = 1
-      for (let y = block.y + 8; y < block.y + block.h - 4; y += 10) {
+      for (let y = -hh + 8; y < hh - 4; y += 10) {
         ctx.beginPath()
-        ctx.moveTo(block.x + 3, y)
-        ctx.lineTo(block.x + block.w - 3, y)
+        ctx.moveTo(-hw + 3, y)
+        ctx.lineTo(hw - 3, y)
         ctx.stroke()
       }
     } else {
       ctx.strokeStyle = 'rgba(60,66,80,0.5)'
       ctx.lineWidth = 1
-      roundRectPath(ctx, block.x + 2, block.y + 2, block.w - 4, block.h - 4, 3)
+      roundRectPath(ctx, -hw + 2, -hh + 2, block.w - 4, block.h - 4, 3)
       ctx.stroke()
     }
     // 裂纹（血量低时叠加）。
@@ -85,11 +90,12 @@ export function renderSlingshot(
       ctx.strokeStyle = 'rgba(30,20,10,' + ((0.7 - k) * 1.2).toFixed(2) + ')'
       ctx.lineWidth = 1.5
       ctx.beginPath()
-      ctx.moveTo(block.x + block.w * 0.2, block.y + block.h * 0.1)
-      ctx.lineTo(block.x + block.w * 0.55, block.y + block.h * 0.5)
-      ctx.lineTo(block.x + block.w * 0.35, block.y + block.h * 0.9)
+      ctx.moveTo(-hw + block.w * 0.2, -hh + block.h * 0.1)
+      ctx.lineTo(-hw + block.w * 0.55, -hh + block.h * 0.5)
+      ctx.lineTo(-hw + block.w * 0.35, -hh + block.h * 0.9)
       ctx.stroke()
     }
+    ctx.restore()
   }
 
   // 猪。
