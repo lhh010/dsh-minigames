@@ -17,7 +17,7 @@ import { readLevel, saveLevel } from '../level-progress.ts'
 import { THEME, createParticles } from '../theme.ts'
 import { createFrameLoop } from '../frame-scheduler.ts'
 
-const ADVANCE_MS = 1600
+const ADVANCE_MS = 900
 
 function createFloodItGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -112,7 +112,21 @@ function createFloodItGame(host: HTMLElement, options?: MiniGameMountOptions): M
     }
   }
 
+  /** 过关展示中立即进入下一关（清掉自动计时）。 */
+  const advanceNow = (): void => {
+    if (!state.won || advanceTimer === 0) return
+    clearTimeout(advanceTimer)
+    advanceTimer = 0
+    const next = level + 1
+    saveLevel('floodit', next + 1)
+    startLevel(next)
+  }
+
   const onMouseDown = (event: MouseEvent): void => {
+    if (state.won) {
+      advanceNow()
+      return
+    }
     const { x, y } = toLogical(event)
     const color = paletteColorAt(state.size, x, y)
     if (color >= 0) applyColor(color)
@@ -129,6 +143,11 @@ function createFloodItGame(host: HTMLElement, options?: MiniGameMountOptions): M
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
+    if (state.won && (event.code === 'Space' || event.code === 'Enter')) {
+      event.preventDefault()
+      advanceNow()
+      return
+    }
     if (event.code === 'KeyR') {
       event.preventDefault()
       clearTimeout(advanceTimer)
@@ -178,7 +197,7 @@ function createFloodItGame(host: HTMLElement, options?: MiniGameMountOptions): M
         won: state.won,
         lost: lost(),
         paused: false,
-        subtitle: '得分 ' + String(scoreFor(level, state.maxSteps - state.steps)) + ' · 即将进入下一关 · R 重开',
+        subtitle: '得分 ' + String(scoreFor(level, state.maxSteps - state.steps)) + ' · 点击或空格进入下一关',
       })
       particles.tick(ctx, f.dt * 1000)
       if (animating) loop.markDirty()
