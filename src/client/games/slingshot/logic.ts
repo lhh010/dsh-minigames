@@ -176,7 +176,7 @@ export const LEVELS: readonly LevelSpec[] = [
   },
   {
     blocks: [...column(TOWER_X, GROUND_Y - 64, 3, 'stone'), { x: TOWER_X - 45, y: GROUND_Y - 150, w: 120, h: 20, mat: 'wood' }, { x: TOWER_X, y: GROUND_Y - 176, w: 30, h: 30, mat: 'ice' }],
-    pigs: [{ x: TOWER_X - 45, y: GROUND_Y - PIG_R }, { x: TOWER_X, y: GROUND_Y - 176 - PIG_R }],
+    pigs: [{ x: TOWER_X - 45, y: GROUND_Y - PIG_R }, { x: TOWER_X + 55, y: GROUND_Y - PIG_R }],
     birds: 4,
   },
   {
@@ -186,7 +186,7 @@ export const LEVELS: readonly LevelSpec[] = [
   },
   {
     blocks: [...column(TOWER_X - 80, GROUND_Y - 64, 4, 'wood'), ...column(TOWER_X, GROUND_Y - 64, 2, 'stone'), ...column(TOWER_X + 80, GROUND_Y - 64, 4, 'wood'), { x: TOWER_X - 40, y: GROUND_Y - 290, w: 220, h: 24, mat: 'stone' }, ...column(TOWER_X, GROUND_Y - 316, 1, 'ice', 30, 44)],
-    pigs: [{ x: TOWER_X - 80, y: GROUND_Y - PIG_R }, { x: TOWER_X + 80, y: GROUND_Y - PIG_R }, { x: TOWER_X, y: GROUND_Y - 316 - PIG_R }, { x: TOWER_X, y: GROUND_Y - PIG_R }],
+    pigs: [{ x: TOWER_X - 80, y: GROUND_Y - PIG_R }, { x: TOWER_X + 80, y: GROUND_Y - PIG_R }, { x: TOWER_X - 130, y: GROUND_Y - PIG_R }, { x: TOWER_X, y: GROUND_Y - PIG_R }],
     birds: 5,
   },
   {
@@ -601,11 +601,11 @@ function substep(state: SlingshotState, dt: number, settling = false): void {
             state.events.push({ type: 'pig', x: pig.x, y: pig.y })
           }
         }
-        // 持续受压：清醒中的块（正在塌落/倾倒）压在猪身上累计致死——
-        // 睡眠块的静止叠放不杀（关卡里有猪顶塔的合法静态布局）。
+        // 持续受压：块中心在猪上方且保持接触即累计致死（倾倒/慢塌落/
+        // 静止叠压都算——关卡布局保证初始摆放没有任何块压在猪上）。
         if (!isBird) {
           const pig = c as Pig
-          if (b.y < pig.y && !b.asleep && !pig.dead) pig.pressed = true
+          if (b.y < pig.y && !pig.dead) pig.pressed = true
         }
       }
       contacts.push({ a: b, b: c, nx: raw.nx, ny: raw.ny, px: raw.px, py: raw.py, pen: raw.pen, jn: 0, jt: 0, e: isBird ? 0.2 : 0, mu: MU_BOX })
