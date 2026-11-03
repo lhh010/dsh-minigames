@@ -119,6 +119,8 @@ export type SteadyHandEvent = {
     x: number;
     y: number;
 } | {
+    type: 'armed';
+} | {
     type: 'checkpoint';
 } | {
     type: 'clear';
@@ -158,6 +160,10 @@ export interface SteadyHandState {
     respawnY: number;
     /** 本关是否已触达检查点。 */
     checkpointTaken: boolean;
+    /** 就位阶段：false 时环尚未回到起点标记，不计时也不判触电。 */
+    armed: boolean;
+    /** 指针是否已离开过起点（防开局默认 target 在起点直接就位）。 */
+    aimMoved: boolean;
     /** 本关沿轨进度 0..1（只增不减）。 */
     progress: number;
     /** 本次会话最快单关通关毫秒（无则 null）。 */

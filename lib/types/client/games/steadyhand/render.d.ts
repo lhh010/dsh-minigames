@@ -5,11 +5,4 @@
  * 震屏、沿轨进度条、HUD（命/计时/最佳/分数）、暂停与结束遮罩。
  */
 import type { SteadyHandState } from './logic.ts';
-/**
- * 渲染一帧：背景、轨道、安全岛、终点、电环、闪电、粒子、红闪、震屏、
- * 进度条、HUD、遮罩。
- * @param ctx - 画布上下文。
- * @param state - 当前状态。
- * @param paused - 是否显示暂停遮罩。
- */
 export declare function renderSteadyHand(ctx: CanvasRenderingContext2D, state: SteadyHandState, paused: boolean): void;

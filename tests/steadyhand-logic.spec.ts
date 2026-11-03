@@ -54,7 +54,13 @@ describe('steadyhand logic', () => {
 
   it('shocking costs a life and respawns at checkpoint after taking it', () => {
     const s = createSteadyHand(1)
-    // 起点保护期后把环甩到远处（远离开轨）触发触电。
+    // 就位流程：指针先离开起点（aimMoved），再回起点完成就位。
+    setPointer(s, -1000, -1000)
+    for (let i = 0; i < 200; i += 1) stepSteadyHand(s, 16)
+    setPointer(s, s.track.points[0]!.x, s.track.points[0]!.y)
+    for (let i = 0; i < 600 && !s.armed; i += 1) stepSteadyHand(s, 16)
+    expect(s.armed).toBe(true)
+    // 起点保护期后再甩到远处触发触电。
     for (let i = 0; i < Math.ceil(GRACE_MS / 16) + 2; i += 1) stepSteadyHand(s, 16)
     const before = s.lives
     // 直接把指针目标设到轨道远端环外——限速追踪会一路撞轨；给足步数。
@@ -80,5 +86,21 @@ describe('steadyhand logic', () => {
     const fast = levelScore(2000)
     const slow = levelScore(30000)
     expect(fast).toBeGreaterThan(slow)
+  })
+
+  it('armed gating: no shock or timing until the ring reaches the start', () => {
+    const s = createSteadyHand(1)
+    expect(s.armed).toBe(false)
+    for (let i = 0; i < Math.ceil(GRACE_MS / 16) + 2; i += 1) stepSteadyHand(s, 16)
+    setPointer(s, -1000, -1000)
+    for (let i = 0; i < 300; i += 1) stepSteadyHand(s, 16)
+    expect(s.armed).toBe(false)
+    expect(s.lives).toBe(START_LIVES)
+    expect(s.levelMs).toBe(0)
+    setPointer(s, s.track.points[0]!.x, s.track.points[0]!.y)
+    for (let i = 0; i < 300 && !s.armed; i += 1) stepSteadyHand(s, 16)
+    expect(s.armed).toBe(true)
+    stepSteadyHand(s, 160)
+    expect(s.levelMs).toBeGreaterThan(0)
   })
 })

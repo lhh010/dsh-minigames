@@ -225,6 +225,7 @@ export function isShocked(track: Track, x: number, y: number): boolean {
 /** 单步内产生、供渲染层消费的可视事件。 */
 export type SteadyHandEvent =
   | { type: 'shock', x: number, y: number }
+  | { type: 'armed' }
   | { type: 'checkpoint' }
   | { type: 'clear', level: number, ms: number, gained: number }
   | { type: 'complete', score: number }
@@ -255,6 +256,10 @@ export interface SteadyHandState {
   respawnX: number, respawnY: number
   /** 本关是否已触达检查点。 */
   checkpointTaken: boolean
+  /** 就位阶段：false 时环尚未回到起点标记，不计时也不判触电。 */
+  armed: boolean
+  /** 指针是否已离开过起点（防开局默认 target 在起点直接就位）。 */
+  aimMoved: boolean
   /** 本关沿轨进度 0..1（只增不减）。 */
   progress: number
   /** 本次会话最快单关通关毫秒（无则 null）。 */
@@ -284,6 +289,8 @@ function enterLevel(state: SteadyHandState, level: number): void {
   state.respawnY = start.y
   state.levelMs = 0
   state.acc = 0
+  state.armed = false
+  state.aimMoved = false
   state.graceMs = GRACE_MS
   state.checkpointTaken = false
   state.progress = 0
@@ -310,6 +317,8 @@ export function createSteadyHand(startLevel = 1, bestMs: number | null = null): 
     shakeMs: 0,
     respawnX: 0, respawnY: 0,
     checkpointTaken: false,
+    armed: false,
+    aimMoved: false,
     progress: 0,
     bestMs,
     track: buildTrack(1),
@@ -368,7 +377,7 @@ export function stepSteadyHand(state: SteadyHandState, dtMs: number): void {
   state.events.length = 0
   if (state.over) return
   state.t += dtMs
-  state.levelMs += dtMs
+  if (state.armed) state.levelMs += dtMs
   if (state.flashMs > 0) state.flashMs = Math.max(0, state.flashMs - dtMs)
   if (state.shakeMs > 0) state.shakeMs = Math.max(0, state.shakeMs - dtMs)
   if (state.graceMs > 0) state.graceMs = Math.max(0, state.graceMs - dtMs)
@@ -386,6 +395,21 @@ export function stepSteadyHand(state: SteadyHandState, dtMs: number): void {
       const move = Math.min(stepLen, dist)
       state.ringX += (dx / dist) * move
       state.ringY += (dy / dist) * move
+    }
+
+    // 就位阶段：环与指针都贴在起点标记才算就位开跑（计时与触电判定
+    // 均未开始）——开局环出生在起点，但玩家指针通常还在别处，必须
+    // 刻意把指针移回起点才正式开始。
+    if (!state.armed) {
+      const startPt = track.points[0]!
+      const aimDist = Math.hypot(state.targetX - startPt.x, state.targetY - startPt.y)
+      if (aimDist > 60) state.aimMoved = true
+      const ringAt = Math.hypot(state.ringX - startPt.x, state.ringY - startPt.y) <= 22
+      if (ringAt && state.aimMoved && aimDist <= 30) {
+        state.armed = true
+        state.events.push({ type: 'armed' })
+      }
+      continue
     }
 
     // 终点：进入终点圈即通关（优先于触电判定）。

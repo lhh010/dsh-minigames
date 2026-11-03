@@ -16,6 +16,7 @@ const RAIL_CORE = '#cfe8ff'
 const CURRENT_COLOR = '#7dcfff'
 const ISLAND_COLOR = '#e0af68'
 const END_COLOR = '#9ece6a'
+const START_COLOR = '#7dcfff'
 const RING_COLOR = '#e2e2ee'
 const TRACE_COLOR = 'rgba(56,66,96,0.5)'
 const PAD_COLOR = 'rgba(80,94,130,0.45)'
@@ -251,6 +252,37 @@ function drawLightning(ctx: CanvasRenderingContext2D, state: SteadyHandState): v
  * @param state - 当前状态。
  * @param paused - 是否显示暂停遮罩。
  */
+/**
+ * 起点标记：发光圆圈 + 「起点」标签；就位阶段脉冲放大并附提示文案。
+ */
+function drawStart(ctx: CanvasRenderingContext2D, state: SteadyHandState): void {
+  const start = state.track.points[0]!
+  const pulse = state.armed ? 1 : 1 + 0.18 * Math.sin(state.t / 140)
+  glow(ctx, START_COLOR, state.armed ? 8 : 16)
+  ctx.strokeStyle = START_COLOR
+  ctx.lineWidth = 2.5
+  ctx.beginPath()
+  ctx.arc(start.x, start.y, 14 * pulse, 0, Math.PI * 2)
+  ctx.stroke()
+  noGlow(ctx)
+  ctx.fillStyle = START_COLOR
+  ctx.beginPath()
+  ctx.arc(start.x, start.y, 3, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.font = '600 12px system-ui, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'top'
+  ctx.fillText('起点', start.x, start.y + 20)
+  if (!state.armed) {
+    ctx.font = '700 16px system-ui, sans-serif'
+    ctx.fillStyle = THEME.text
+    ctx.fillText('把电环移到起点开始', W / 2, H / 2 - 8)
+    ctx.font = '600 12px system-ui, sans-serif'
+    ctx.fillStyle = THEME.textMuted
+    ctx.fillText('就位后才开始计时与判定', W / 2, H / 2 + 16)
+  }
+}
+
 export function renderSteadyHand(ctx: CanvasRenderingContext2D, state: SteadyHandState, paused: boolean): void {
   drawCircuitBoard(ctx, state.t)
 
@@ -266,6 +298,7 @@ export function renderSteadyHand(ctx: CanvasRenderingContext2D, state: SteadyHan
 
   drawRail(ctx, state.track, state.t)
   drawIsland(ctx, state)
+  drawStart(ctx, state)
   drawEnd(ctx, state.track, state.t)
   drawRing(ctx, state)
 
@@ -274,6 +307,9 @@ export function renderSteadyHand(ctx: CanvasRenderingContext2D, state: SteadyHan
     if (ev.type === 'shock') {
       particles.burst(ev.x, ev.y, THEME.bad, 24, 240)
       particles.burst(ev.x, ev.y, THEME.gold, 10, 160)
+    } else if (ev.type === 'armed') {
+      const start = state.track.points[0]!
+      particles.burst(start.x, start.y, START_COLOR, 16, 160)
     } else if (ev.type === 'checkpoint') {
       particles.burst(state.track.checkpoint.x, state.track.checkpoint.y, ISLAND_COLOR, 14, 140)
     } else if (ev.type === 'clear') {
