@@ -57,7 +57,7 @@ export interface Block {
     /** 低速持续的子步计数。 */
     still: number;
 }
-/** 猪圆形刚体：被直接命中 / 坠落着地 / 被落块砸中即消灭。 */
+/** 猪圆形刚体：被直接命中 / 坠落着地 / 被落块砸中 / 被重块持续压住即消灭。 */
 export interface Pig {
     x: number;
     y: number;
@@ -66,6 +66,10 @@ export interface Pig {
     dead: boolean;
     asleep: boolean;
     still: number;
+    /** 本子步是否被块从上方压住（持续受压计时用）。 */
+    pressed: boolean;
+    /** 持续受压累计 ms——重块压住超过阈值即消灭（愤怒的小鸟语义）。 */
+    crushMs: number;
 }
 export interface BirdBody {
     x: number;

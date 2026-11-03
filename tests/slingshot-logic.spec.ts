@@ -21,7 +21,7 @@ function makeBlock(x: number, y: number, w: number, h: number, mat: keyof typeof
   return { x, y, w, h, mat, hp: MATERIALS[mat].hp, vx: 0, vy: 0, angle: 0, av: 0, broken: false, asleep: false, still: 0 }
 }
 function makePig(x: number, y: number): Pig {
-  return { x, y, vx: 0, vy: 0, dead: false, asleep: false, still: 0 }
+  return { x, y, vx: 0, vy: 0, dead: false, asleep: false, still: 0, pressed: false, crushMs: 0 }
 }
 
 describe('slingshot logic', () => {
@@ -172,5 +172,18 @@ describe('slingshot logic', () => {
     while (s.used < s.birds) launch(s, -300, -300) || stepAndJudge(s, 4)
     for (let i = 0; i < 20000 && s.phase === 'flying'; i += 1) stepAndJudge(s, 4)
     expect(s.phase).toBe('lost')
+  })
+
+  it('a slowly settling block resting on a pig crushes it (awake press)', () => {
+    const s = createSlingshot(5, 1)
+    const pig = s.pigs[0]!
+    const b = s.blocks[0]!
+    b.x = pig.x
+    b.y = pig.y - 40
+    b.asleep = false
+    b.vy = 0
+    for (let i = 0; i < 2400 && !pig.dead; i += 1) stepAndJudge(s, 1000 / 240)
+    expect(pig.dead).toBe(true)
+    expect(s.events.some((e) => e.type === 'pig')).toBe(true)
   })
 })

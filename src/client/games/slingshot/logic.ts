@@ -78,7 +78,7 @@ export interface Block {
   still: number
 }
 
-/** 猪圆形刚体：被直接命中 / 坠落着地 / 被落块砸中即消灭。 */
+/** 猪圆形刚体：被直接命中 / 坠落着地 / 被落块砸中 / 被重块持续压住即消灭。 */
 export interface Pig {
   x: number
   y: number
@@ -87,6 +87,10 @@ export interface Pig {
   dead: boolean
   asleep: boolean
   still: number
+  /** 本子步是否被块从上方压住（持续受压计时用）。 */
+  pressed: boolean
+  /** 持续受压累计 ms——重块压住超过阈值即消灭（愤怒的小鸟语义）。 */
+  crushMs: number
 }
 
 export interface BirdBody {
@@ -553,7 +557,8 @@ function substep(state: SlingshotState, dt: number, settling = false): void {
   }
   if (bird !== null) bird.vy += GRAVITY * dt
 
-  // 2. 生成接触（含伤害/消灭判定）。
+  // 2. 生成接触（含伤害/消灭判定）。pressed 由本子步的接触标记，在
+  // 子步末结算压杀后清零。
   const contacts: Contact[] = []
   let birdLanded = false
   const alive = state.blocks.filter(b => !b.broken)
@@ -595,6 +600,12 @@ function substep(state: SlingshotState, dt: number, settling = false): void {
             pig.dead = true
             state.events.push({ type: 'pig', x: pig.x, y: pig.y })
           }
+        }
+        // 持续受压：清醒中的块（正在塌落/倾倒）压在猪身上累计致死——
+        // 睡眠块的静止叠放不杀（关卡里有猪顶塔的合法静态布局）。
+        if (!isBird) {
+          const pig = c as Pig
+          if (b.y < pig.y && !b.asleep && !pig.dead) pig.pressed = true
         }
       }
       contacts.push({ a: b, b: c, nx: raw.nx, ny: raw.ny, px: raw.px, py: raw.py, pen: raw.pen, jn: 0, jt: 0, e: isBird ? 0.2 : 0, mu: MU_BOX })
@@ -697,6 +708,21 @@ function substep(state: SlingshotState, dt: number, settling = false): void {
   for (const c of contacts) {
     touched.add(c.a as Block | Pig)
     if (c.b !== null) touched.add(c.b as Block | Pig)
+  }
+  // 持续受压结算：被块从上方压住累计 crushMs，超过阈值消灭；未受压
+  // 则快速消退（轻擦/短暂滑过不算压杀）。冰块最轻，压得久一点才致命。
+  for (const p of state.pigs) {
+    if (p.dead) continue
+    if (p.pressed) {
+      p.crushMs += dt * 1000
+      if (p.crushMs >= 180) {
+        p.dead = true
+        state.events.push({ type: 'pig', x: p.x, y: p.y })
+      }
+    } else {
+      p.crushMs = Math.max(0, p.crushMs - dt * 2000)
+    }
+    p.pressed = false
   }
   // 预落座期用更宽的休眠阈值：仅靠窄支撑平衡的板（亚稳）在数值
   // 扰动放大前冻结，而不是倾倒砸塌全场。
@@ -804,7 +830,7 @@ export function createSlingshot(seed: number, level: number): SlingshotState {
     asleep: false,
     still: 0,
   }))
-  const pigs: Pig[] = spec.pigs.map(p => ({ x: p.x, y: p.y, vx: 0, vy: 0, dead: false, asleep: false, still: 0 }))
+  const pigs: Pig[] = spec.pigs.map(p => ({ x: p.x, y: p.y, vx: 0, vy: 0, dead: false, asleep: false, pressed: false, crushMs: 0, still: 0 }))
   settleLayout(blocks, pigs)
   const state: SlingshotState = {
     seed,
