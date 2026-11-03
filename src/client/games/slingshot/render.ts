@@ -148,14 +148,15 @@ export function renderSlingshot(
     if (pull > 4) {
       hudPair(ctx, 10, 26, '力度', Math.round((pull / MAX_DRAG) * 100) + '%', 'left', pull / MAX_DRAG > 0.85 ? THEME.bad : THEME.gold)
     }
-    // 预瞄虚线。
+    // 预瞄虚线：从弹弓锚点（实际发射原点）按同一物理积分预演——所见即
+    // 所投（launch 的鸟从 SLING 出发，不从被拉回的弓兜出发）。
     if (v !== null) {
       ctx.strokeStyle = 'rgba(255,255,255,0.4)'
       ctx.lineWidth = 2
       ctx.setLineDash([3, 7])
       ctx.beginPath()
-      ctx.moveTo(bx, by)
-      let px = bx, py = by, pvx = v.vx, pvy = v.vy
+      ctx.moveTo(SLING.x, SLING.y)
+      let px = SLING.x, py = SLING.y, pvx = v.vx, pvy = v.vy
       for (let i = 0; i < 30; i += 1) {
         pvy += GRAVITY * 0.045
         px += pvx * 0.045
