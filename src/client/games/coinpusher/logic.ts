@@ -47,6 +47,9 @@ export const ROUND_MS = 60000
 export const START_COINS = 40
 export const COOLDOWN_MS = 340
 export const MAX_COINS = 120
+/** 投尽后的静默结算期 ms：推板还要把余币继续推落，不能最后一枚
+ * 落定就立刻结束——留出几个推板周期让尾巴分数落袋。 */
+export const QUIET_END_MS = 6000
 const SCORE_Y = PLAT_Y + 90
 const COL_GAP = (DROP_X1 - DROP_X0) / (DROP_COLS - 1)
 /** 奖励币间隔：每 BONUS_EVERY 次投币出一枚。 */
@@ -81,6 +84,8 @@ export interface CoinPusherState {
   result: 'playing' | 'ended'
   /** 奖励币触发后的余震计时（ms），仅渲染用。 */
   quakeMs: number
+  /** 投尽后无空中币的连续静默 ms（达到 QUIET_END_MS 才结算）。 */
+  quietMs: number
   dropCount: number
   events: CoinPusherEvent[]
   /** 每局一个种子；投币类型由它驱动，保证可重放。 */
@@ -139,6 +144,7 @@ export function createGame(seed: number): CoinPusherState {
     cooldownMs: 0,
     result: 'playing',
     quakeMs: 0,
+    quietMs: 0,
     dropCount: 0,
     events: [],
     rng,
@@ -357,8 +363,17 @@ export function step(s: CoinPusherState, dt: number): void {
     substep(s)
     s.acc -= SUB
   }
-  if (s.coinsLeft <= 0 && !s.coins.some(c => c.state === 'fall')) {
-    s.result = 'ended'
-    s.events.push({ kind: 'ended', reason: 'coins' })
+  if (s.coinsLeft <= 0) {
+    if (s.coins.some(c => c.state === 'fall')) {
+      s.quietMs = 0
+    } else {
+      s.quietMs += clamped * 1000
+      if (s.quietMs >= QUIET_END_MS) {
+        s.result = 'ended'
+        s.events.push({ kind: 'ended', reason: 'coins' })
+      }
+    }
+  } else {
+    s.quietMs = 0
   }
 }

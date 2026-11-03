@@ -127,7 +127,7 @@ export function renderSlingshot(
   ctx.moveTo(SLING.x + 14, GROUND_Y)
   ctx.lineTo(SLING.x + 4, SLING.y + 22)
   ctx.stroke()
-  // 待发鸟画在弓兜。
+  // 待发鸟画在弓兜（朝向 = 发射方向：拉弓方向的反向）。
   if (state.phase === 'aim' && aim !== null) {
     const v = dragToVelocity(aim.from.x - aim.to.x, aim.from.y - aim.to.y)
     const pull = v === null ? 0 : Math.min(Math.hypot(aim.to.x - aim.from.x, aim.to.y - aim.from.y), MAX_DRAG)
@@ -141,7 +141,8 @@ export function renderSlingshot(
     ctx.lineTo(bx, by)
     ctx.lineTo(SLING.x + 6, SLING.y + 24)
     ctx.stroke()
-    drawBird(ctx, bx, by, 0)
+    // 待发鸟朝向 = 发射方向（拉弓方向的反向）。未拉出有效力度时默认朝右上。
+    drawBird(ctx, bx, by, v === null ? -0.5 : Math.atan2(v.vy, v.vx))
     // 力度指示。
     if (pull > 4) {
       hudPair(ctx, 10, 26, '力度', Math.round((pull / MAX_DRAG) * 100) + '%', 'left', pull / MAX_DRAG > 0.85 ? THEME.bad : THEME.gold)

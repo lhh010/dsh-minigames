@@ -35,6 +35,9 @@ export declare const ROUND_MS = 60000;
 export declare const START_COINS = 40;
 export declare const COOLDOWN_MS = 340;
 export declare const MAX_COINS = 120;
+/** 投尽后的静默结算期 ms：推板还要把余币继续推落，不能最后一枚
+ * 落定就立刻结束——留出几个推板周期让尾巴分数落袋。 */
+export declare const QUIET_END_MS = 6000;
 /** 一枚币。id 全局递增，保证求解顺序确定。 */
 export interface Coin {
     id: number;
@@ -70,6 +73,8 @@ export interface CoinPusherState {
     result: 'playing' | 'ended';
     /** 奖励币触发后的余震计时（ms），仅渲染用。 */
     quakeMs: number;
+    /** 投尽后无空中币的连续静默 ms（达到 QUIET_END_MS 才结算）。 */
+    quietMs: number;
     dropCount: number;
     events: CoinPusherEvent[];
     /** 每局一个种子；投币类型由它驱动，保证可重放。 */
