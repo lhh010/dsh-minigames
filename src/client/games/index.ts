@@ -90,6 +90,10 @@ import { puyoGame } from './puyo/index.ts'
 import { mahjongGame } from './mahjong/index.ts'
 import { minigolfGame } from './minigolf/index.ts'
 import { jungleGame } from './jungle/index.ts'
+import { grappleGame } from './grapple/index.ts'
+import { qwopGame } from './qwop/index.ts'
+import { copterGame } from './copter/index.ts'
+import { gravflipGame } from './gravflip/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -137,6 +141,7 @@ export function registerBuiltinGames(): void {
     puyoGame, mahjongGame, minigolfGame, jungleGame,
     masyuGame, blackjackGame, flooditGame, coinpusherGame,
     slingshotGame, holeGame, steadyhandGame,
+    grappleGame, qwopGame, copterGame, gravflipGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
