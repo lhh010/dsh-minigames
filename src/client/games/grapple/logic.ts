@@ -84,16 +84,17 @@ export interface GrappleWorld {
 export function generateWorld(seed: number, level: number): GrappleWorld {
   const rng = mulberry32((Math.floor(seed) * 977 + level * 131) >>> 0)
   const goalX = 2600 + level * 500
-  // 锚点水平间距：150px 起，每关 +15px（更稀疏）。
-  const spacing = 150 + (level - 1) * 15
+  // 锚点水平间距：前两关密集好上手（110px 起），第 3 关起走 150px 斜率——
+// 开局钩点够密容错高，后期才考验释放时机。
+  const spacing = level <= 2 ? 110 + (level - 1) * 20 : 150 + (level - 1) * 15
   const anchors: Anchor[] = []
   for (let x = 140; x < goalX - 80; x += spacing * (0.85 + rng() * 0.3)) {
     anchors.push({ x, y: 36 + rng() * 96 })
   }
   // 终点前保底一个锚点。
   anchors.push({ x: goalX - 60, y: 60 + rng() * 60 })
-  // 尖刺墙：数量随关卡增长，宽度 16px，高度 60~200px。
-  const spikeCount = 5 + level * 3
+  // 尖刺墙：数量随关卡增长，宽度 16px，高度 60~200px。第 1 关少一截热身。
+  const spikeCount = 2 + level * 3
   const spikes: Spike[] = []
   let guard = 0
   while (spikes.length < spikeCount && guard < spikeCount * 40) {
