@@ -18,7 +18,7 @@ export const GRAVITY = 1400
 /** 忍者碰撞半径 px。 */
 export const PLAYER_R = 10
 /** 钩索发射半径 px（超出不予吸附）。 */
-export const HOOK_RANGE = 280
+export const HOOK_RANGE = 330
 /** 锚点吸附半径 px（圆形判定，渲染发光圈同尺寸）。 */
 export const ANCHOR_R = 14
 /** 固定物理子步 ms（确定性：所有推进都切成本子步）。 */
@@ -87,12 +87,24 @@ export function generateWorld(seed: number, level: number): GrappleWorld {
   // 锚点水平间距：前两关密集好上手（110px 起），第 3 关起走 150px 斜率——
 // 开局钩点够密容错高，后期才考验释放时机。
   const spacing = level <= 2 ? 110 + (level - 1) * 20 : 150 + (level - 1) * 15
+  // 锚点高度带随关卡抬升：第 1 关低垂好够（86~186px），第 3 关起回到
+  // 高位天花板（36~132px）考验摆荡衔接。
+  const yBase = level === 1 ? 86 : level === 2 ? 60 : 36
+  const ySpan = level === 1 ? 100 : 96
   const anchors: Anchor[] = []
   for (let x = 140; x < goalX - 80; x += spacing * (0.85 + rng() * 0.3)) {
-    anchors.push({ x, y: 36 + rng() * 96 })
+    anchors.push({ x, y: yBase + rng() * ySpan })
   }
   // 终点前保底一个锚点。
   anchors.push({ x: goalX - 60, y: 60 + rng() * 60 })
+  // 每个重生点（段首 +40px）前方保底一个可够到的锚点——防止复活后
+  // 无钩可发直接坠死的挫败循环。
+  for (let seg = 0; seg * SEG_LEN < goalX - 200; seg += 1) {
+    const sx = seg * SEG_LEN + 40
+    const covered = anchors.some(a => a.x > sx && a.x < sx + 240)
+    if (!covered) anchors.push({ x: sx + 130, y: yBase + rng() * 60 })
+  }
+  anchors.sort((a, b) => a.x - b.x)
   // 尖刺墙：数量随关卡增长，宽度 16px，高度 60~200px。第 1 关少一截热身。
   const spikeCount = 2 + level * 3
   const spikes: Spike[] = []
@@ -278,8 +290,9 @@ function tryAttach(state: GrappleState): void {
     const a = state.world.anchors[i]!
     const dx = a.x - state.x
     const dy = a.y - state.y
-    // 角度朝上前方：锚点在玩家上方且不落后超过 40px。
-    if (dy > -16 || dx < -40) continue
+    // 角度朝上前方（放宽容错）：锚点大致在玩家上方、允许落后 90px
+    // 或略低于玩家——开局衔接不再苛刻。
+    if (dy > -28 || dx < -90) continue
     const d = Math.sqrt(dx * dx + dy * dy)
     if (d <= bestD) {
       bestD = d

@@ -5,7 +5,7 @@
  * 摔倒/过线遮罩。纯绘制，无状态（粒子系统实例除外）。
  */
 import {
-  W, H, GOAL_M, qwopJoints, distanceScore,
+  W, H, GOAL_M, FALL_SETTLE_MS, qwopJoints, distanceScore,
   type QwopState, type QwopInput, type QwopFallReason,
 } from './logic.ts'
 import { THEME, accent, createParticles, drawOverlay, drawBackground, glow, hudPair, noGlow, roundRectPath } from '../theme.ts'
@@ -303,8 +303,11 @@ export function renderQwop(
     return
   }
   if (state.phase === 'fallen') {
-    const why = state.fallReason === null ? '' : FALL_TEXT[state.fallReason]
-    drawOverlay(ctx, W, H, '摔倒了', why + ' · 跑了 ' + distanceScore(state) + ' m · 按 R 重开', THEME.bad)
+    // 瘫地沉降动画（1s）播完再弹结算遮罩——摔倒瞬间先看到人物倒地。
+    if (state.settle >= FALL_SETTLE_MS) {
+      const why = state.fallReason === null ? '' : FALL_TEXT[state.fallReason]
+      drawOverlay(ctx, W, H, '摔倒了', why + ' · 跑了 ' + distanceScore(state) + ' m · 按 R 重开', THEME.bad)
+    }
   } else if (state.phase === 'finished') {
     drawOverlay(ctx, W, H, '冲线成功', '跑完 50 m · 按 R 再来一局', THEME.good)
   }

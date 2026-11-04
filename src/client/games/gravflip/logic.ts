@@ -37,7 +37,7 @@ export const SPIKE_W = 18
 /** 屏障墙厚度。 */
 export const BARRIER_W = 16
 /** 屏障窗口最小高度（生成器保证可通过）。 */
-export const MIN_WINDOW = 86
+export const MIN_WINDOW = 110
 /** 激光参数：周期 / 发射时长 / 预警时长 / 光束宽 / 覆盖高度。 */
 export const LASER_PERIOD = 2100
 export const LASER_FIRE_MS = 520
@@ -141,7 +141,7 @@ export function genSegment(seed: number, index: number): Obstacle[] {
     return [{ type: 'laser', x, side, phase }]
   }
   const x = index * SEG_LEN + 120 + rng() * (SEG_LEN - 240)
-  const h = MIN_WINDOW + rng() * 40
+  const h = MIN_WINDOW + rng() * 30
   const halfBand = H / 2 - TRACK - h / 2 - 30
   const center = H / 2 + (rng() * 2 - 1) * halfBand
   return [{ type: 'barrier', x, oy1: center - h / 2, oy2: center + h / 2 }]

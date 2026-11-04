@@ -64,14 +64,18 @@ function sx(state: GravFlipState, wx: number): number {
  * @param ctx - 画布上下文。
  * @param ob - 尖刺障碍。
  */
-function drawSpikes(ctx: CanvasRenderingContext2D, ob: Extract<Obstacle, { type: 'spikes' }>): void {
+function drawSpikes(ctx: CanvasRenderingContext2D, state: GravFlipState, ob: Extract<Obstacle, { type: 'spikes' }>): void {
   const color = THEME.bad
   glow(ctx, color, 8)
   ctx.fillStyle = color
   ctx.beginPath()
-  for (let x = ob.x1; x + SPIKE_W <= ob.x2 + 0.01; x += SPIKE_W) {
+  // 世界 x → 屏幕 x：之前直接用世界坐标画，尖刺全部落在摄像机外
+  // （碰撞在世界坐标生效）＝玩家看到的"隐形尖刺"。
+  const wx1 = sx(state, ob.x1)
+  const wx2 = sx(state, ob.x2)
+  for (let x = wx1; x + SPIKE_W <= wx2 + 0.01; x += SPIKE_W) {
     const a = x
-    const b = Math.min(x + SPIKE_W, ob.x2)
+    const b = Math.min(x + SPIKE_W, wx2)
     if (ob.side === 'bottom') {
       ctx.moveTo(a, FLOOR_TOP)
       ctx.lineTo((a + b) / 2, FLOOR_TOP - SPIKE_H)
@@ -232,7 +236,7 @@ export function renderGravFlip(ctx: CanvasRenderingContext2D, state: GravFlipSta
   for (const ob of state.obstacles) {
     const x = sx(state, ob.type === 'spikes' ? ob.x1 : ob.x)
     if (x > -80 && x < W + 80) {
-      if (ob.type === 'spikes') drawSpikes(ctx, ob)
+      if (ob.type === 'spikes') drawSpikes(ctx, state, ob)
       else if (ob.type === 'barrier') drawBarrier(ctx, state, ob)
       else drawLaser(ctx, state, ob)
     }

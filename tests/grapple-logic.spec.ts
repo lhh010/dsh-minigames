@@ -29,8 +29,8 @@ describe('grapple logic', () => {
     const w5 = generateWorld(42, 5)
     expect(w5.spikes.length).toBeGreaterThan(wa.spikes.length)
     expect(w5.goalX).toBeGreaterThan(wa.goalX)
-    // 锚点都在画面上部（天花板锚点群）。
-    for (const an of wa.anchors) expect(an.y).toBeLessThan(140)
+    // 锚点都在画面上部（L1 是 86~186px 低锚带，L2 起天花板锚点群）。
+    for (const an of wa.anchors) expect(an.y).toBeLessThan(187)
   })
 
   it('grapple attaches only to an up-forward anchor within HOOK_RANGE', () => {

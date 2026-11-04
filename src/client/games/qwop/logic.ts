@@ -92,8 +92,9 @@ export const CALF_MAX = 1.5
 /** 髋关节摆幅上限。 */
 export const THIGH_MAX = 1.35
 
-/** 躯干超角阈值（rad，超过即摔倒）。 */
-export const FALL_TORSO = 1.0
+/** 躯干超角阈值（rad，超过即摔倒）。1.33 ≈ 76°：前倾到肉眼明显
+ * 支不住才判摔——57° 时人物看起来还站着就结算，观感是"没摔就结束"。 */
+export const FALL_TORSO = 1.33
 /** 膝盖离地危险高度（米，低于即摔倒）。 */
 export const KNEE_GROUND = 0.07
 /** 头部危险高度（米）。 */
