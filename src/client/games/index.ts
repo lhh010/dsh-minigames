@@ -94,9 +94,9 @@ import { grappleGame } from './grapple/index.ts'
 import { qwopGame } from './qwop/index.ts'
 import { copterGame } from './copter/index.ts'
 import { gravflipGame } from './gravflip/index.ts'
-import { snakeioGame } from './snakeio/index.ts'
-import { pinball2Game } from './pinball2/index.ts'
 import { reactionGame } from './reaction/index.ts'
+import { circlemathGame } from './circlemath/index.ts'
+import { lightspeedGame } from './lightspeed/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -145,7 +145,7 @@ export function registerBuiltinGames(): void {
     masyuGame, blackjackGame, flooditGame, coinpusherGame,
     slingshotGame, holeGame, steadyhandGame,
     grappleGame, qwopGame, copterGame, gravflipGame,
-    snakeioGame, pinball2Game, reactionGame,
+    reactionGame, circlemathGame, lightspeedGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
