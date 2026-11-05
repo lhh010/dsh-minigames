@@ -14,11 +14,11 @@ export const W = 640
 export const H = 360
 
 /** 重力加速度 px/s^2。 */
-export const GRAVITY = 1400
+export const GRAVITY = 1000
 /** 忍者碰撞半径 px。 */
 export const PLAYER_R = 10
 /** 钩索发射半径 px（超出不予吸附）。 */
-export const HOOK_RANGE = 330
+export const HOOK_RANGE = 420
 /** 锚点吸附半径 px（圆形判定，渲染发光圈同尺寸）。 */
 export const ANCHOR_R = 14
 /** 固定物理子步 ms（确定性：所有推进都切成本子步）。 */
@@ -83,10 +83,10 @@ export interface GrappleWorld {
  */
 export function generateWorld(seed: number, level: number): GrappleWorld {
   const rng = mulberry32((Math.floor(seed) * 977 + level * 131) >>> 0)
-  const goalX = 2600 + level * 500
+  const goalX = 1800 + level * 400
   // 锚点水平间距：前两关密集好上手（110px 起），第 3 关起走 150px 斜率——
 // 开局钩点够密容错高，后期才考验释放时机。
-  const spacing = level <= 2 ? 110 + (level - 1) * 20 : 150 + (level - 1) * 15
+  const spacing = level <= 2 ? 90 : 120 + (level - 1) * 10
   // 锚点高度带随关卡抬升：第 1 关低垂好够（86~186px），第 3 关起回到
   // 高位天花板（36~132px）考验摆荡衔接。
   const yBase = level === 1 ? 86 : level === 2 ? 60 : 36
@@ -107,8 +107,8 @@ export function generateWorld(seed: number, level: number): GrappleWorld {
   anchors.sort((a, b) => a.x - b.x)
   // 尖刺墙：数量随关卡增长，宽度 16px，高度 60~(60+maxH)px。每放一根
   // 都保证附近有一个足够高的锚点可借力荡过——不再出现无解墙。
-  const maxH = level === 1 ? 80 : level === 2 ? 110 : 140
-  const spikeCount = 2 + level * 3
+  const maxH = level <= 2 ? 50 : level === 3 ? 90 : 120
+  const spikeCount = Math.max(0, level - 2) * 2 + 1
   const spikes: Spike[] = []
   let guard = 0
   while (spikes.length < spikeCount && guard < spikeCount * 40) {
