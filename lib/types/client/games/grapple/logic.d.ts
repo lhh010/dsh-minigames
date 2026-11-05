@@ -12,11 +12,11 @@
 export declare const W = 640;
 export declare const H = 360;
 /** 重力加速度 px/s^2。 */
-export declare const GRAVITY = 1400;
+export declare const GRAVITY = 1000;
 /** 忍者碰撞半径 px。 */
 export declare const PLAYER_R = 10;
 /** 钩索发射半径 px（超出不予吸附）。 */
-export declare const HOOK_RANGE = 330;
+export declare const HOOK_RANGE = 420;
 /** 锚点吸附半径 px（圆形判定，渲染发光圈同尺寸）。 */
 export declare const ANCHOR_R = 14;
 /** 固定物理子步 ms（确定性：所有推进都切成本子步）。 */
