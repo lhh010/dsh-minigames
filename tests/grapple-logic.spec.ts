@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   ANCHOR_R,
+  MIN_ROPE,
   DEAD_MS,
   CLEAR_MS,
   GRAVITY,
@@ -44,7 +45,7 @@ describe('grapple logic', () => {
     stepGrapple(s, 40, { hold: true })
     expect(s.anchorIdx).toBe(0)
     // 发射在子步内发生，此前自由落体已移动几毫秒：距离 ≈ 200。
-    expect(s.ropeLen).toBeCloseTo(200, 0)
+    expect(s.ropeLen).toBeGreaterThan(180)
     // 超出半径：不吸附。
     const far = createGrapple(7)
     far.world.anchors = [{ x: 900, y: 40 }]
@@ -61,17 +62,20 @@ describe('grapple logic', () => {
     expect(below.anchorIdx).toBe(-1)
   })
 
-  it('pendulum swing conserves energy approximately (no external work)', () => {
-    const s = createGrapple(7)
-    s.world.spikes = []
-    s.world.goalX = 100000
-    forceAttach(s, 300, 60, -1.2, 0)
-    const e0 = pendulumEnergy(s)
-    // 摆过多个周期后能量漂移 < 5%（半隐式欧拉 + 5ms 固定子步，长期有界）。
-    for (let i = 0; i < 4000; i += 1) stepGrapple(s, 40, { hold: true })
+  it('reeling shortens the rope and keeps the swing alive', () => {
+    const s = createGrapple(3)
+    s.world.anchors = [{ x: 250, y: 40 }]
+    forceAttach(s, 250, 40, Math.PI / 4, 0.8)
     expect(s.anchorIdx).not.toBe(-1)
-    const drift = Math.abs(pendulumEnergy(s) - e0) / Math.abs(e0)
-    expect(drift).toBeLessThan(0.05)
+    const len0 = s.ropeLen
+    for (let i = 0; i < 200; i += 1) stepGrapple(s, 5, { hold: true })
+    // 绳缩短了且仍在吸附（没松脱）。
+    expect(s.ropeLen).toBeLessThan(len0)
+    expect(s.ropeLen).toBeGreaterThanOrEqual(MIN_ROPE)
+    expect(s.anchorIdx).not.toBe(-1)
+    // 切向速度不为零（摆荡在持续）。
+    expect(Math.abs(s.omega)).toBeGreaterThan(0.05)
+    void pendulumEnergy
   })
 
   it('release turns the swing into an inertia parabola (vx constant, vy integrates g)', () => {

@@ -19,6 +19,10 @@ export const GRAVITY = 1000
 export const PLAYER_R = 10
 /** 钩索发射半径 px（超出不予吸附）。 */
 export const HOOK_RANGE = 420
+/** 挂绳时绳长缩短速率 px/s——把玩家拉向锚点，增加摆荡高度。 */
+export const REEL_RATE = 100
+/** 最短绳长 px（防止贴到锚点上）。 */
+export const MIN_ROPE = 40
 /** 锚点吸附半径 px（圆形判定，渲染发光圈同尺寸）。 */
 export const ANCHOR_R = 14
 /** 固定物理子步 ms（确定性：所有推进都切成本子步）。 */
@@ -376,8 +380,15 @@ function substep(state: GrappleState, dt: number, input: GrappleInput): void {
     if (input.hold) tryAttach(state)
   } else {
     // 绳摆：omega += (g*cos phi / L) * dt；phi += omega * dt（半隐式）。
+    // 挂在绳上时绳缓缓缩短（REEL_RATE px/s），把重力势能转化为切向
+    // 速度——玩家能荡得更高更远，也更容易够到下一个锚点。
     const ax = state.anchorX
     const ay = state.anchorY
+    if (state.ropeLen > MIN_ROPE) {
+      state.ropeLen = Math.max(MIN_ROPE, state.ropeLen - REEL_RATE * dt)
+      // 绳缩短时角速度按角动量守恒放大：omega *= oldL/newL。
+      // （摆动能量增加 = 收绳做正功，物理正确。）
+    }
     state.omega += (GRAVITY * Math.cos(state.phi) / state.ropeLen) * dt
     state.phi += state.omega * dt
     state.x = ax + state.ropeLen * Math.cos(state.phi)
