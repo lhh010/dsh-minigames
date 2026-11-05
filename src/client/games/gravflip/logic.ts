@@ -37,7 +37,7 @@ export const SPIKE_W = 18
 /** 屏障墙厚度。 */
 export const BARRIER_W = 16
 /** 屏障窗口最小高度（生成器保证可通过）。 */
-export const MIN_WINDOW = 110
+export const MIN_WINDOW = 128
 /** 激光参数：周期 / 发射时长 / 预警时长 / 光束宽 / 覆盖高度。 */
 export const LASER_PERIOD = 2100
 export const LASER_FIRE_MS = 520

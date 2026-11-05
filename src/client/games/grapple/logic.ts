@@ -105,7 +105,9 @@ export function generateWorld(seed: number, level: number): GrappleWorld {
     if (!covered) anchors.push({ x: sx + 130, y: yBase + rng() * 60 })
   }
   anchors.sort((a, b) => a.x - b.x)
-  // 尖刺墙：数量随关卡增长，宽度 16px，高度 60~200px。第 1 关少一截热身。
+  // 尖刺墙：数量随关卡增长，宽度 16px，高度 60~(60+maxH)px。每放一根
+  // 都保证附近有一个足够高的锚点可借力荡过——不再出现无解墙。
+  const maxH = level === 1 ? 80 : level === 2 ? 110 : 140
   const spikeCount = 2 + level * 3
   const spikes: Spike[] = []
   let guard = 0
@@ -117,9 +119,17 @@ export function generateWorld(seed: number, level: number): GrappleWorld {
       : Math.abs(x - (Math.round(x / SEG_LEN) * SEG_LEN + 40)) < 100
     const tooClose = spikes.some((s) => Math.abs(s.x - x) < 120)
     if (nearSpawn || tooClose) continue
-    const h = 60 + rng() * 140
+    const h = 60 + rng() * maxH
     spikes.push({ x: x - 8, y: H - h, w: 16, h })
+    // 可解性保证：尖刺前方 160px 内存在高度足够荡过的锚点（锚 y 必须
+    // 比尖刺顶端高至少 90px，摆荡最低点才不撞墙）。没有就补一个。
+    const spikeTop = H - h
+    const hasClearAnchor = anchors.some(a => a.x > x - 170 && a.x < x + 30 && a.y < spikeTop - 90)
+    if (!hasClearAnchor) {
+      anchors.push({ x: x - 80 - rng() * 60, y: Math.max(yBase, spikeTop - 100 - rng() * 50) })
+    }
   }
+  anchors.sort((a, b) => a.x - b.x)
   return { goalX, anchors, spikes }
 }
 
