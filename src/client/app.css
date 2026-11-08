@@ -181,6 +181,31 @@
   min-height: 0;
 }
 
+/* 分类标签栏：横向滚动 pill 按钮组，选中的高亮描边。 */
+.dmg-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 4px 10px;
+}
+.dmg-cat {
+  border: 1px solid rgba(148, 152, 176, 0.32);
+  border-radius: 999px;
+  background: rgba(30, 32, 48, 0.72);
+  color: rgba(226, 226, 238, 0.82);
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dmg-cat:hover { border-color: rgba(148, 152, 176, 0.6); color: rgba(226, 226, 238, 1); }
+.dmg-cat-on {
+  border-color: var(--dmg-accent, #7aa2ff);
+  color: #fff;
+  background: rgba(122, 162, 255, 0.18);
+}
+
 .dmg-picker {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

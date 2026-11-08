@@ -8,6 +8,7 @@
  * management (pause on hide / tab hidden / user pause, destroy on switch).
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { CATEGORIES, categoryOf, countByCategory } from './categories.ts'
 import {
   getGame, getGames, registerBuiltinGames, type MiniGameDefinition,
 } from '../games/index.ts'
@@ -20,6 +21,7 @@ const LS_WIDTH = 'dsh-minigames:width'
 const LS_POS = 'dsh-minigames:pos'
 const LS_DOCK = 'dsh-minigames:dock'
 const LS_LAUNCHER = 'dsh-minigames:launcher'
+const LS_CAT = 'dsh-minigames:cat'
 const LS_BEST_PREFIX = 'dsh-minigames:best:'
 
 /** Snap distance to a screen edge (px). */
@@ -120,6 +122,8 @@ function clampLauncherPos(p: { x: number; y: number }): { x: number; y: number }
 
 export function MiniGamePanel(): ReactNode {
   const [open, setOpen] = useState(() => loadBool(LS_OPEN, false))
+  // 分类过滤：'all' = 全部；记忆上次选择。
+  const [cat, setCat] = useState<string>(() => loadStr(LS_CAT, 'all') ?? 'all')
   const [gameId, setGameId] = useState<string | null>(() => loadStr(LS_GAME, null))
   const [width, setWidth] = useState(() => {
     const saved = loadStr(LS_WIDTH, null)
@@ -404,7 +408,36 @@ export function MiniGamePanel(): ReactNode {
       <div className="dmg-body">
         {activeGame === undefined ? (
           <div className="dmg-picker">
-            {games.map(game => (
+            <div className="dmg-cats" role="tablist" aria-label="游戏分类">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={cat === 'all'}
+                className={cat === 'all' ? 'dmg-cat dmg-cat-on' : 'dmg-cat'}
+                onClick={() => { setCat('all'); localStorage.setItem(LS_CAT, 'all') }}
+              >
+                全部 {games.length}
+              </button>
+              {CATEGORIES.map(c => {
+                const n = countByCategory(games.map(g => g.id), c.id)
+                if (n === 0) return null
+                return (
+                  <button
+                    type="button"
+                    key={c.id}
+                    role="tab"
+                    aria-selected={cat === c.id}
+                    className={cat === c.id ? 'dmg-cat dmg-cat-on' : 'dmg-cat'}
+                    onClick={() => { setCat(c.id); localStorage.setItem(LS_CAT, c.id) }}
+                  >
+                    {c.icon} {c.label} {n}
+                  </button>
+                )
+              })}
+            </div>
+            {games
+              .filter(game => cat === 'all' || categoryOf(game.id) === cat)
+              .map(game => (
               <button
                 type="button"
                 key={game.id}
