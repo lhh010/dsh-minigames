@@ -50,7 +50,8 @@ describe('traffic logic', () => {
   })
 
   it('跟车模型：停着不动、远处自由加速、近处按运动学减速', () => {
-    expect(followAccel(0, 10)).toBe(0)
+    expect(followAccel(0, 0.5)).toBe(0)
+    expect(followAccel(0, 10)).toBeGreaterThan(0) // 有空间静止车蠕行补位（旧语义堵死=死锁 bug）
     expect(followAccel(20, Infinity)).toBeGreaterThan(0)
     expect(followAccel(50, 5)).toBeLessThan(0)
     expect(followAccel(50, 200)).toBeGreaterThan(0)
@@ -150,5 +151,18 @@ describe('traffic logic', () => {
       stepTraffic(state, 0.05)
     }
     expect(state.over).not.toBe('crash')
+  })
+})
+
+describe('followAccel standstill & braking fix', () => {
+  it('a stopped car accelerates (v=0 no longer returns 0)', () => {
+    expect(followAccel(0, Infinity)).toBeGreaterThan(0)
+    expect(followAccel(0, 500)).toBeGreaterThan(0)
+  })
+  it('a fast car close to an obstacle brakes', () => {
+    expect(followAccel(60, 15)).toBeLessThan(0)
+  })
+  it('a car with ample stopping distance cruises or accelerates', () => {
+    expect(followAccel(30, 400)).toBeGreaterThanOrEqual(0)
   })
 })

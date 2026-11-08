@@ -31,6 +31,10 @@ export const MAX_SPEED = 70
 export const ACCEL = 55
 /** 紧急制动率（px/s^2），用于已经贴上障碍的硬刹。 */
 export const HARD_BRAKE = 160
+/** 舒适制动减速度 px/s²（安全判定用）。 */
+export const COMFORT_BRAKE = 60
+/** 跟车安全净距 px（车头到障碍）。 */
+export const CAR_GAP = 10
 /** 车道全程长度：从入口边缘到出口边缘（逻辑像素）。 */
 export const LANE_LEN = 520
 /** 路口中心坐标。 */
@@ -129,11 +133,15 @@ export function trafficRate(time: number): number {
  * @param dist - 到障碍（前车尾部或停止线）的距离，Infinity 表示无约束。
  */
 export function followAccel(v: number, dist: number): number {
-  if (v <= 0) return 0
+  // dist = 可用减速距离（到停车点）。静止且已抵近：保持静止；静止畅通：起步。
+  if (v <= 0) return dist <= 1 ? 0 : ACCEL
   if (dist <= 0.5) return -HARD_BRAKE
   const free = v >= MAX_SPEED ? 0 : ACCEL
-  if (dist > 70) return free
-  return Math.min(free, -(v * v) / (2 * dist))
+  // 运动学安全判定：以舒适制动减速能在 dist 前停住 → 可自由加速；
+  // 否则按恰好停住的减速度制动。
+  const need = (v * v) / (2 * COMFORT_BRAKE)
+  if (need < dist - 1) return free
+  return Math.max(-HARD_BRAKE, -(v * v) / (2 * Math.max(dist, 1)))
 }
 
 /** 轴对齐矩形。 */
@@ -255,7 +263,7 @@ export function stepTraffic(state: TrafficState, dt: number): void {
         wait = 0.5
         break
       }
-      lane.push({ pos: 0, v: 0, hue: Math.floor(state.rng() * 8), committed: false })
+      lane.push({ pos: 0, v: MAX_SPEED * 0.5, hue: Math.floor(state.rng() * 8), committed: false })
       wait += spawnGap(trafficRate(state.time), state.rng)
     }
     state.nextSpawn[d] = wait
@@ -286,7 +294,7 @@ export function stepTraffic(state: TrafficState, dt: number): void {
       const car = lane[i]!
       if (open === 'green') car.committed = false
       const leader = i > 0 ? lane[i - 1]! : null
-      const gap = leader === null ? Infinity : leader.pos - CAR_LEN - car.pos
+      const gap = leader === null ? Infinity : leader.pos - CAR_LEN - CAR_GAP - car.pos
       let obstacle = gap
       let lineConstrained = false
       if (open !== 'green' && !car.committed && car.pos < STOP_LINE + 0.5) {
@@ -295,8 +303,10 @@ export function stepTraffic(state: TrafficState, dt: number): void {
       }
       const a = followAccel(car.v, obstacle)
       car.v = Math.max(0, Math.min(MAX_SPEED, car.v + a * dt))
+      // 红灯约束下的蠕行速度归零：运动学制动收敛到小正数但不精确为 0。
+      if (lineConstrained && car.v < 1) car.v = 0
       car.pos += car.v * dt
-      if (lineConstrained && car.pos > STOP_LINE) car.pos = STOP_LINE
+      if (lineConstrained && car.pos > STOP_LINE) { car.pos = STOP_LINE; if (car.v > 0) car.v = 0 }
     }
     while (lane.length > 0 && lane[lane.length - 1]!.pos - CAR_LEN >= LANE_LEN) {
       lane.pop()

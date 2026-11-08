@@ -109,6 +109,24 @@ export function sailPower(relWind: number, sail: number, windSpeed: number): num
   return -windSpeed * Math.sin(sail) * Math.sin(r - sail)
 }
 
+/** 当前相对风角下的最优帆角（解析解 s = r/2 + π/4，夹到 ±SAIL_MAX）。
+ * 死角区返回 0（无意义，提示层改示"转向"）。渲染层以此画推荐帆位。 */
+export function optimalSail(relWind: number): number {
+  const r = normAngle(relWind)
+  if (Math.abs(Math.PI - Math.abs(r)) <= DEAD_ZONE) return 0
+  return Math.max(-SAIL_MAX, Math.min(SAIL_MAX, r / 2 + Math.PI / 4))
+}
+
+/** 当前帆动力占该风角最大动力的比例 0~1（提示层的"调帆质量"读数）。 */
+export function powerRatio(relWind: number, sail: number): number {
+  const r = normAngle(relWind)
+  if (Math.abs(Math.PI - Math.abs(r)) <= DEAD_ZONE) return 0
+  const cur = -Math.sin(sail) * Math.sin(r - sail)
+  const best = sailPower(r, optimalSail(r), 1)
+  if (best <= 0) return 0
+  return Math.max(0, Math.min(1, cur / best))
+}
+
 /** 一个浮标：圆心与通过判定半径。 */
 export interface Buoy {
   x: number

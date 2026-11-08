@@ -20,6 +20,10 @@ export declare const MAX_SPEED = 70;
 export declare const ACCEL = 55;
 /** 紧急制动率（px/s^2），用于已经贴上障碍的硬刹。 */
 export declare const HARD_BRAKE = 160;
+/** 舒适制动减速度 px/s²（安全判定用）。 */
+export declare const COMFORT_BRAKE = 60;
+/** 跟车安全净距 px（车头到障碍）。 */
+export declare const CAR_GAP = 10;
 /** 车道全程长度：从入口边缘到出口边缘（逻辑像素）。 */
 export declare const LANE_LEN = 520;
 /** 路口中心坐标。 */

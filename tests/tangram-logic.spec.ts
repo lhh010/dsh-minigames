@@ -200,7 +200,7 @@ describe('tangram rotation-correct placement', () => {
     const slotCs = polygonCentroid(slot0)
     // 槽的姿态可以从 SILHOUETTES 重建，但直接用 rot=0 的件 0 平移对齐质心
     // 不一定顶点对齐（生成器可能有旋转）。改用判定函数本身做对照：
-    const base = piecePoly(0, { x: 0, y: 0, rot: 0, flipped: false })
+    const base = piecePoly(0, { x: 0, y: 0, rot: 0, flip: false })
     const moved = base.map(p => ({ x: p.x + slotCs.x, y: p.y + slotCs.y }))
     // 找一个与件 0 同形（sameShape）的槽——就是它的解槽
     const mySlot = s.target.find(sl => sl.length === base.length) ?? slot0
