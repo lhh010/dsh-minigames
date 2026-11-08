@@ -89,6 +89,8 @@ export interface TrafficState {
   /** 当前绿灯已持续时长（s）。 */
   greenElapsed: number
   nextSpawn: number[]
+  /** 各方向被入口闸挡住、等待进场的车数（拥堵的延伸——排队溢出到入口外）。 */
+  waiting: number[]
   time: number
   passed: number
   score: number
@@ -212,6 +214,7 @@ export function createTrafficState(seed: number): TrafficState {
     phaseTimer: 0,
     greenElapsed: 0,
     nextSpawn: [0, 0, 0, 0],
+    waiting: [0, 0, 0, 0],
     time: 0,
     passed: 0,
     score: 0,
@@ -265,9 +268,12 @@ export function stepTraffic(state: TrafficState, dt: number): void {
     while (wait <= 0) {
       if (lane.some(c => c.pos < CAR_LEN + 14)) {
         wait = 0.5
+        // 入口被占 = 一辆车堵在场外等待进场，计入该方向排队（拥堵延伸）。
+        state.waiting[d] = Math.min((state.waiting[d] ?? 0) + 1, 30)
         break
       }
       lane.push({ pos: 0, v: MAX_SPEED * 0.5, hue: Math.floor(state.rng() * 8), committed: false })
+      state.waiting[d] = 0
       wait += spawnGap(trafficRate(state.time), state.rng)
     }
     state.nextSpawn[d] = wait

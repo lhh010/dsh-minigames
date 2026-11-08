@@ -75,6 +75,8 @@ export interface TrafficState {
     /** 当前绿灯已持续时长（s）。 */
     greenElapsed: number;
     nextSpawn: number[];
+    /** 各方向被入口闸挡住、等待进场的车数（拥堵的延伸——排队溢出到入口外）。 */
+    waiting: number[];
     time: number;
     passed: number;
     score: number;
