@@ -4,7 +4,7 @@
  * 结束遮罩。渲染器无状态，每帧从纯逻辑状态直接绘制。
  */
 import type { TrafficState } from './logic.ts';
-export declare const LOGICAL_W = 520;
+export declare const LOGICAL_W = 800;
 export declare const HUD_H = 34;
 export declare const LOGICAL_H: number;
 /**

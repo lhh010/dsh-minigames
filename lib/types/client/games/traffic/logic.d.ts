@@ -25,9 +25,9 @@ export declare const COMFORT_BRAKE = 60;
 /** 跟车安全净距 px（车头到障碍）。 */
 export declare const CAR_GAP = 10;
 /** 车道全程长度：从入口边缘到出口边缘（逻辑像素）。 */
-export declare const LANE_LEN = 520;
+export declare const LANE_LEN = 800;
 /** 路口中心坐标。 */
-export declare const CENTER = 260;
+export declare const CENTER = 400;
 /** 路口半宽（单条道路宽 128 = 两条车道）。 */
 export declare const ROAD_HALF = 64;
 /** 路口占用车流坐标区间 [I0, I1]。 */

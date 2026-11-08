@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  CENTER,
   ALL_RED_S, CAR_LEN, CONGEST_LIMIT, LANE_LEN, MIN_GREEN_S, STOP_LINE,
   YELLOW_S, carRect, createTrafficState, followAccel, intersectionClear,
   mulberry32, queueLen, rectOverlap, requestSwitch, signalOpen, snapshot,
@@ -75,7 +76,7 @@ describe('traffic logic', () => {
   it('路口净空判定：占箱时不清空，驶离后清空', () => {
     const state = createTrafficState(3)
     state.nextSpawn = [999, 999, 999, 999]
-    state.cars[0] = [car(260, 60)] // NS 车在路口正中
+    state.cars[0] = [car(CENTER, 60)] // NS 车在路口正中
     expect(intersectionClear(state, 'NS')).toBe(false)
     expect(intersectionClear(state, 'EW')).toBe(true)
     run(state, 4)
@@ -86,8 +87,8 @@ describe('traffic logic', () => {
     const state = createTrafficState(4)
     state.nextSpawn = [999, 999, 999, 999]
     // 右侧通行车道有横向偏移：两车分别取到对方车道带上才重叠。
-    state.cars[0] = [car(280, 60)]
-    state.cars[2] = [car(250, 60)]
+    state.cars[0] = [car(CENTER + 20, 60)]
+    state.cars[2] = [car(CENTER - 10, 60)]
     expect(rectOverlap(carRect(state.cars[0][0]!, 0), carRect(state.cars[2][0]!, 2))).toBe(true)
     stepTraffic(state, 0.05)
     expect(state.over).toBe('crash')
