@@ -12,11 +12,13 @@ import {
   timeLeft,
   timeLimitOf,
   sailPower,
+  optimalSail,
+  powerRatio,
   normAngle,
   mulberry32,
   type SailingState,
 } from './logic.ts'
-import { THEME, accent, createParticles, drawBackground, drawOverlay, glow, hudPair, noGlow } from '../theme.ts'
+import { THEME, accent, createParticles, drawBackground, drawOverlay, glow, hudPair, noGlow, roundRectPath } from '../theme.ts'
 
 // 渲染层自有的粒子系统（每个画布一个实例）。
 const particles = createParticles()
@@ -260,6 +262,23 @@ function drawSpeedo(ctx: CanvasRenderingContext2D, state: SailingState): void {
   ctx.textAlign = 'center'
   ctx.fillStyle = THEME.textMuted
   ctx.fillText(Math.round(state.v) + ' px/s', cx, cy + 14)
+  // 动力条：当前帆动力占该风角最优动力的比例（绿=高、黄=中、红=近零）。
+  const rel = normAngle(state.wind.travel - state.heading)
+  const ratio = powerRatio(rel, state.sail)
+  const barW = 52
+  const bx = cx - barW / 2
+  const by = cy + 22
+  ctx.fillStyle = '#34344a'
+  roundRectPath(ctx, bx, by, barW, 5, 2)
+  ctx.fill()
+  const fillC = ratio > 0.66 ? THEME.good : ratio > 0.33 ? THEME.gold : THEME.bad
+  ctx.fillStyle = fillC
+  roundRectPath(ctx, bx, by, Math.max(2, barW * ratio), 5, 2)
+  ctx.fill()
+  ctx.font = '600 9px system-ui, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillStyle = THEME.textMuted
+  ctx.fillText('动力 ' + Math.round(ratio * 100) + '%', cx, by + 14)
 }
 
 /**
@@ -289,6 +308,22 @@ function drawSailGauge(ctx: CanvasRenderingContext2D, state: SailingState): void
     ctx.lineTo(cx + 34, cy)
     ctx.stroke()
   }
+  // 最优帆位幽灵标记（金色虚线）：当前风角下的推荐帆角。
+  const best = optimalSail(rel)
+  if (!inDead) {
+    const bx = cx + Math.sin(best) * 30
+    const by = cy - Math.cos(best) * 6 - 4
+    ctx.setLineDash([3, 3])
+    ctx.strokeStyle = THEME.gold
+    ctx.lineWidth = 2
+    glow(ctx, THEME.gold, 5)
+    ctx.beginPath()
+    ctx.moveTo(cx, cy - 4)
+    ctx.lineTo(bx, by)
+    ctx.stroke()
+    noGlow(ctx)
+    ctx.setLineDash([])
+  }
   // 帆位指示。
   const sailX = cx + Math.sin(state.sail) * 30
   const sailY = cy - Math.cos(state.sail) * 6 - 4
@@ -306,6 +341,18 @@ function drawSailGauge(ctx: CanvasRenderingContext2D, state: SailingState): void
   ctx.fillStyle = THEME.textMuted
   ctx.fillText('帆角 ' + Math.round((state.sail * 180) / Math.PI) + '°', cx, cy + 14)
   ctx.fillText('±' + Math.round((SAIL_MAX * 180) / Math.PI) + '°', cx, cy - 34)
+  // 调帆方向提示：偏离最优超过 15° 时指示按 ↑ 还是 ↓。
+  if (!inDead && Math.abs(state.sail - best) > (15 * Math.PI) / 180) {
+    ctx.fillStyle = THEME.gold
+    ctx.font = '700 11px system-ui, sans-serif'
+    ctx.fillText(state.sail < best ? '↑ 松帆' : '↓ 收帆', cx, cy - 20)
+  }
+  // 顶风时最醒目的动作提示：转向离开死角区。
+  if (inDead) {
+    ctx.fillStyle = THEME.bad
+    ctx.font = '700 11px system-ui, sans-serif'
+    ctx.fillText('顶风！←/→ 转向', cx, cy - 20)
+  }
 }
 
 /**
