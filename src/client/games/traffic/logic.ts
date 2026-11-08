@@ -53,7 +53,7 @@ export const ALL_RED_S = 1.2
 /** 最短绿灯时长（s）：切换请求在此之前被拒绝。 */
 export const MIN_GREEN_S = 3
 /** 单方向排队拥堵阈值：超过即结束。 */
-export const CONGEST_LIMIT = 7
+export const CONGEST_LIMIT = 12
 /**
  * 黄灯亮起瞬间的"刹不住"系数：距停止线不足 v*T 且车速够快的车被标记
  * committed，越线继续通过（此时切换对玩家有风险，需自行把握时机）。
