@@ -77,6 +77,9 @@ function createTrafficGame(host: HTMLElement, options?: MiniGameMountOptions): M
   }
 
   const onClick = ():void => {
+    // 点击会把焦点打到 body（canvas 不可聚焦），host 失焦后空格会被
+    // gameHasFocus 拦截——点击时重新聚焦，保证空格与点击等效。
+    focusGameHost(host)
     togglePhase()
   }
 
