@@ -242,7 +242,7 @@ function createCircleMathGame(host: HTMLElement, options?: MiniGameMountOptions)
 export const circlemathGame: MiniGameDefinition = {
   id: 'circlemath',
   title: '圆周挑战 Circle Math',
-  icon: '⭕',
+  icon: '🎡',
   description: '圆盘上的数字推演：旋转圆环让数字对齐求和——锻炼空间思维与速算。',
   controls: [
     '点击扇区或 ↑↓：切换活动环 · ←→：旋转一步（计步）',

@@ -126,7 +126,7 @@ function createOthelloGame(host: HTMLElement, options?: MiniGameMountOptions): M
 export const othelloGame: MiniGameDefinition = {
   id: 'othello',
   title: '黑白棋',
-  icon: '⚫',
+  icon: '🐼',
   description: '黑白棋 vs AI：翻转夹住的对方棋子，角最重要，无棋可下自动让位。',
   controls: ['点击：落子', 'R：重开', 'P：暂停'],
   create: createOthelloGame,

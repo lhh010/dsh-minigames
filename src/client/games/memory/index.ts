@@ -151,7 +151,7 @@ function createMemoryGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 export const memoryGame: MiniGameDefinition = {
   id: 'memory',
   title: '记忆翻牌',
-  icon: '🃏',
+  icon: '🧠',
   description: '翻开两张配对，全部配对完成即胜，步数越少越好。',
   controls: ['点击：翻牌', 'R：重开', 'P：暂停'],
   create: createMemoryGame,

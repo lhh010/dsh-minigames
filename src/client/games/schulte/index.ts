@@ -215,7 +215,7 @@ function createSchulteGame(host: HTMLElement, options?: MiniGameMountOptions): M
 export const schulteGame: MiniGameDefinition = {
   id: 'schulte',
   title: '舒尔特方格 Schulte Grid',
-  icon: '🔲',
+  icon: '👀',
   description: '按 1 到 N² 的顺序依次点击打乱数字，越快越好。',
   controls: ['点击 / 触摸：按顺序点数字', 'R：重开本关', '[ ]：切换关卡（已通关范围）', 'P：暂停'],
   create: createSchulteGame,

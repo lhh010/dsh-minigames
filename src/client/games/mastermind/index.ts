@@ -245,7 +245,7 @@ function createMastermindGame(host: HTMLElement, options?: MiniGameMountOptions)
 export const mastermindGame: MiniGameDefinition = {
   id: 'mastermind',
   title: 'Mastermind 猜码',
-  icon: '🎯',
+  icon: '🔒',
   description: '破解彩色密码：绿点=颜色位置都对，黄点=颜色对位置不对，重复颜色可能出现。',
   controls: ['点击调色盘 / 数字键 1–6：填色', 'Enter：提交 · Backspace：删除', '空格 / 点击：再来一局 · R：同局重打'],
   create: createMastermindGame,

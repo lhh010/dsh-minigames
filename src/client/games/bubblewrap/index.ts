@@ -144,7 +144,7 @@ function createBubbleWrapGame(host: HTMLElement, options?: MiniGameMountOptions)
 export const bubblewrapGame: MiniGameDefinition = {
   id: 'bubblewrap',
   title: '泡泡纸 Bubble Wrap',
-  icon: '🫧',
+  icon: '✨',
   description: '无限解压：捏爆一板又一板泡泡纸，连捏 combo 计数。',
   controls: ['点击 / 按住拖动扫过：捏爆泡泡（连捏加成）', '一板全爆自动换新板，配色随板号轮换 · 零失败无时限', 'R：重开 · P：暂停'],
   create: createBubbleWrapGame,

@@ -165,7 +165,7 @@ function createMovingHoopGame(host: HTMLElement, options?: MiniGameMountOptions)
 export const movinghoopGame: MiniGameDefinition = {
   id: 'movinghoop',
   title: '移动篮筐 Moving Hoop',
-  icon: '🎯',
+  icon: '🥅',
   description: '没有防守，但篮筐会动：浮沉、巡逻到画圆弧，预判轨迹提前出手。',
   controls: ['按住篮球拖拽瞄准，松手出手（拖得越远力越大）', '篮筐随投数升级运动，预判轨迹槽提前出手；空心入网得分更高、连击有倍乘', '60 秒或 20 投结束 · R：重开 · P：暂停'],
   create: createMovingHoopGame,

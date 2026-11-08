@@ -223,7 +223,7 @@ function createFifteenGame(host: HTMLElement, options?: MiniGameMountOptions): M
 export const fifteenGame: MiniGameDefinition = {
   id: 'fifteen',
   title: '数字华容道 15-Puzzle',
-  icon: '🔢',
+  icon: '🔟',
   description: '滑动数字方块，把打乱的盘面恢复成 1 到 N 的顺序，关卡从 3×3 递进到 5×5。',
   controls: ['方向键：向该方向滑动紧邻空格的方块（也可点击）', 'Z / Backspace：撤销一步', 'R：重开本关', '[ ]：切换关卡（已通关范围）', 'P：暂停'],
   create: createFifteenGame,

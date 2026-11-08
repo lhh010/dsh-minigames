@@ -123,7 +123,7 @@ function createSteadyHandGame(host: HTMLElement, options?: MiniGameMountOptions)
 export const steadyhandGame: MiniGameDefinition = {
   id: 'steadyhand',
   title: '电流急急棒 Steady Hand',
-  icon: '⚡',
+  icon: '🩺',
   description: '捏着电环走过弯曲金属轨——碰到就通电报警，手有多稳路有多长。',
   controls: [
     '移动指针带动电环（限速跟随）',

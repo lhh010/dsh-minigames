@@ -161,7 +161,7 @@ function createPuyoGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
 export const puyoGame: MiniGameDefinition = {
   id: 'puyo',
   title: '噗呦噗呦 Puyo',
-  icon: '🫧',
+  icon: '🫘',
   description: '经典成对下落消除：四连通同色即消、重力压实、连锁倍率平方起飞。',
   controls: [
     '← →：移动 · ↑：旋转（贴墙/贴底自动踢位）',

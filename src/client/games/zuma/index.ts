@@ -231,7 +231,7 @@ function createZumaGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
 export const zumaGame: MiniGameDefinition = {
   id: 'zuma',
   title: '祖玛',
-  icon: '🔮',
+  icon: '🐉',
   description: '祖玛连珠：转动发射器射出彩球，三颗同色相连即爆裂，小心彩珠滚进终点的黑洞。',
   controls: [
     '← →：瞄准 · 空格：发射',

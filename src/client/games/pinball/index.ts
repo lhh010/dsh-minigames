@@ -180,7 +180,7 @@ function createPinballGame(host: HTMLElement, options?: MiniGameMountOptions): M
 export const pinballGame: MiniGameDefinition = {
   id: 'pinball',
   title: '弹球台',
-  icon: '🎯',
+  icon: '🧿',
   description: '真实物理弹球：弹射器发球、挡板击打、缓冲柱与反弹板得分，小心出局通道和 TILT。',
   controls: [
     'A / ← 左挡板 · D / → 右挡板',

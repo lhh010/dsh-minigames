@@ -120,7 +120,7 @@ function createSnakeGame(host: HTMLElement, options?: MiniGameMountOptions): Min
 export const snakeGame: MiniGameDefinition = {
   id: 'snake',
   title: '贪吃蛇',
-  icon: '🐍',
+  icon: '📜',
   description: '经典贪吃蛇：方向键移动，吃食物变长；穿越边界会从对侧出现。',
   controls: ['方向键 / WASD：移动', 'R：重开', 'P：暂停'],
   create: createSnakeGame,

@@ -175,7 +175,7 @@ function createJumperGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 export const jumperGame: MiniGameDefinition = {
   id: 'jumper',
   title: '蹦蹦跳 Jumper',
-  icon: '🦘',
+  icon: '🪂',
   description: '自动弹跳的小家伙不断向上：左右移动踩平台，避开尖刺与破碎板，越高分越高。',
   controls: ['←→ / A D：左右移动（可按住指针拖动）', '蓝板普通 · 青板横移 · 金板踩一次碎 · 红板尖刺勿碰', '1 条命 · R：重开 · P：暂停'],
   create: createJumperGame,

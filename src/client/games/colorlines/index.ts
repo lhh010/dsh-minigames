@@ -188,7 +188,7 @@ function createColorLinesGame(host: HTMLElement, options?: MiniGameMountOptions)
 export const colorLinesGame: MiniGameDefinition = {
   id: 'colorlines',
   title: '五连珠',
-  icon: '🔮',
+  icon: '🧵',
   description: '移动彩球连成五连胜：同色直线（含斜线）5 颗即消除，消除的回合不补充新球。',
   controls: ['点击 / 方向键+回车：选球再选落点', 'R：重开', 'P：暂停'],
   create: createColorLinesGame,

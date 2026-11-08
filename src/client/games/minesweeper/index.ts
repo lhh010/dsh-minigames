@@ -149,7 +149,7 @@ function createMinesweeperGame(host: HTMLElement, options?: MiniGameMountOptions
 export const minesweeperGame: MiniGameDefinition = {
   id: 'minesweeper',
   title: '扫雷',
-  icon: '💣',
+  icon: '🚩',
   description: '经典扫雷：左键翻开、右键标旗、双击数字自动展开周围，排完即胜。',
   controls: ['左键：翻开', '右键：标旗', '双击数字：自动展开', 'R：重开', 'P：暂停'],
   create: createMinesweeperGame,

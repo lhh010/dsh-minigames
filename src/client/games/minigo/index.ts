@@ -204,7 +204,7 @@ function createMiniGoGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 export const miniGoGame: MiniGameDefinition = {
   id: 'minigo',
   title: '迷你围棋',
-  icon: '⚫',
+  icon: '🌰',
   description: '9×9 迷你围棋：气、提子、禁自杀、劫，AI 随关卡加深（L1 贪心 / L2 提子 / L3 两层搜索）。',
   controls: ['点击交点落子', 'P：弃一手（连续两手终局）', 'R：重开'],
   create: createMiniGoGame,

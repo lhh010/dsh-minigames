@@ -164,7 +164,7 @@ function createSudokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 export const sudokuGame: MiniGameDefinition = {
   id: 'sudoku',
   title: '数独',
-  icon: '🧩',
+  icon: '9️⃣',
   description: '9×9 数独：填满且无冲突即胜，D 键切难度，越快分越高。',
   controls: ['点击：选中格子', '1-9：填入 / 0：清除', '方向键：移动光标', 'D：切换难度', 'R：新题', 'P：暂停'],
   create: createSudokuGame,

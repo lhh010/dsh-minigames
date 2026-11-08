@@ -233,7 +233,7 @@ function createNonogramGame(host: HTMLElement, options?: MiniGameMountOptions): 
 export const nonogramGame: MiniGameDefinition = {
   id: 'nonogram',
   title: '数织 Nonogram',
-  icon: '🧩',
+  icon: '🔲',
   description: '按行列数字提示涂满方格，还原隐藏图案；每关唯一解。',
   controls: [
     '点击 / 空格：涂格（再按取消）',

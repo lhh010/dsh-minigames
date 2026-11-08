@@ -226,7 +226,7 @@ function createJungleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 export const jungleGame: MiniGameDefinition = {
   id: 'jungle',
   title: '斗兽棋',
-  icon: '🐘',
+  icon: '🌴',
   description: '八兽等级吃子：鼠可欺象、狮虎跳河、陷阱废武功，攻入对方兽穴即胜；AI 分帧搜索不卡顿。',
   controls: ['点击选子 / 点击目标走子', 'U：悔棋 · D：难度 · R：重开 · P：暂停'],
   create: createJungleGame,

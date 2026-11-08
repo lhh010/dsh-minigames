@@ -317,7 +317,7 @@ function createSuguruGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 export const suguruGame: MiniGameDefinition = {
   id: 'suguru',
   title: '数块 Suguru',
-  icon: '🔢',
+  icon: '🔆',
   description: '把盘面填入 1-n：每块区域数字不重复，相邻（含斜向）格子数字不同——数独与数回的合体。',
   controls: ['点击/方向键选格 · 数字键输入 · 空格循环 +1', '0/退格清空 · H：提示（弃时间奖励） · S：AI 演示', 'R：重开本关 · [ ]：切换关卡 · P：暂停'],
   create: createSuguruGame,

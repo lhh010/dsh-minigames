@@ -204,7 +204,7 @@ function createMazeGame(host: HTMLElement, options?: MiniGameMountOptions): Mini
 export const mazeGame: MiniGameDefinition = {
   id: 'maze',
   title: '迷宫',
-  icon: '🌀',
+  icon: '🗺️',
   description: '随机完美迷宫：穿过唯一通路走到右下角出口，5 关逐渐变大。',
   controls: ['方向键 / WASD：移动', 'R：重开本关（同一迷宫）', '[ ]：切换关卡（已通关范围）', 'P：暂停'],
   create: createMazeGame,

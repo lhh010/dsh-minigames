@@ -198,7 +198,7 @@ function createSlingshotGame(host: HTMLElement, options?: MiniGameMountOptions):
 export const slingshotGame: MiniGameDefinition = {
   id: 'slingshot',
   title: '弹弓复仇 Slingshot',
-  icon: '🐦',
+  icon: '🏹',
   description: '拉满弹弓轰塌堡垒：木石冰材质各有耐久，把绿猪全部砸下来——剩弹越多星越多。',
   controls: [
     '在弹弓处按下拖拽瞄准，松手发射',

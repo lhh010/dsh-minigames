@@ -236,7 +236,7 @@ function createGame24Game(host: HTMLElement, options?: MiniGameMountOptions): Mi
 export const game24Game: MiniGameDefinition = {
   id: 'game24',
   title: '24点 24 Game',
-  icon: '🔢',
+  icon: '➗',
   description: '四张牌加减乘除凑 24——中式经典算术谜题，考验心速与构造力。',
   controls: [
     '点牌选两张（再点取消）· 点 + − × ÷ 或按运算小键盘合并 · U：撤回',

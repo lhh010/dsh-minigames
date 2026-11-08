@@ -196,7 +196,7 @@ function createTdGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGa
 export const tdGame: MiniGameDefinition = {
   id: 'td',
   title: '塔防',
-  icon: '🏹',
+  icon: '🏰',
   description: '在固定路径旁建塔：箭塔速射、冰霜减速、炮塔溅射，守住十波敌人过关；第五关后进入无尽模式——敌人血量指数增长，看你能撑多少波。',
   controls: [
     '1/2/3 或点工具栏：选塔 · 点击空地建造',

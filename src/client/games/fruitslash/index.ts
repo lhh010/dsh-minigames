@@ -149,7 +149,7 @@ function createFruitSlashGame(host: HTMLElement, options?: MiniGameMountOptions)
 export const fruitslashGame: MiniGameDefinition = {
   id: 'fruitslash',
   title: '切水果 Fruit Slash',
-  icon: '🍉',
+  icon: '🗡️',
   description: '按住鼠标划出刀光切开抛来的 8 种水果，避开炸弹与炸弹链，同种连击、一刀多切加倍！',
   controls: ['按住拖动：刀光切割（一刀可多切）', '小水果分更高（西瓜+5 ~ 猕猴桃+20）· 同种连击 / 多切上浮', '炸弹或漏接直接扣命（5 命）· R：重开 · P：暂停'],
   create: createFruitSlashGame,

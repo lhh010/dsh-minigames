@@ -229,7 +229,7 @@ function createSolitaireGame(host: HTMLElement, options?: MiniGameMountOptions):
 export const solitaireGame: MiniGameDefinition = {
   id: 'solitaire',
   title: '纸牌接龙 Solitaire',
-  icon: '🃏',
+  icon: '🂡',
   description: '经典 Klondike：把四种花色从 A 到 K 依次收进基础堆，翻牌与空列自由调度。',
   controls: [
     '点击选牌，再点目标列 / 基础堆移动；对单牌再点一次自动寻找合法目标',

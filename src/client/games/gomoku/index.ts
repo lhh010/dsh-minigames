@@ -126,7 +126,7 @@ function createGomokuGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 export const gomokuGame: MiniGameDefinition = {
   id: 'gomoku',
   title: '五子棋',
-  icon: '⚫',
+  icon: '🖐️',
   description: '15x15 五子棋 vs AI：五子连珠即胜，AI 会进攻也会堵你。',
   controls: ['点击：落子', 'R：重新开始', 'P：暂停'],
   create: createGomokuGame,
