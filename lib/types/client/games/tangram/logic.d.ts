@@ -112,6 +112,10 @@ export declare function containsPoint(poly: Poly, p: Pt, tol?: number): boolean;
  * @param tol - 容差。
  */
 export declare function polygonCovered(poly: Poly, covers: Poly[], tol: number): boolean;
+/** 板块与单个解槽的顶点级对齐：质心重合 + 顶点集合一一对应（容差内）。
+ * 质心对齐保证平移正确；顶点对应保证旋转正确——只摆对位置没转正的
+ * 板块角点与解槽角点不重合，不判就位。 */
+export declare function pieceMatchesSlot(poly: Poly, slot: Poly, tol: number): boolean;
 /** 一局七巧板的完整状态（纯数据，可整体快照比较）。 */
 export interface TangramState {
     level: number;

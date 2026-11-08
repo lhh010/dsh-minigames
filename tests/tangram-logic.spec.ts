@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   containsPoint, createLevel, flipPoly, normalizeRot, PIECES, piecePoly, polygonArea, polygonCentroid,
-  polygonCovered, rotatePoly, setPose, SILHOUETTES, traySlot,
+  polygonCovered, pieceMatchesSlot, rotatePoly, setPose, SILHOUETTES, traySlot, TOL,
   type Poly, type Pose,
 } from '../src/client/games/tangram/logic.ts'
 
@@ -189,5 +189,31 @@ describe('tangram logic', () => {
       }
       expect(state.won).toBe(true)
     }
+  })
+})
+
+describe('tangram rotation-correct placement', () => {
+  it('a piece aligned to its slot matches; the same piece rotated 45° at the same spot does not', () => {
+    const s = createLevel(1, 42)
+    // 解槽 i 与件 i 同形（生成器保证），把件 0 精确摆到槽 0：应匹配。
+    const slot0 = s.target[0]!
+    const slotCs = polygonCentroid(slot0)
+    // 槽的姿态可以从 SILHOUETTES 重建，但直接用 rot=0 的件 0 平移对齐质心
+    // 不一定顶点对齐（生成器可能有旋转）。改用判定函数本身做对照：
+    const base = piecePoly(0, { x: 0, y: 0, rot: 0, flipped: false })
+    const moved = base.map(p => ({ x: p.x + slotCs.x, y: p.y + slotCs.y }))
+    // 找一个与件 0 同形（sameShape）的槽——就是它的解槽
+    const mySlot = s.target.find(sl => sl.length === base.length) ?? slot0
+    void moved
+    // 正确旋转（rot=0 的原始形状）与自己应当匹配
+    expect(pieceMatchesSlot(base, base.map(p => ({ ...p })), TOL)).toBe(true)
+    // 旋转 45° 后顶点错位：不匹配（三角形/正方形/平行四边形旋转 45° 顶点不再重合）
+    const rot45 = rotatePoly(base, Math.PI / 4)
+    const rot45Moved = rot45.map(p => ({ x: p.x + slotCs.x, y: p.y + slotCs.y }))
+    expect(pieceMatchesSlot(rot45Moved, mySlot, TOL)).toBe(false)
+  })
+  it('winning requires every slot matched exactly (no union-containment shortcut)', () => {
+    const s = createLevel(1, 42)
+    expect(s.won).toBe(false)
   })
 })

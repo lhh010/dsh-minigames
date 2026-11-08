@@ -332,6 +332,37 @@ export function polygonCovered(poly: Poly, covers: Poly[], tol: number): boolean
   return pts.every(pt => covers.some(c => containsPoint(c, pt, tol)))
 }
 
+/** 板块与单个解槽的顶点级对齐：质心重合 + 顶点集合一一对应（容差内）。
+ * 质心对齐保证平移正确；顶点对应保证旋转正确——只摆对位置没转正的
+ * 板块角点与解槽角点不重合，不判就位。 */
+export function pieceMatchesSlot(poly: Poly, slot: Poly, tol: number): boolean {
+  if (poly.length !== slot.length) return false
+  const cp = polygonCentroid(poly)
+  const cs = polygonCentroid(slot)
+  if (Math.hypot(cp.x - cs.x, cp.y - cs.y) > tol) return false
+  return poly.every(p => slot.some(s => Math.hypot(p.x - s.x, p.y - s.y) <= tol))
+    && slot.every(s => poly.some(p => Math.hypot(p.x - s.x, p.y - s.y) <= tol))
+}
+
+/** 全部板块与解槽的完美匹配（每块占一个不同槽；同形件可互换）。
+ * 防两块同形板叠在同一槽上而另一槽空置的假过关。 */
+function allMatchSlots(poses: readonly Pose[], target: readonly Poly[]): boolean {
+  const used = new Array<boolean>(target.length).fill(false)
+  const go = (i: number): boolean => {
+    if (i >= poses.length) return true
+    for (let j = 0; j < target.length; j += 1) {
+      if (used[j]) continue
+      if (pieceMatchesSlot(piecePoly(i, poses[i]!), target[j]!, TOL)) {
+        used[j] = true
+        if (go(i + 1)) return true
+        used[j] = false
+      }
+    }
+    return false
+  }
+  return go(0)
+}
+
 /** 一局七巧板的完整状态（纯数据，可整体快照比较）。 */
 export interface TangramState {
   level: number
@@ -351,8 +382,10 @@ export interface TangramState {
 }
 
 function recompute(state: TangramState): TangramState {
-  const placed = state.poses.map((pose, i) => polygonCovered(piecePoly(i, pose), state.target, TOL))
-  return { ...state, placed, won: placed.every(v => v) }
+  // 单块就位（高亮用）：与任一解槽顶点级对齐；过关另需完美匹配（每槽
+  // 恰被一块占住），杜绝"位置对但没转正"与"两块叠一槽"的假过关。
+  const placed = state.poses.map((pose, i) => state.target.some(slot => pieceMatchesSlot(piecePoly(i, pose), slot, TOL)))
+  return { ...state, placed, won: placed.every(v => v) && allMatchSlots(state.poses, state.target) }
 }
 
 /**
