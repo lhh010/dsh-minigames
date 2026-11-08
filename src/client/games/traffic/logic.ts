@@ -197,7 +197,7 @@ export const STUCK_V = 10
 /** 某方向尚未越过停止线且低速卡住的车数（拥堵统计——只计真正的排队，
  * 行驶中的来车不计，绿波同时多辆在场不误判瘫痪）。 */
 export function queueLen(state: TrafficState, dir: Dir): number {
-  let n = 0
+  let n = state.waiting[dir] ?? 0
   for (const car of state.cars[dir]!) {
     if (car.pos < STOP_LINE && car.v < STUCK_V) n += 1
   }
