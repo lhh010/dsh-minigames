@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getGames, registerBuiltinGames } from '../src/client/games/index.ts'
-import { CATEGORIES, categoryOf } from '../src/client/panel/categories.ts'
+import { CATEGORIES, categoryOf, isClassic } from '../src/client/panel/categories.ts'
 
 registerBuiltinGames()
 const GAMES = getGames()
@@ -21,5 +21,13 @@ describe('game categories', () => {
     for (const c of CATEGORIES) {
       expect(GAMES.some(g => categoryOf(g.id) === c.id), c.id).toBe(true)
     }
+  })
+})
+
+describe('classic tag', () => {
+  it('every classic id exists in the registry and the set is non-trivial', () => {
+    const classics = GAMES.filter(g => isClassic(g.id))
+    expect(classics.length).toBeGreaterThanOrEqual(15)
+    for (const g of classics) expect(GAMES.map(x => x.id)).toContain(g.id)
   })
 })

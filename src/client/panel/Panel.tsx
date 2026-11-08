@@ -8,7 +8,7 @@
  * management (pause on hide / tab hidden / user pause, destroy on switch).
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { CATEGORIES, categoryOf, countByCategory } from './categories.ts'
+import { CATEGORIES, categoryOf, countByCategory, isClassic } from './categories.ts'
 import {
   getGame, getGames, registerBuiltinGames, type MiniGameDefinition,
 } from '../games/index.ts'
@@ -418,6 +418,15 @@ export function MiniGamePanel(): ReactNode {
               >
                 全部 {games.length}
               </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={cat === 'classic'}
+                className={cat === 'classic' ? 'dmg-cat dmg-cat-on' : 'dmg-cat'}
+                onClick={() => { setCat('classic'); localStorage.setItem(LS_CAT, 'classic') }}
+              >
+                ⭐ 经典 {games.filter(g => isClassic(g.id)).length}
+              </button>
               {CATEGORIES.map(c => {
                 const n = countByCategory(games.map(g => g.id), c.id)
                 if (n === 0) return null
@@ -436,7 +445,7 @@ export function MiniGamePanel(): ReactNode {
               })}
             </div>
             {games
-              .filter(game => cat === 'all' || categoryOf(game.id) === cat)
+              .filter(game => cat === 'all' ? true : cat === 'classic' ? isClassic(game.id) : categoryOf(game.id) === cat)
               .map(game => (
               <button
                 type="button"

@@ -63,6 +63,20 @@ export function categoryOf(gameId: string): string {
   return CATEGORY_OF[gameId] ?? 'casual'
 }
 
+/** 经典标签（叠加而非互斥）：传统经典游戏同时属于其原类型与经典页。
+ * 策展清单——街机黄金时代与桌面上百年以上的玩法原型。 */
+const CLASSIC: ReadonlySet<string> = new Set([
+  'dino', 'tetris', 'snake', 'pacman', 'breakout', 'pong', 'invaders',
+  'asteroids', 'minesweeper', 'sudoku', 'game2048', 'solitaire',
+  'chess', 'xiangqi', 'gomoku', 'othello', 'fifteen', 'hanoi',
+  'memory', 'whack', 'colorlines',
+])
+
+/** 游戏是否属于经典策展清单。 */
+export function isClassic(gameId: string): boolean {
+  return CLASSIC.has(gameId)
+}
+
 /** 某分类在给定游戏表中的数量（标签栏显示 n）。 */
 export function countByCategory(gameIds: readonly string[], catId: string): number {
   let n = 0
