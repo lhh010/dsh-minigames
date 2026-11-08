@@ -9,7 +9,7 @@ Floating mini-games window in the DSH Web UI: a slacking-off companion for killi
 - **Expanded state**: a floating mini-games window — **drag the title bar** to move it anywhere; releasing near a screen edge auto-**snaps** to that edge
   (left/right docking, top/bottom edge-hugging). Position, dock state, and width persist across reloads; default width is min(50vw, 640px), draggable on
   its left edge between 360px–80vw, and you can freely pick a game inside the panel.
-- **Games** (all offline, zero asset files, Canvas-rendered):
+- **Games** (**103 in total**; all offline, zero asset files, Canvas-rendered):
   1. 🦖 **Dino Run** — the classic Chrome T-Rex (day/night/rain);
   2. 🧱 **Tetris** — classic falling-block line clearing;
   3. 🛡️ **Tank Battle (with AI)** — 2D tank combat, enemy tracking + line-of-sight firing, 3 waves total;
@@ -27,7 +27,19 @@ Floating mini-games window in the DSH Web UI: a slacking-off companion for killi
   15. 🐦 **Flappy** — click/space to flap through pipe gaps; the farther, the higher the score;
   16. 🧩 **Sudoku** — 9×9 standard sudoku; D key switches difficulty; filling with no conflicts wins;
   17. 🟡 **Pac-Man** — classic maze munching; power pellets let you eat the ghosts back;
-  18. 🎯 **Aim Training** — FPS aim practice: locked mouse turns the view to track a 3D drifting target; left-click shoots with recoil.
+  18. 🎯 **Aim Training** — FPS aim practice: locked mouse turns the view to track a 3D drifting target; left-click shoots with recoil;
+  19. 🪝 **Grapple Ninja** — rope-swing physics with a retracting grapple hook;
+  20. 🏃 **QWOP** — control each limb separately to run (and tumble);
+  21. 🚁 **Copter** — hold to rise, release to fall, thread the cave;
+  22. 🔄 **Gravity Flip** — flip gravity to clear levels;
+  23. 🌈 **Stroop** — color-word interference reaction test;
+  24. 🎲 **Yahtzee** — classic five-dice strategy scoring;
+  25. 🤹 **Juggle** — multi-ball rhythm juggling;
+  26. 🔍 **Spot Diff** — spot-the-difference visual discrimination;
+  27. ⚡ **Reaction** — tap the instant the color changes; tests your reflexes;
+  28. ⭕ **Circle Math** — rotating-ring puzzle, align nodes to solve;
+  29. 🚀 **Lightspeed** — gravity-slingshot physics, hitch rides on celestial gravity.
+- The list above is a selection plus the v0.11.x additions — **103 games in total** today; see the in-panel game picker and the changelog below for the full list.
 - **Reserved extension interface**: a game registry (`registerGame`) — adding a game only requires implementing one interface.
 - **Experience details**: games auto-pause when the window is hidden or the tab is switched, and resume when you come back; each game's high score is
   stored in localStorage; keyboard input only takes effect after clicking the game area and never hijacks the chat input box.
@@ -95,6 +107,13 @@ est includes `@dsh-external/dsh-minigames` and `/plugins/@dsh-external/dsh-minig
 - **Live-instance boot verification**: after web starts on the final snapshot (`snapshots/20260812T172954Z-final`), the `window.__DSH_BOOT__` manifest includes `@dsh-external/dsh-minigames` and `/plugins/@dsh-external/dsh-minigames/client.js` returns 200; the boot manifest after starting `dsh web` as an npm rc.5 consumer also includes this plugin. typecheck, build, and 201 unit tests pass against the final-snapshot baseline.
 
 ## Changelog
+
+### 2026-11-08 · v0.11.4 — 103-game milestone
+
+- **Milestone**: the game count reaches **103** (v0.10.x → v0.11.x journey: 92 → 99 → 103, with multiple rounds of polish along the way).
+- **New (high-skill)**: 🪝 Grapple Ninja (rope-swing physics + retracting hook), 🏃 QWOP (limb-by-limb running), 🚁 Copter, 🔄 Gravity Flip.
+- **New (filling genre gaps)**: 🌈 Stroop (color-word interference reaction), 🎲 Yahtzee (dice strategy), 🤹 Juggle (multi-ball rhythm), 🔍 Spot Diff (visual discrimination), ⚡ Reaction (reflex test), ⭕ Circle Math (rotating-ring puzzle), 🚀 Lightspeed (gravity-slingshot physics).
+- **New engine**: a slingshot rigid-body physics engine shared by gravity-slingshot / rope-swing games, paving the way for more physics gameplay.
 
 ### 2026-10-11 · v0.3.28 — declare dsh-v0.2.1-alpha.2 support
 
