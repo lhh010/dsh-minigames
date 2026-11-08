@@ -162,11 +162,14 @@ function drawCar(
 
 /** 四个路口角的信号灯：按 signalOpen 的灯色发光显示三灯灯箱。 */
 function drawSignals(ctx: CanvasRenderingContext2D, state: TrafficState, y0: number): void {
+  // 灯放在各自车道停止线旁（车道口），不再放路口四角——四角同时邻
+  // 两条路，看灯无法区分控制哪条车道。
+  const laneOff = 16
   const spots: { x: number; y: number; dir: Dir }[] = [
-    { x: I0 - 20, y: y0 + I0 - 20, dir: 0 },
-    { x: I1 + 20, y: y0 + I1 + 20, dir: 1 },
-    { x: I0 - 20, y: y0 + I1 + 20, dir: 2 },
-    { x: I1 + 20, y: y0 + I0 - 20, dir: 3 },
+    { x: CENTER - laneOff, y: y0 + STOP_LINE - 16, dir: 0 },
+    { x: CENTER + laneOff, y: y0 + (LANE_LEN - STOP_LINE) + 16, dir: 1 },
+    { x: STOP_LINE - 16, y: y0 + CENTER + laneOff, dir: 2 },
+    { x: LANE_LEN - STOP_LINE + 16, y: y0 + CENTER - laneOff, dir: 3 },
   ]
   for (const s of spots) {
     const open = signalOpen(state, s.dir)

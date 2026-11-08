@@ -189,11 +189,15 @@ export function intersectionClear(state: TrafficState, phase: SignalPhase): bool
   return true
 }
 
-/** 某方向尚未越过停止线的排队车数（拥堵统计）。 */
+/** 排队认定速度阈值 px/s：低于它算"卡住"（排队），行驶中的车不算。 */
+export const STUCK_V = 10
+
+/** 某方向尚未越过停止线且低速卡住的车数（拥堵统计——只计真正的排队，
+ * 行驶中的来车不计，绿波同时多辆在场不误判瘫痪）。 */
 export function queueLen(state: TrafficState, dir: Dir): number {
   let n = 0
   for (const car of state.cars[dir]!) {
-    if (car.pos < STOP_LINE) n += 1
+    if (car.pos < STOP_LINE && car.v < STUCK_V) n += 1
   }
   return n
 }

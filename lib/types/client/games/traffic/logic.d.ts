@@ -131,7 +131,10 @@ export declare function carCenter(car: TrafficCar, dir: Dir): {
  * @param phase - 要检查的轴。
  */
 export declare function intersectionClear(state: TrafficState, phase: SignalPhase): boolean;
-/** 某方向尚未越过停止线的排队车数（拥堵统计）。 */
+/** 排队认定速度阈值 px/s：低于它算"卡住"（排队），行驶中的车不算。 */
+export declare const STUCK_V = 10;
+/** 某方向尚未越过停止线且低速卡住的车数（拥堵统计——只计真正的排队，
+ * 行驶中的来车不计，绿波同时多辆在场不误判瘫痪）。 */
 export declare function queueLen(state: TrafficState, dir: Dir): number;
 /** 建立新对局：初始相位 NS 绿，各方向首次来车间隔由 seed 决定。 */
 export declare function createTrafficState(seed: number): TrafficState;
