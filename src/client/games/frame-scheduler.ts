@@ -75,6 +75,7 @@ export function createFrameLoop(callback: (frame: FrameInfo) => void, options?: 
   let dirty = true
   let contended = 0
   let skipping = false
+  let tick = 0
   const continuous = (options?.mode ?? 'continuous') === 'continuous'
 
   const frame = (now: number): void => {
@@ -89,6 +90,12 @@ export function createFrameLoop(callback: (frame: FrameInfo) => void, options?: 
     else contended = 0
     if (contended >= CONTENDED_STREAK) skipping = true
     else if (contended === 0) skipping = false
+    // 竞争态半频回调：多数游戏不检查 frame.render（无条件重绘），调度器
+    // 中心化降频——竞争时隔帧调用（约 30fps），绘制开销立减一半；模拟
+    // 由 dt 钳制兜底（≤50ms/帧，长间隙按慢动作处理不瞬移）。dirty 标记
+    // 帧不受降频影响（棋盘类交互仍即时响应）。
+    tick += 1
+    if (skipping && continuous && dirty !== true && tick % 2 === 0) return
     const render = dirty || (continuous && !skipping)
     dirty = false
     callback({ dt, render, wallMs })
