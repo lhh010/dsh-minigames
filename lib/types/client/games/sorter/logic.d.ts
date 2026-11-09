@@ -56,6 +56,7 @@ export interface Belt {
     flap: 0 | 1 | 2 | 3;
     packages: Package[];
     /** 下一次生成包裹的回合钟时刻 ms。 */
+    /** 保留字段（旧每带节奏；现为全局节奏，见 SorterState.nextArrivalAt）。 */
     nextSpawnAt: number;
 }
 /** 上浮渐隐的飘字（得分 / 失误提示）。 */
@@ -105,6 +106,8 @@ export interface SorterState {
     sharedColor: 0 | 1 | 2 | 3 | -1;
     /** 共享色对应的生成时刻 ms（跨时刻重掷）。 */
     sharedColorAt: number;
+    /** 全局下一次到货时刻 ms——任意轨道的到达节奏（开局 2s 渐收至 0.5s）。 */
+    nextArrivalAt: number;
 }
 /**
  * 传送带中心线逻辑 y。

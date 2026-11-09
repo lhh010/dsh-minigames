@@ -19,9 +19,9 @@ function runUntil(s: SorterState, done: () => boolean, frames = 60): SorterEvent
 
 /** 压制自然生成，注入可控的包裹。 */
 function quiet(s: SorterState): void {
+  s.nextArrivalAt = Number.MAX_SAFE_INTEGER
   for (const belt of s.belts) {
     belt.packages.length = 0
-    belt.nextSpawnAt = Number.MAX_SAFE_INTEGER
   }
 }
 

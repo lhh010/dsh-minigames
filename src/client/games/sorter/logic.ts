@@ -71,6 +71,7 @@ export interface Belt {
   flap: 0 | 1 | 2 | 3
   packages: Package[]
   /** 下一次生成包裹的回合钟时刻 ms。 */
+  /** 保留字段（旧每带节奏；现为全局节奏，见 SorterState.nextArrivalAt）。 */
   nextSpawnAt: number
 }
 
@@ -113,6 +114,8 @@ export interface SorterState {
   sharedColor: 0 | 1 | 2 | 3 | -1
   /** 共享色对应的生成时刻 ms（跨时刻重掷）。 */
   sharedColorAt: number
+  /** 全局下一次到货时刻 ms——任意轨道的到达节奏（开局 2s 渐收至 0.5s）。 */
+  nextArrivalAt: number
 }
 
 /**
@@ -178,7 +181,7 @@ export function createSorter(seed: number, round = 1): SorterState {
       lane: lane as 0 | 1 | 2,
       flap: 0,
       packages: [],
-      nextSpawnAt: 700 + lane * 260 + rng() * 500,
+      nextSpawnAt: 0,
     })
   }
   return {
@@ -196,31 +199,37 @@ export function createSorter(seed: number, round = 1): SorterState {
     over: false,
     sharedColor: -1,
     sharedColorAt: -1,
+    nextArrivalAt: 900 + rng() * 600,
   }
 }
 
 /**
- * 按泊松节奏尝试生成一件包裹：带入口附近已有包裹则推迟（避免重叠）。
- * @param state - 目标状态（使用其 rng）。
- * @param belt - 目标传送带。
+ * 全局到货节奏：到货时刻在 1~3 条带（随机子集）同时放同色包裹，
+ * 然后按全局间隔（开局 2s → 终盘 0.5s）排下一次到货。带入口被占的
+ * 带跳过（不推迟全局钟）。
+ * @param state - 目标状态。
  * @param level - 当前档位。
  */
-function trySpawn(state: SorterState, belt: Belt, level: number): void {
-  const mean = spawnMeanMs(level)
-  if (state.t < belt.nextSpawnAt) return
-  const blocked = belt.packages.some((p) => p.x < BELT_LEFT + PACKAGE_SIZE + 34)
-  if (blocked) {
-    belt.nextSpawnAt = state.t + 140
-    return
+function trySpawn(state: SorterState, level: number): void {
+  if (state.t < state.nextArrivalAt) return
+  const roll = state.rng() * COLOR_COUNT
+  const color = Math.min(COLOR_COUNT - 1, Math.floor(roll)) as 0 | 1 | 2 | 3
+  const count = 1 + Math.floor(state.rng() * 3)
+  // 随机挑选 count 条带（洗牌取前 count 个）。
+  const lanes = state.belts.map(b => b)
+  for (let i = lanes.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(state.rng() * (i + 1))
+    const tmp = lanes[i]!
+    lanes[i] = lanes[j]!
+    lanes[j] = tmp
   }
-  // 同一生成时刻的多带包裹共用一色（一次按键分流全部）；跨时刻重掷。
-  if (state.sharedColorAt !== state.t) {
-    const roll = state.rng() * COLOR_COUNT
-    state.sharedColor = Math.min(COLOR_COUNT - 1, Math.floor(roll)) as 0 | 1 | 2 | 3
-    state.sharedColorAt = state.t
+  for (let i = 0; i < count; i += 1) {
+    const belt = lanes[i]!
+    const blocked = belt.packages.some((p) => p.x < BELT_LEFT + PACKAGE_SIZE + 34)
+    if (blocked) continue
+    belt.packages.push({ color, x: BELT_LEFT - PACKAGE_SIZE / 2 })
   }
-  belt.packages.push({ color: state.sharedColor as 0 | 1 | 2 | 3, x: BELT_LEFT - PACKAGE_SIZE / 2 })
-  belt.nextSpawnAt = state.t + poissonInterval(state.rng, mean)
+  state.nextArrivalAt = state.t + poissonInterval(state.rng, spawnMeanMs(level))
 }
 
 /**
@@ -270,8 +279,8 @@ function substep(state: SorterState, dtMs: number): void {
   state.t += dtMs
   const level = levelOf(state.t)
   const speed = beltSpeed(level)
+  trySpawn(state, level)
   for (const belt of state.belts) {
-    trySpawn(state, belt, level)
     for (let i = belt.packages.length - 1; i >= 0; i -= 1) {
       const pkg = belt.packages[i]!
       pkg.x += speed * dt
