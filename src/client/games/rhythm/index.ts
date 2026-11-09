@@ -10,7 +10,7 @@ import type {
   MiniGameMountOptions,
 } from '../types.ts'
 import { LANE_COUNT, W, H, createRhythm, hitRhythm, stepRhythm } from './logic.ts'
-import { renderRhythm } from './render.ts'
+import { renderRhythm, SPEED_PRESETS, SPEED_LABELS } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { createFrameLoop } from '../frame-scheduler.ts'
@@ -30,6 +30,16 @@ function createRhythmGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   const state = createRhythm()
   let paused = false
   let lastScore = -1
+  // 下落速度档位（记忆上次选择）：[ 减慢 · ] 加快。
+  const SPEED_KEY = 'dsh-minigames:rhythm-speed'
+  const savedSpeed = Number(localStorage.getItem(SPEED_KEY))
+  let speedIdx = SPEED_PRESETS.indexOf(savedSpeed)
+  if (speedIdx < 0) speedIdx = 2
+  const cycleSpeed = (dir: number): void => {
+    speedIdx = (speedIdx + dir + SPEED_PRESETS.length) % SPEED_PRESETS.length
+    localStorage.setItem(SPEED_KEY, String(SPEED_PRESETS[speedIdx]))
+    loop.markDirty()
+  }
 
   const reportScore = (): void => {
     if (state.score !== lastScore) {
@@ -69,6 +79,12 @@ function createRhythmGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()
+    } else if (event.code === 'BracketLeft') {
+      event.preventDefault()
+      cycleSpeed(-1)
+    } else if (event.code === 'BracketRight') {
+      event.preventDefault()
+      cycleSpeed(1)
     } else {
       const lane = LANE_KEYS.indexOf(event.code)
       if (lane >= 0) {
@@ -83,7 +99,7 @@ function createRhythmGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       stepRhythm(state, f.dt * 1000)
       reportScore()
     }
-    renderRhythm(ctx, state, paused)
+    renderRhythm(ctx, state, paused, SPEED_PRESETS[speedIdx], SPEED_LABELS[speedIdx])
   })
 
   const pause = (): void => {
@@ -129,7 +145,7 @@ export const rhythmGame: MiniGameDefinition = {
   controls: [
     'D / F / J / K 或点击轨道底部：打击落到判定线的音符',
     'PERFECT ±30ms 500 分 · GOOD ±80ms 200 分 · 连击每 50 升倍率（最高 x4）',
-    'MISS 或漏接扣血（共 3 命）· R：重开 · P：暂停',
+    'MISS 或漏接扣血（共 3 命）· [ / ]：下落速度（慢→快五档，记忆选择）· R：重开 · P：暂停',
   ],
   create: createRhythmGame,
 }

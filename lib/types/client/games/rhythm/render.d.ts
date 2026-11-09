@@ -5,10 +5,14 @@
  * 分数），底部 D F J K 按键提示；暂停与结束遮罩、事件粒子。
  */
 import type { RhythmState } from './logic.ts';
+/** 可选下落速度档位（下落时长 ms，越短越快）。 */
+export declare const SPEED_PRESETS: readonly number[];
+/** 速度档位标签。 */
+export declare const SPEED_LABELS: readonly string[];
 /**
  * 渲染一帧：背景、轨道与判定线、下落音符、特效、HUD、遮罩。
  * @param ctx - 画布上下文。
  * @param state - 当前状态。
  * @param paused - 是否显示暂停遮罩。
  */
-export declare function renderRhythm(ctx: CanvasRenderingContext2D, state: RhythmState, paused: boolean): void;
+export declare function renderRhythm(ctx: CanvasRenderingContext2D, state: RhythmState, paused: boolean, approachMs?: number, speedLabel?: string): void;

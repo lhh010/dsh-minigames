@@ -13,7 +13,12 @@ const JUDGE_Y = H - 120
 /** 轨道区顶部 y。 */
 const LANE_TOP = 56
 /** 音符从出现到判定线的下落时长 ms。 */
+/** 默认下落时长 ms（标准速度）。 */
 const APPROACH_MS = 1500
+/** 可选下落速度档位（下落时长 ms，越短越快）。 */
+export const SPEED_PRESETS: readonly number[] = [2200, 1800, 1500, 1150, 850]
+/** 速度档位标签。 */
+export const SPEED_LABELS: readonly string[] = ['慢', '较慢', '标准', '较快', '快']
 /** 底部按键提示。 */
 const KEY_HINTS = ['D', 'F', 'J', 'K']
 const PERFECT_COLOR = THEME.gold
@@ -59,7 +64,7 @@ function laneCenterX(lane: number): number {
  * @param state - 当前状态。
  * @param paused - 是否显示暂停遮罩。
  */
-export function renderRhythm(ctx: CanvasRenderingContext2D, state: RhythmState, paused: boolean): void {
+export function renderRhythm(ctx: CanvasRenderingContext2D, state: RhythmState, paused: boolean, approachMs = APPROACH_MS, speedLabel = SPEED_LABELS[2]!): void {
   drawBackground(ctx, W, H)
   const laneW = W / LANE_COUNT
 
@@ -112,8 +117,8 @@ export function renderRhythm(ctx: CanvasRenderingContext2D, state: RhythmState, 
   for (const note of state.notes) {
     if (note.judged !== null) continue
     const remain = note.timeMs - state.t
-    if (remain > APPROACH_MS || remain < -MISS_LATE_MS) continue
-    const y = JUDGE_Y - (remain / APPROACH_MS) * (JUDGE_Y - LANE_TOP - 12)
+    if (remain > approachMs || remain < -MISS_LATE_MS) continue
+    const y = JUDGE_Y - (remain / approachMs) * (JUDGE_Y - LANE_TOP - 12)
     const color = accent(note.lane + 2)
     glow(ctx, color, 10)
     roundRectPath(ctx, laneCenterX(note.lane) - noteW / 2, y - noteH / 2, noteW, noteH, 7)
@@ -199,6 +204,10 @@ export function renderRhythm(ctx: CanvasRenderingContext2D, state: RhythmState, 
   ctx.fillStyle = THEME.text
   ctx.font = '600 14px system-ui, sans-serif'
   ctx.fillText('分数 ' + state.score, W - 14, hudY)
+  // 速度档位指示（[ / ] 调节）。
+  ctx.font = '600 11px system-ui, sans-serif'
+  ctx.fillStyle = THEME.textMuted
+  ctx.fillText('速度 ' + speedLabel + '  [ ]', W - 14, hudY + 16)
 
   // 底部按键提示。
   ctx.font = '600 15px system-ui, sans-serif'
