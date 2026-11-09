@@ -54,7 +54,7 @@ describe('sorter logic', () => {
       stepSorter(s, 16, { flap: null })
       s.belts.forEach((belt, bi) => {
         for (const p of belt.packages) {
-          seenPerBelt[bi] += 1
+          seenPerBelt[bi] = (seenPerBelt[bi] ?? 0) + 1
           spawnedColors.add(p.color)
         }
       })
