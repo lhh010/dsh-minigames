@@ -32,7 +32,7 @@ export declare const COMBO_BONUS = 1;
 /** 分拣成功基础分。 */
 export declare const BASE_SCORE = 2;
 /** 每 12 秒升一档难度。 */
-export declare const LEVEL_MS = 12000;
+export declare const LEVEL_MS = 8000;
 /** 固定子步 ms：stepSorter 内部按该粒度推进模拟。 */
 export declare const SUBSTEP_MS = 10;
 /** 飘字存活时长 ms。 */
@@ -128,14 +128,15 @@ export declare function levelOf(tMs: number): number;
  */
 export declare function beltSpeed(level: number): number;
 /**
- * 每条带生成包裹的平均间隔 ms：开局 2000，逐档 -125，下限 500
- * （1 档 2s 从容起步 → 中盘 1s → 终盘 0.5s）。
+ * 全局到货的平均间隔 ms：开局 2000，逐档 -250，下限 500
+ * （1 档 2s → 4 档 1.25s → 7 档起 0.5s；8s/档约 48s 到顶）。
  * @param level - 当前档位。
  * @returns 生成间隔的期望值。
  */
 export declare function spawnMeanMs(level: number): number;
 /**
- * 泊松间隔采样：指数分布 -ln(1-u)*mean，截断到 [0.35, 2.2] 倍期望。
+ * 泊松间隔采样：指数分布 -ln(1-u)*mean，截断到 [0.5, 1.6] 倍期望
+ * （更紧凑的节奏带——旧 2.2 倍上界会出现明显空窗）。
  * @param rng - 随机源。
  * @param mean - 间隔期望 ms。
  * @returns 本次到下一次生成的间隔 ms。

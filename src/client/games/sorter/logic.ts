@@ -34,7 +34,7 @@ export const COMBO_BONUS = 1
 /** 分拣成功基础分。 */
 export const BASE_SCORE = 2
 /** 每 12 秒升一档难度。 */
-export const LEVEL_MS = 12_000
+export const LEVEL_MS = 8_000
 /** 固定子步 ms：stepSorter 内部按该粒度推进模拟。 */
 export const SUBSTEP_MS = 10
 /** 飘字存活时长 ms。 */
@@ -146,17 +146,18 @@ export function beltSpeed(level: number): number {
 }
 
 /**
- * 每条带生成包裹的平均间隔 ms：开局 2000，逐档 -125，下限 500
- * （1 档 2s 从容起步 → 中盘 1s → 终盘 0.5s）。
+ * 全局到货的平均间隔 ms：开局 2000，逐档 -250，下限 500
+ * （1 档 2s → 4 档 1.25s → 7 档起 0.5s；8s/档约 48s 到顶）。
  * @param level - 当前档位。
  * @returns 生成间隔的期望值。
  */
 export function spawnMeanMs(level: number): number {
-  return Math.max(500, 2000 - (level - 1) * 125)
+  return Math.max(500, 2000 - (level - 1) * 250)
 }
 
 /**
- * 泊松间隔采样：指数分布 -ln(1-u)*mean，截断到 [0.35, 2.2] 倍期望。
+ * 泊松间隔采样：指数分布 -ln(1-u)*mean，截断到 [0.5, 1.6] 倍期望
+ * （更紧凑的节奏带——旧 2.2 倍上界会出现明显空窗）。
  * @param rng - 随机源。
  * @param mean - 间隔期望 ms。
  * @returns 本次到下一次生成的间隔 ms。
@@ -164,7 +165,7 @@ export function spawnMeanMs(level: number): number {
 export function poissonInterval(rng: () => number, mean: number): number {
   const u = rng()
   const raw = -Math.log(1 - u) * mean
-  return Math.max(mean * 0.35, Math.min(mean * 2.2, raw))
+  return Math.max(mean * 0.5, Math.min(mean * 1.6, raw))
 }
 
 /**
@@ -214,20 +215,17 @@ function trySpawn(state: SorterState, level: number): void {
   if (state.t < state.nextArrivalAt) return
   const roll = state.rng() * COLOR_COUNT
   const color = Math.min(COLOR_COUNT - 1, Math.floor(roll)) as 0 | 1 | 2 | 3
-  const count = 1 + Math.floor(state.rng() * 3)
-  // 随机挑选 count 条带（洗牌取前 count 个）。
-  const lanes = state.belts.map(b => b)
+  // 只在入口未堵的带里选（原先被堵的带静默跳过 → 到货凭空消失）。
+  const lanes = state.belts.filter(b => !b.packages.some((p) => p.x < BELT_LEFT + PACKAGE_SIZE + 34))
   for (let i = lanes.length - 1; i > 0; i -= 1) {
     const j = Math.floor(state.rng() * (i + 1))
     const tmp = lanes[i]!
     lanes[i] = lanes[j]!
     lanes[j] = tmp
   }
+  const count = Math.min(lanes.length, 1 + Math.floor(state.rng() * 3))
   for (let i = 0; i < count; i += 1) {
-    const belt = lanes[i]!
-    const blocked = belt.packages.some((p) => p.x < BELT_LEFT + PACKAGE_SIZE + 34)
-    if (blocked) continue
-    belt.packages.push({ color, x: BELT_LEFT - PACKAGE_SIZE / 2 })
+    lanes[i]!.packages.push({ color, x: BELT_LEFT - PACKAGE_SIZE / 2 })
   }
   state.nextArrivalAt = state.t + poissonInterval(state.rng, spawnMeanMs(level))
 }

@@ -32,13 +32,13 @@ function run(s: SorterState, frames: number, flap: 0 | 1 | 2 | 3 | null = null):
 describe('sorter logic', () => {
   it('difficulty tables: level ramps by 12s, belt speed and spawn mean tighten with caps', () => {
     expect(levelOf(0)).toBe(1)
-    expect(levelOf(11_999)).toBe(1)
-    expect(levelOf(12_000)).toBe(2)
+    expect(levelOf(7_999)).toBe(1)
+    expect(levelOf(8_000)).toBe(2)
     expect(beltSpeed(1)).toBe(78)
     expect(beltSpeed(4)).toBe(78 + 3 * 14)
     expect(beltSpeed(20)).toBe(220)
     expect(spawnMeanMs(1)).toBe(2000)
-    expect(spawnMeanMs(3)).toBe(1750)
+    expect(spawnMeanMs(3)).toBe(1500)
     expect(spawnMeanMs(20)).toBe(500)
     expect(SUBSTEP_MS).toBeGreaterThan(0)
     expect(PACKAGE_COLORS.length).toBe(COLOR_COUNT)
