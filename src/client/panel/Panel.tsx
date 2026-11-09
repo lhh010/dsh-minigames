@@ -217,6 +217,17 @@ export function MiniGamePanel(): ReactNode {
     })
   }
 
+  // 稳定的分数回调（所有 early return 之前——Hooks 规则）：破纪录 setBest
+  // 重渲染面板树时，memo 化 GameArea 凭稳定 props 跳过重渲染。refs 转发
+  // 最新值使回调保持零依赖（真正稳定的引用）。
+  const activeGameRef = useRef(activeGame)
+  const onScoreRef = useRef(onScore)
+  activeGameRef.current = activeGame
+  onScoreRef.current = onScore
+  const handleGameScore = useCallback((score: number) => {
+    if (activeGameRef.current !== undefined) onScoreRef.current(activeGameRef.current, score)
+  }, [])
+
   /** Drag the window by its header; releasing near an edge snaps it there. */
   const startDrag = (event: React.PointerEvent): void => {
     const target = event.target as HTMLElement
@@ -370,11 +381,6 @@ export function MiniGamePanel(): ReactNode {
 
   const games = getGames()
   const height = windowHeight(window.innerHeight)
-  // 稳定的分数回调：破纪录的 setBest 会重渲染整个面板树，memo 化的
-  // GameArea 凭稳定 props 完全跳过重渲染（游戏实例不受分数上报影响）。
-  const handleGameScore = useCallback((score: number) => {
-    if (activeGame !== undefined) onScore(activeGame, score)
-  }, [activeGame, onScore])
   return (
     <div
       ref={panelRef}
