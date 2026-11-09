@@ -67,9 +67,11 @@ export function hitChar(
   x: number, y: number, state: RiverState, level: RiverLevel,
 ): { where: 'left' | 'right' | 'boat', id: string } | null {
   const boatCx = boatCenterX(state, 0)
+  // 与乘客绘制坐标严格一致（农夫左侧 -24 偏移、22px 间距、船身中线）——
+  // 此前命中框偏了 24px 且 y 差了半船高，点击可见乘客落空导致无法下船。
   for (let i = 0; i < state.boat.length; i += 1) {
-    const bx = boatCx - ((state.boat.length - 1) * 24) / 2 + i * 24
-    if (Math.abs(x - bx) <= 16 && Math.abs(y - (WATER_Y + 2)) <= 18) {
+    const bx = boatCx - ((state.boat.length - 1) * 22) / 2 + i * 22 - 24
+    if (Math.abs(x - bx) <= 15 && Math.abs(y - (WATER_Y + BOAT_H / 2)) <= 15) {
       return { where: 'boat', id: state.boat[i]! }
     }
   }

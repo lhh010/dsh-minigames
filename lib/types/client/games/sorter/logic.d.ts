@@ -121,7 +121,8 @@ export declare function levelOf(tMs: number): number;
  */
 export declare function beltSpeed(level: number): number;
 /**
- * 每条带生成包裹的平均间隔 ms：1 档 1900，每档 -150，下限 650。
+ * 每条带生成包裹的平均间隔 ms：1 档 2900，每档 -130，下限 1000
+ * （开局更从容，升档放缓——节奏曲线整体放宽约 50%）。
  * @param level - 当前档位。
  * @returns 生成间隔的期望值。
  */

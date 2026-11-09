@@ -135,16 +135,17 @@ export function levelOf(tMs: number): number {
  * @returns 该档位的带速。
  */
 export function beltSpeed(level: number): number {
-  return Math.min(250, 90 + (level - 1) * 18)
+  return Math.min(220, 78 + (level - 1) * 14)
 }
 
 /**
- * 每条带生成包裹的平均间隔 ms：1 档 1900，每档 -150，下限 650。
+ * 每条带生成包裹的平均间隔 ms：1 档 2900，每档 -130，下限 1000
+ * （开局更从容，升档放缓——节奏曲线整体放宽约 50%）。
  * @param level - 当前档位。
  * @returns 生成间隔的期望值。
  */
 export function spawnMeanMs(level: number): number {
-  return Math.max(650, 1900 - (level - 1) * 150)
+  return Math.max(1000, 2900 - (level - 1) * 130)
 }
 
 /**
