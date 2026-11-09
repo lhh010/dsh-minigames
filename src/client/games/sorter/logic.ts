@@ -109,6 +109,10 @@ export interface SorterState {
   floats: FloatText[]
   rng: () => number
   over: boolean
+  /** 同一时刻共用的生成色（多带同刻到货同色）；-1 表示无当前共享。 */
+  sharedColor: 0 | 1 | 2 | 3 | -1
+  /** 共享色对应的生成时刻 ms（跨时刻重掷）。 */
+  sharedColorAt: number
 }
 
 /**
@@ -139,13 +143,13 @@ export function beltSpeed(level: number): number {
 }
 
 /**
- * 每条带生成包裹的平均间隔 ms：1 档 2900，每档 -130，下限 1000
- * （开局更从容，升档放缓——节奏曲线整体放宽约 50%）。
+ * 每条带生成包裹的平均间隔 ms：开局 2000，逐档 -125，下限 500
+ * （1 档 2s 从容起步 → 中盘 1s → 终盘 0.5s）。
  * @param level - 当前档位。
  * @returns 生成间隔的期望值。
  */
 export function spawnMeanMs(level: number): number {
-  return Math.max(1000, 2900 - (level - 1) * 130)
+  return Math.max(500, 2000 - (level - 1) * 125)
 }
 
 /**
@@ -190,6 +194,8 @@ export function createSorter(seed: number, round = 1): SorterState {
     floats: [],
     rng,
     over: false,
+    sharedColor: -1,
+    sharedColorAt: -1,
   }
 }
 
@@ -207,9 +213,13 @@ function trySpawn(state: SorterState, belt: Belt, level: number): void {
     belt.nextSpawnAt = state.t + 140
     return
   }
-  const roll = state.rng() * COLOR_COUNT
-  const color = Math.min(COLOR_COUNT - 1, Math.floor(roll)) as 0 | 1 | 2 | 3
-  belt.packages.push({ color, x: BELT_LEFT - PACKAGE_SIZE / 2 })
+  // 同一生成时刻的多带包裹共用一色（一次按键分流全部）；跨时刻重掷。
+  if (state.sharedColorAt !== state.t) {
+    const roll = state.rng() * COLOR_COUNT
+    state.sharedColor = Math.min(COLOR_COUNT - 1, Math.floor(roll)) as 0 | 1 | 2 | 3
+    state.sharedColorAt = state.t
+  }
+  belt.packages.push({ color: state.sharedColor as 0 | 1 | 2 | 3, x: BELT_LEFT - PACKAGE_SIZE / 2 })
   belt.nextSpawnAt = state.t + poissonInterval(state.rng, mean)
 }
 

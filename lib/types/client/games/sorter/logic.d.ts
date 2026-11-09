@@ -101,6 +101,10 @@ export interface SorterState {
     floats: FloatText[];
     rng: () => number;
     over: boolean;
+    /** 同一时刻共用的生成色（多带同刻到货同色）；-1 表示无当前共享。 */
+    sharedColor: 0 | 1 | 2 | 3 | -1;
+    /** 共享色对应的生成时刻 ms（跨时刻重掷）。 */
+    sharedColorAt: number;
 }
 /**
  * 传送带中心线逻辑 y。
@@ -121,8 +125,8 @@ export declare function levelOf(tMs: number): number;
  */
 export declare function beltSpeed(level: number): number;
 /**
- * 每条带生成包裹的平均间隔 ms：1 档 2900，每档 -130，下限 1000
- * （开局更从容，升档放缓——节奏曲线整体放宽约 50%）。
+ * 每条带生成包裹的平均间隔 ms：开局 2000，逐档 -125，下限 500
+ * （1 档 2s 从容起步 → 中盘 1s → 终盘 0.5s）。
  * @param level - 当前档位。
  * @returns 生成间隔的期望值。
  */
