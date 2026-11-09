@@ -31,13 +31,13 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   rushhour: 'puzzle', maze: 'puzzle', hanoi: 'puzzle', fifteen: 'puzzle',
   peg: 'puzzle', pipes: 'puzzle', flow: 'puzzle', wordle: 'puzzle',
   mastermind: 'puzzle', circlemath: 'puzzle', game24: 'puzzle', tangram: 'puzzle',
-  spotdiff: 'puzzle', memory: 'puzzle', match3: 'puzzle',
+  spotdiff: 'puzzle', memory: 'puzzle', match3: 'puzzle', '2048': 'puzzle', traffic: 'puzzle',
   // 棋牌
   chess: 'board', xiangqi: 'board', gomoku: 'board', othello: 'board',
   connect4: 'board', minigo: 'board', blackjack: 'board', yahtzee: 'board',
   solitaire: 'board', mahjong: 'board',
   // 街机
-  dino: 'arcade', tetris: 'arcade', snake: 'arcade', pacman: 'arcade',
+  dino: 'arcade', tetris: 'arcade', snake: 'arcade', pacman: 'arcade', pong: 'arcade', lightspeed: 'arcade',
   breakout: 'arcade', invaders: 'arcade', asteroids: 'arcade', danmaku: 'arcade',
   frogger: 'arcade', bomber: 'arcade', bubble: 'arcade', zuma: 'arcade',
   colorlines: 'arcade', puyo: 'arcade', hop: 'arcade', flappy: 'arcade',
@@ -58,7 +58,12 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   bubblewrap: 'casual', fishing: 'casual', eggcatcher: 'casual', coinpusher: 'casual',
 }
 
-/** 查游戏分类；未登记回落休闲（全覆盖测试把遗漏顶出来）。 */
+/** 查游戏分类；未登记回落休闲（isCategorized 供全覆盖测试锁定遗漏）。 */
+export function isCategorized(gameId: string): boolean {
+  return Object.hasOwn(CATEGORY_OF, gameId)
+}
+
+/** 查游戏分类；未登记回落休闲。 */
 export function categoryOf(gameId: string): string {
   return CATEGORY_OF[gameId] ?? 'casual'
 }
@@ -67,7 +72,7 @@ export function categoryOf(gameId: string): string {
  * 策展清单——街机黄金时代与桌面上百年以上的玩法原型。 */
 const CLASSIC: ReadonlySet<string> = new Set([
   'dino', 'tetris', 'snake', 'pacman', 'breakout', 'pong', 'invaders',
-  'asteroids', 'minesweeper', 'sudoku', 'game2048', 'solitaire',
+  'asteroids', 'minesweeper', 'sudoku', '2048', 'solitaire',
   'chess', 'xiangqi', 'gomoku', 'othello', 'fifteen', 'hanoi',
   'memory', 'whack', 'colorlines',
 ])
@@ -75,6 +80,11 @@ const CLASSIC: ReadonlySet<string> = new Set([
 /** 游戏是否属于经典策展清单。 */
 export function isClassic(gameId: string): boolean {
   return CLASSIC.has(gameId)
+}
+
+/** 经典策展清单（测试据此校验每个 id 都真实存在于游戏注册表）。 */
+export function classicIds(): readonly string[] {
+  return [...CLASSIC]
 }
 
 /** 某分类在给定游戏表中的数量（标签栏显示 n）。 */
