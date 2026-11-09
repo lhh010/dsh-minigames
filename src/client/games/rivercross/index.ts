@@ -161,6 +161,11 @@ function createRiverCrossGame(host: HTMLElement, options?: MiniGameMountOptions)
       event.preventDefault()
       if (!running || paused) return
       beginCross()
+    } else if (event.code === 'BracketLeft' || event.code === 'BracketRight') {
+      // 前后切关（与 circlemath 等谜题一致）：越过边界的按键取模循环。
+      event.preventDefault()
+      const delta = event.code === 'BracketRight' ? 1 : -1
+      startLevel(((level - 1 + delta + LEVELS.length) % LEVELS.length) + 1)
     }
   }
 
