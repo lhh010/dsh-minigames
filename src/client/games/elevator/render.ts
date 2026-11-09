@@ -76,9 +76,9 @@ function drawWaiting(ctx: CanvasRenderingContext2D, state: ElevatorState, floor:
     ctx.arc(px, py, r, 0, Math.PI * 2)
     ctx.fill()
     noGlow(ctx)
-    // 方向箭头。
+    // 目标层：箭头+楼层数（乘客要去哪层一眼可辨）。
     ctx.fillStyle = THEME.textMuted
-    ctx.fillText(dirOf(p.from, p.to) === 'up' ? '\u2191' : '\u2193', px + 5, py - 5)
+    ctx.fillText((dirOf(p.from, p.to) === 'up' ? '\u2191' : '\u2193') + String(p.to), px + 5, py - 5)
     // 等待时间条：越接近超时越长并转红。
     const frac = Math.min(1, p.waited / WAIT_TIMEOUT_S)
     const urgent = p.waited > WAIT_TIMEOUT_S * 0.66
@@ -115,6 +115,16 @@ function drawShaft(ctx: CanvasRenderingContext2D, state: ElevatorState): void {
   ctx.font = '600 14px system-ui, sans-serif'
   ctx.fillStyle = THEME.text
   ctx.fillText(state.inside.length + '/' + CAPACITY, SHAFT_X + SHAFT_W / 2, floorY(state.pos) + 5)
+  // 轿厢内乘客目标层：一行小字（停靠决策依据——去哪层的都在里面）。
+  if (state.inside.length > 0) {
+    ctx.font = '600 8px system-ui, sans-serif'
+    ctx.fillStyle = THEME.textMuted
+    ctx.fillText(
+      state.inside.map((p) => String(p.to)).join(' '),
+      SHAFT_X + SHAFT_W / 2,
+      floorY(state.pos) + 16,
+    )
+  }
 }
 
 /** 顶部 HUD：送达数、满意度心形、轿厢人数、当前/目标层。 */

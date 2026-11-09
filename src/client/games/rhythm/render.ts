@@ -79,6 +79,22 @@ export function renderRhythm(ctx: CanvasRenderingContext2D, state: RhythmState, 
     ctx.stroke()
   }
 
+  // 按压闪光：最近 150ms 内按过的轨道在判定线附近亮起渐隐竖光柱
+  // ——空按也有即时反馈（不只是命中才有反应）。
+  for (let lane = 0; lane < LANE_COUNT; lane += 1) {
+    const since = state.t - (state.laneFlashMs[lane] ?? -Infinity)
+    if (!(since >= 0 && since <= 150)) continue
+    const alpha = 1 - since / 150
+    const fx = 14 + lane * laneW
+    const grad = ctx.createLinearGradient(0, JUDGE_Y - 90, 0, JUDGE_Y + 26)
+    grad.addColorStop(0, 'rgba(122,162,255,0)')
+    grad.addColorStop(1, 'rgba(122,162,255,' + (0.45 * alpha).toFixed(3) + ')')
+    ctx.fillStyle = grad
+    ctx.fillRect(fx, JUDGE_Y - 90, laneW - 8, 116)
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.5 * alpha).toFixed(3) + ')'
+    ctx.fillRect(fx, JUDGE_Y - 3, laneW - 8, 6)
+  }
+
   // 判定线：横向亮线 + 呼吸发光。
   const lineColor = accent(0)
   glow(ctx, lineColor, 12 + Math.sin(state.t / 240) * 4)

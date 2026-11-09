@@ -76,6 +76,8 @@ export interface RhythmState {
   score: number
   lives: number
   events: RhythmEvent[]
+  /** 每轨道最近一次按键的时刻 ms（按压闪光反馈用；未按为 -Infinity）。 */
+  laneFlashMs: number[]
   over: boolean
   /** 谱面全部判定完毕（命未尽）。 */
   finished: boolean
@@ -154,6 +156,7 @@ export function createRhythm(seed?: number): RhythmState {
     score: 0,
     lives: START_LIVES,
     events: [],
+    laneFlashMs: new Array(LANE_COUNT).fill(-Infinity),
     over: false,
     finished: false,
   }
@@ -177,6 +180,8 @@ export function comboMultiplier(combo: number): number {
  */
 export function hitRhythm(state: RhythmState, lane: number): void {
   if (state.over || state.finished) return
+  // 无论是否命中都记录按压时刻——空按也有轨道闪光反馈。
+  state.laneFlashMs[lane] = state.t
   let best: RhythmNote | null = null
   let bestAbs = Infinity
   for (const note of state.notes) {

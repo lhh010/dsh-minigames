@@ -78,6 +78,8 @@ export interface RhythmState {
     score: number;
     lives: number;
     events: RhythmEvent[];
+    /** 每轨道最近一次按键的时刻 ms（按压闪光反馈用；未按为 -Infinity）。 */
+    laneFlashMs: number[];
     over: boolean;
     /** 谱面全部判定完毕（命未尽）。 */
     finished: boolean;
