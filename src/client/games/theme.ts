@@ -27,11 +27,25 @@ export function accent(index: number): string {
   return THEME.accents[((index % THEME.accents.length) + THEME.accents.length) % THEME.accents.length]!
 }
 
+/** 背景渐变缓存：按 (context, 高度) 复用 CanvasGradient 对象——连续
+ * 游戏每帧重绘背景，避免 60fps 下重复 createLinearGradient 的分配与
+ * GPU 资源重建（WeakMap 随 context 释放）。 */
+const bgGradientCache = new WeakMap<CanvasRenderingContext2D, Map<number, CanvasGradient>>()
+
 /** Fill the whole logical canvas with the shared vertical gradient. */
 export function drawBackground(ctx: CanvasRenderingContext2D, w: number, h: number): void {
-  const gradient = ctx.createLinearGradient(0, 0, 0, h)
-  gradient.addColorStop(0, THEME.bgTop)
-  gradient.addColorStop(1, THEME.bgBottom)
+  let byHeight = bgGradientCache.get(ctx)
+  if (byHeight === undefined) {
+    byHeight = new Map()
+    bgGradientCache.set(ctx, byHeight)
+  }
+  let gradient = byHeight.get(h)
+  if (gradient === undefined) {
+    gradient = ctx.createLinearGradient(0, 0, 0, h)
+    gradient.addColorStop(0, THEME.bgTop)
+    gradient.addColorStop(1, THEME.bgBottom)
+    byHeight.set(h, gradient)
+  }
   ctx.fillStyle = gradient
   ctx.fillRect(0, 0, w, h)
 }

@@ -7,7 +7,7 @@
  * picker and game area mount inside the window with full lifecycle
  * management (pause on hide / tab hidden / user pause, destroy on switch).
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { CATEGORIES, categoryOf, countByCategory, isClassic } from './categories.ts'
 import {
   getGame, getGames, registerBuiltinGames, type MiniGameDefinition,
@@ -370,6 +370,11 @@ export function MiniGamePanel(): ReactNode {
 
   const games = getGames()
   const height = windowHeight(window.innerHeight)
+  // 稳定的分数回调：破纪录的 setBest 会重渲染整个面板树，memo 化的
+  // GameArea 凭稳定 props 完全跳过重渲染（游戏实例不受分数上报影响）。
+  const handleGameScore = useCallback((score: number) => {
+    if (activeGame !== undefined) onScore(activeGame, score)
+  }, [activeGame, onScore])
   return (
     <div
       ref={panelRef}
@@ -461,7 +466,7 @@ export function MiniGamePanel(): ReactNode {
             ))}
           </div>
         ) : (
-          <GameArea key={activeGame.id} game={activeGame} onScore={score => onScore(activeGame, score)} />
+          <GameArea key={activeGame.id} game={activeGame} onScore={handleGameScore} />
         )}
       </div>
     </div>
@@ -480,7 +485,7 @@ interface GameAreaProps {
  * focusable and owns keyboard input while focused, so typing in the chat
  * composer is never hijacked by the game.
  */
-function GameArea({ game, onScore }: GameAreaProps): ReactNode {
+const GameArea = memo(function GameArea({ game, onScore }: GameAreaProps): ReactNode {
   const hostRef = useRef<HTMLDivElement>(null)
   const instanceRef = useRef<ReturnType<MiniGameDefinition['create']> | null>(null)
   const [userPaused, setUserPaused] = useState(false)
@@ -577,4 +582,4 @@ function GameArea({ game, onScore }: GameAreaProps): ReactNode {
       </div>
     </div>
   )
-}
+})
