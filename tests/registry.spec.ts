@@ -31,13 +31,13 @@ describe('game registry', () => {
     expect(() => registerGame({ ...dummy, id: 'dummy' })).toThrow(/already registered/)
   })
 
-  it('registers the one-hundred-twenty-three built-in games', () => {
+  it('registers the one-hundred-twenty-seven built-in games', () => {
     registerBuiltinGames()
     const ids = getGames().map(game => game.id)
-    for (const id of ['dino', 'tanks', 'tetris', 'match3', 'snake', '2048', 'minesweeper', 'memory', 'gomoku', 'hop', 'breakout', 'whack', 'othello', 'flappy', 'sudoku', 'pacman', 'aimtrack', 'simon', 'sokoban', 'asteroids', 'pipes', 'colorlines', 'dodger', 'typing', 'lightsout', 'pong', 'stack', 'wordle', 'nonogram', 'peg', 'hanoi', 'fifteen', 'mastermind', 'maze', 'schulte', 'hashi', 'minigo', 'connect4', 'slitherlink', 'racing', 'bubble', 'bomber', 'piano', 'zuma', 'pool', 'td', 'chess', 'pinball', 'flow', 'bowling', 'tents', 'shikaku', 'frogger', 'nurikabe', 'skyscrapers', 'kakuro', 'dominosa', 'hitori', 'fruitslash', 'fillomino', 'heyawake', 'lander', 'fishing', 'bubblewrap', 'papertoss', 'solitaire', 'invaders', 'knifering', 'hoopshot', 'movinghoop', 'rushhour', 'ski', 'suika', 'taiji', 'jumper', 'eggcatcher', 'xiangqi', 'slither', 'danmaku', 'suguru', 'avalanche', 'puyo', 'mahjong', 'minigolf', 'jungle', 'masyu', 'blackjack', 'floodit', 'coinpusher', 'slingshot', 'hole', 'steadyhand', 'grapple', 'qwop', 'copter', 'gravflip', 'reaction', 'circlemath', 'lightspeed', 'stroop', 'yahtzee', 'juggle', 'spotdiff', 'game24', 'tangram', 'sailing', 'traffic', 'rhythm', 'elevator', 'iceslide', 'link', 'balloon', 'sorter', 'rivercross', 'shutbox', 'balance', 'tide', 'burger', 'missile', 'bridge', 'jugs', 'knightour', 'nimgame']) {
+    for (const id of ['dino', 'tanks', 'tetris', 'match3', 'snake', '2048', 'minesweeper', 'memory', 'gomoku', 'hop', 'breakout', 'whack', 'othello', 'flappy', 'sudoku', 'pacman', 'aimtrack', 'simon', 'sokoban', 'asteroids', 'pipes', 'colorlines', 'dodger', 'typing', 'lightsout', 'pong', 'stack', 'wordle', 'nonogram', 'peg', 'hanoi', 'fifteen', 'mastermind', 'maze', 'schulte', 'hashi', 'minigo', 'connect4', 'slitherlink', 'racing', 'bubble', 'bomber', 'piano', 'zuma', 'pool', 'td', 'chess', 'pinball', 'flow', 'bowling', 'tents', 'shikaku', 'frogger', 'nurikabe', 'skyscrapers', 'kakuro', 'dominosa', 'hitori', 'fruitslash', 'fillomino', 'heyawake', 'lander', 'fishing', 'bubblewrap', 'papertoss', 'solitaire', 'invaders', 'knifering', 'hoopshot', 'movinghoop', 'rushhour', 'ski', 'suika', 'taiji', 'jumper', 'eggcatcher', 'xiangqi', 'slither', 'danmaku', 'suguru', 'avalanche', 'puyo', 'mahjong', 'minigolf', 'jungle', 'masyu', 'blackjack', 'floodit', 'coinpusher', 'slingshot', 'hole', 'steadyhand', 'grapple', 'qwop', 'copter', 'gravflip', 'reaction', 'circlemath', 'lightspeed', 'stroop', 'yahtzee', 'juggle', 'spotdiff', 'game24', 'tangram', 'sailing', 'traffic', 'rhythm', 'elevator', 'iceslide', 'link', 'balloon', 'sorter', 'rivercross', 'shutbox', 'balance', 'tide', 'burger', 'missile', 'bridge', 'jugs', 'knightour', 'nimgame', 'queens8', 'kenken', 'futoshiki', 'ricochet']) {
       expect(ids).toContain(id)
     }
-    expect(ids.filter(id => id !== 'dummy')).toHaveLength(123)
+    expect(ids.filter(id => id !== 'dummy')).toHaveLength(127)
     expect(ids).not.toContain('huarong')
   })
 

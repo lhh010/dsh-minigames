@@ -33,6 +33,7 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   mastermind: 'puzzle', circlemath: 'puzzle', game24: 'puzzle', tangram: 'puzzle',
   spotdiff: 'puzzle', memory: 'puzzle', match3: 'puzzle', iceslide: 'puzzle', link: 'puzzle', rivercross: 'puzzle', balance: 'puzzle',
   bridge: 'puzzle', jugs: 'puzzle', knightour: 'puzzle', nimgame: 'puzzle',
+  queens8: 'puzzle', kenken: 'puzzle', futoshiki: 'puzzle', ricochet: 'puzzle',
   // 棋牌
   chess: 'board', xiangqi: 'board', gomoku: 'board', othello: 'board',
   connect4: 'board', minigo: 'board', blackjack: 'board', yahtzee: 'board',
