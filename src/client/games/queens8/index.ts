@@ -27,7 +27,9 @@ function createQueensGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   if (fit === null) throw new Error('dsh-minigames: queens8 needs a 2d canvas context')
   const ctx = fit.ctx
 
-  let levelIdx = 0
+  // 记忆上次档位（首次默认 6×6——4×4 偏小）；数字键 4/6/8 可直达。
+  const savedSize = Number(localStorage.getItem('dsh-minigames:queens8-size') ?? 6)
+  let levelIdx = (LEVELS as readonly number[]).includes(savedSize) ? (LEVELS as readonly number[]).indexOf(savedSize) : 1
   let state: QueensState = createBoard(LEVELS[levelIdx]!)
   let score = 0
   let lastReported = -1
@@ -45,6 +47,7 @@ function createQueensGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   }
 
   const startLevel = (idx: number): void => {
+    localStorage.setItem('dsh-minigames:queens8-size', String(LEVELS[idx] ?? 6))
     levelIdx = idx
     state = createBoard(LEVELS[levelIdx]!)
     elapsedMs = 0
@@ -102,6 +105,9 @@ function createQueensGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()
+    } else if (event.code === 'Digit4' || event.code === 'Digit6' || event.code === 'Digit8') {
+      event.preventDefault()
+      startLevel((LEVELS as readonly number[]).indexOf(Number(event.code.slice(5))))
     } else if (event.code === 'BracketLeft' || event.code === 'BracketRight') {
       event.preventDefault()
       const dir = event.code === 'BracketRight' ? 1 : -1
@@ -181,6 +187,6 @@ export const queens8Game: MiniGameDefinition = {
   title: '八皇后 Queens',
   icon: '👑',
   description: '在棋盘上放皇后互不攻击——行、列、斜线都不能撞，回溯思维的百年经典。',
-  controls: ['点击格子：放置 / 移除皇后 · 悬停：行、列、斜线攻击提示', '[ / ]：切换 4/6/8 档位 · R：重开 · P：暂停'],
+  controls: ['点击格子：放置 / 移除皇后 · 悬停：行、列、斜线攻击提示', '4 / 6 / 8：直达档位 · [ / ]：循环切换 · R：重开 · P：暂停'],
   create: createQueensGame,
 }
