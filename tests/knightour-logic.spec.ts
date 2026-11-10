@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  undoTour,
   bestHint, createTour, knightMoves, moveTour, mulberry32, randomStart,
   reachableMoves, tourStatus, warnsdorffDegree, warnsdorffTour,
 } from '../src/client/games/knightour/logic.ts'
@@ -99,5 +100,18 @@ describe('knightour determinism', () => {
     expect(state.path).toHaveLength(25)
     expect(new Set(state.path).size).toBe(25)
     expect(tourStatus(state)).toBe('won')
+  })
+})
+
+describe('undoTour', () => {
+  it('pops the last move and rebuilds visited; start cannot undo', () => {
+    const s0 = createTour(5, 12)
+    const s1 = moveTour(s0, knightMoves(5, 12)[0]!)
+    expect(s1).not.toBeNull()
+    const back = undoTour(s1!)
+    expect(back!.path).toEqual(s0.path)
+    expect(back!.visited[12]).toBe(true)
+    expect(back!.visited[knightMoves(5, 12)[0]!]).toBe(false)
+    expect(undoTour(s0)).toBeNull()
   })
 })

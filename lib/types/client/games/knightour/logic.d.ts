@@ -60,6 +60,12 @@ export declare function tourStatus(state: TourState): TourStatus;
  * @param state - 当前局面。
  * @param to - 目标格序号。
  * @returns 新局面，非法步为 null。 */
+/**
+ * 撤回上一步：路径退一格（保留起点），visited 重建；起点无步可撤。
+ * @param state - 当前状态。
+ * @returns 新状态；已在起点返回 null。
+ */
+export declare function undoTour(state: TourState): TourState | null;
 export declare function moveTour(state: TourState, to: number): TourState | null;
 /** Warnsdorff 出度：cell 的马步中未访问的目标数。
  * @param state - 当前局面。

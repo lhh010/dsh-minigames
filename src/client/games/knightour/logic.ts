@@ -111,6 +111,19 @@ export function tourStatus(state: TourState): TourStatus {
  * @param state - 当前局面。
  * @param to - 目标格序号。
  * @returns 新局面，非法步为 null。 */
+/**
+ * 撤回上一步：路径退一格（保留起点），visited 重建；起点无步可撤。
+ * @param state - 当前状态。
+ * @returns 新状态；已在起点返回 null。
+ */
+export function undoTour(state: TourState): TourState | null {
+  if (state.path.length <= 1) return null
+  const path = state.path.slice(0, -1)
+  const visited = new Array<boolean>(state.size * state.size).fill(false)
+  for (const cell of path) visited[cell] = true
+  return { ...state, path, visited }
+}
+
 export function moveTour(state: TourState, to: number): TourState | null {
   const current = state.path[state.path.length - 1]!
   if (state.visited[to]) return null

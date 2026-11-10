@@ -5,7 +5,7 @@
  */
 import type { MiniGameDefinition, MiniGameInstance, MiniGameMountOptions } from '../types.ts'
 import {
-  BOARD_SIZES, bestHint, createTour, moveTour, mulberry32, randomStart,
+  BOARD_SIZES, bestHint, createTour, moveTour, mulberry32, randomStart, undoTour,
   reachableMoves, tourStatus, type TourState,
 } from './logic.ts'
 import { LOGICAL_H, LOGICAL_W, renderTour, squareAt, type TourView } from './render.ts'
@@ -127,6 +127,16 @@ function createKnightourGame(host: HTMLElement, options?: MiniGameMountOptions):
     loop.markDirty()
   }
 
+  /** 撤回上一步（U）：路径退一格；起点不可撤。 */
+  const undoMove = (): void => {
+    if (!running || paused) return
+    if (tourStatus(state) !== 'playing') return
+    const prev = undoTour(state)
+    if (prev === null) return
+    state = prev
+    loop.markDirty()
+  }
+
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
     if (event.code === 'KeyR') {
@@ -135,6 +145,9 @@ function createKnightourGame(host: HTMLElement, options?: MiniGameMountOptions):
     } else if (event.code === 'KeyH') {
       event.preventDefault()
       useHint()
+    } else if (event.code === 'KeyU') {
+      event.preventDefault()
+      undoMove()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()
@@ -204,6 +217,6 @@ export const knightourGame: MiniGameDefinition = {
   title: '马踏棋盘 Knights Tour',
   icon: '🎠',
   description: '马走日访遍全盘不重复——一步踏错的哈密顿路径挑战。',
-  controls: ['点击高亮格：走马步', 'H：提示 Warnsdorff 最小出度格（每局 3 次，扣分）', 'R：重开 · P：暂停', '[ / ]：切换 5×5 / 6×6 / 8×8 档位'],
+  controls: ['点击高亮格：走马步', 'U：撤回一步（起点不可撤）', 'H：提示 Warnsdorff 最小出度格（每局 3 次，扣分）', 'R：重开 · P：暂停', '[ / ]：切换 5×5 / 6×6 / 8×8 档位'],
   create: createKnightourGame,
 }
