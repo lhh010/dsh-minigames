@@ -113,6 +113,10 @@ import { balloonGame } from './balloon/index.ts'
 import { sorterGame } from './sorter/index.ts'
 import { rivercrossGame } from './rivercross/index.ts'
 import { shutboxGame } from './shutbox/index.ts'
+import { balanceGame } from './balance/index.ts'
+import { tideGame } from './tide/index.ts'
+import { burgerGame } from './burger/index.ts'
+import { missileGame } from './missile/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -166,6 +170,7 @@ export function registerBuiltinGames(): void {
     game24Game, tangramGame, sailingGame, trafficGame,
     rhythmGame, elevatorGame, iceslideGame, linkGame,
     balloonGame, sorterGame, rivercrossGame, shutboxGame,
+    balanceGame, tideGame, burgerGame, missileGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }

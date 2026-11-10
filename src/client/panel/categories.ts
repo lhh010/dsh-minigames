@@ -31,7 +31,7 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   rushhour: 'puzzle', maze: 'puzzle', hanoi: 'puzzle', fifteen: 'puzzle',
   peg: 'puzzle', pipes: 'puzzle', flow: 'puzzle', wordle: 'puzzle',
   mastermind: 'puzzle', circlemath: 'puzzle', game24: 'puzzle', tangram: 'puzzle',
-  spotdiff: 'puzzle', memory: 'puzzle', match3: 'puzzle', iceslide: 'puzzle', link: 'puzzle', rivercross: 'puzzle',
+  spotdiff: 'puzzle', memory: 'puzzle', match3: 'puzzle', iceslide: 'puzzle', link: 'puzzle', rivercross: 'puzzle', balance: 'puzzle',
   // 棋牌
   chess: 'board', xiangqi: 'board', gomoku: 'board', othello: 'board',
   connect4: 'board', minigo: 'board', blackjack: 'board', yahtzee: 'board',
@@ -44,7 +44,7 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   dodger: 'arcade', stack: 'arcade', jumper: 'arcade', avalanche: 'arcade',
   suika: 'arcade', tanks: 'arcade', td: 'arcade', slither: 'arcade',
   jungle: 'arcade', fruitslash: 'arcade', gravflip: 'arcade', copter: 'arcade',
-  whack: 'arcade', piano: 'arcade', rhythm: 'arcade', elevator: 'arcade', sorter: 'arcade',
+  whack: 'arcade', piano: 'arcade', rhythm: 'arcade', elevator: 'arcade', sorter: 'arcade', burger: 'arcade', missile: 'arcade',
   // 反应
   aimtrack: 'reflex', simon: 'reflex', schulte: 'reflex', stroop: 'reflex',
   reaction: 'reflex', typing: 'reflex', juggle: 'reflex', steadyhand: 'reflex',
@@ -55,7 +55,7 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   papertoss: 'physics', knifering: 'physics', hoopshot: 'physics', movinghoop: 'physics',
   ski: 'physics', racing: 'physics', hole: 'physics',
   // 休闲
-  bubblewrap: 'casual', fishing: 'casual', eggcatcher: 'casual', coinpusher: 'casual', balloon: 'casual',
+  bubblewrap: 'casual', fishing: 'casual', eggcatcher: 'casual', coinpusher: 'casual', balloon: 'casual', tide: 'casual',
 }
 
 /** 查游戏分类；未登记回落休闲（全覆盖测试把遗漏顶出来）。 */
