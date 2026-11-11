@@ -127,11 +127,11 @@ export function renderRicochet(ctx: CanvasRenderingContext2D, state: RicochetSta
   const names = ['红', '黄', '绿', '蓝']
   const tName = names[state.targetRobot] ?? '?'
   const tCol = ROBOT_COLORS[state.targetRobot] ?? THEME.text
-  ctx.font = '700 13px system-ui, sans-serif'
-  ctx.textAlign = 'left'
+  ctx.font = '700 12px system-ui, sans-serif'
+  ctx.textAlign = 'center'
   glow(ctx, tCol, 6)
   ctx.fillStyle = tCol
-  ctx.fillText('◆ 目标：把【' + tName + '色机器人】（金色描边）滑到菱形目标格', 16, 48)
+  ctx.fillText('◆ 目标：把【' + tName + '色机器人】（金色描边）滑到菱形目标格', W / 2, 421)
   noGlow(ctx)
 
   // 盘面底板。
