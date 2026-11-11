@@ -125,6 +125,10 @@ import { queens8Game } from './queens8/index.ts'
 import { kenkenGame } from './kenken/index.ts'
 import { futoshikiGame } from './futoshiki/index.ts'
 import { ricochetGame } from './ricochet/index.ts'
+import { tiltmazeGame } from './tiltmaze/index.ts'
+import { morseGame } from './morse/index.ts'
+import { dartsGame } from './darts/index.ts'
+import { onestrokeGame } from './onestroke/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -181,6 +185,7 @@ export function registerBuiltinGames(): void {
     balanceGame, tideGame, burgerGame, missileGame,
     bridgeGame, jugsGame, knightourGame, nimgameGame,
     queens8Game, kenkenGame, futoshikiGame, ricochetGame,
+    tiltmazeGame, morseGame, dartsGame, onestrokeGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }

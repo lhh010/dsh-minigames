@@ -203,7 +203,7 @@ function createSimonGame(host: HTMLElement, options?: MiniGameMountOptions): Min
 export const simonGame: MiniGameDefinition = {
   id: 'simon',
   title: 'Simon 记忆序列',
-  icon: '🎵',
+  icon: '🔔',
   description: '记住闪烁序列并复现，回合越往后越长越快。',
   controls: ['点击 / A S D F：按键', 'R：重开', 'P：暂停'],
   create: createSimonGame,
