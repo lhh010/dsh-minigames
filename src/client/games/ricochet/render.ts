@@ -124,7 +124,8 @@ export function renderRicochet(ctx: CanvasRenderingContext2D, state: RicochetSta
   hudPair(ctx, 240, 28, 'PAR', String(state.par))
   hudPair(ctx, W - 16, 28, '分数', String(state.score), 'right', state.won ? THEME.gold : THEME.text)
   // 目标横幅：明确本关要送哪个机器人去哪（金色描边机器人 → 菱形目标格）。
-  const names = ['红', '黄', '绿', '蓝']
+  // 与 ROBOT_COLORS（accent 0/2/4/6）对应：蓝、绿、红、橙。
+  const names = ['蓝', '绿', '红', '橙']
   const tName = names[state.targetRobot] ?? '?'
   const tCol = ROBOT_COLORS[state.targetRobot] ?? THEME.text
   ctx.font = '700 12px system-ui, sans-serif'
