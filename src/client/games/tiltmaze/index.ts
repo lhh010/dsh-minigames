@@ -183,7 +183,7 @@ function createTiltMazeGame(host: HTMLElement, options?: MiniGameMountOptions): 
 export const tiltmazeGame: MiniGameDefinition = {
   id: 'tiltmaze',
   title: '旋转迷宫 Tilt Maze',
-  icon: '🎡',
+  icon: '🧭',
   description: '小球自己会滚——你转动的是整个迷宫：旋转盘子引导小球躲陷阱达终点。',
   controls: [
     '按住 ←/→ 或 A/D：旋转盘面（触屏按住左/右半屏）',
