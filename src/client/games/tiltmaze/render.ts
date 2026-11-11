@@ -89,7 +89,7 @@ export function renderTiltMaze(ctx: CanvasRenderingContext2D, state: TiltMazeSta
   noGlow(ctx)
   for (let i = 1; i <= m.rings; i += 1) {
     ctx.beginPath()
-    ctx.arc(0, 0, i * m.ringGap, 0, Math.PI * 2)
+    ctx.arc(0, 0, HUB_R + i * m.ringGap, 0, Math.PI * 2)
     ctx.strokeStyle = i % 2 === 0 ? 'rgba(0,0,0,0.28)' : 'rgba(255,225,180,0.06)'
     ctx.lineWidth = 1.5
     ctx.stroke()
@@ -105,19 +105,19 @@ export function renderTiltMaze(ctx: CanvasRenderingContext2D, state: TiltMazeSta
     for (let s = 0; s < m.spokes; s += 1) {
       if (!m.ringWalls[i]![s]) continue
       ctx.beginPath()
-      ctx.arc(0, 0, i * m.ringGap, s * step, (s + 1) * step)
+      ctx.arc(0, 0, HUB_R + i * m.ringGap, s * step, (s + 1) * step)
       ctx.stroke()
     }
   }
   ctx.lineWidth = 5
   for (let i = 1; i <= m.rings; i += 1) {
-    const inner = (i - 1) * m.ringGap + (i === 1 ? HUB_R : 0)
+    const inner = HUB_R + (i - 1) * m.ringGap
     for (let s = 0; s < m.spokes; s += 1) {
       if (!m.spokeWalls[i]![s]) continue
       const a = s * step
       ctx.beginPath()
       ctx.moveTo(Math.cos(a) * inner, Math.sin(a) * inner)
-      ctx.lineTo(Math.cos(a) * i * m.ringGap, Math.sin(a) * i * m.ringGap)
+      ctx.lineTo(Math.cos(a) * (HUB_R + i * m.ringGap), Math.sin(a) * (HUB_R + i * m.ringGap))
       ctx.stroke()
     }
   }

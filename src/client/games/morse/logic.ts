@@ -16,15 +16,15 @@ export const MORSE_TABLE: Readonly<Record<string, string>> = {
 }
 
 /** 点的播放时长（ms）。 */
-export const DIT_MS = 120
+export const DIT_MS = 180
 /** 划的播放时长（ms）。 */
-export const DAH_MS = 300
+export const DAH_MS = 540
 /** 点/划分桶阈值：按压时长 <180ms 记点，≥180ms 记划。 */
-export const ELEMENT_THRESHOLD_MS = 180
+export const ELEMENT_THRESHOLD_MS = 360
 /** 字母内点划之间的熄灭间隔（ms）。 */
-export const SYMBOL_GAP_MS = 120
+export const SYMBOL_GAP_MS = 180
 /** 播放时字母之间的空隙（ms）。 */
-export const LETTER_GAP_MS = 500
+export const LETTER_GAP_MS = 700
 /** 编码判定容差 ±25%：抬键后的停顿达到该时长的 75% 即判定字母结束。 */
 export const TOLERANCE = 0.25
 /** 字母结束判定阈值：LETTER_GAP_MS * (1 - TOLERANCE) = 375ms。 */

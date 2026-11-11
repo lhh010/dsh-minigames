@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import {
+import { SYMBOL_GAP_MS,
   DIT_MS, DAH_MS, ELEMENT_THRESHOLD_MS, LETTER_GAP_MS, LETTER_END_GAP_MS, LEVELS,
   MORSE_TABLE, answerScore, baseScore, classifyElementDuration, createMorseState,
   endPlayback, expandWord, finishEncodeLetter, gapEndsLetter, letterFromCode,
   mulberry32, pickLetter, pushElement, signalAt, startRound, speedBonus,
   totalDurationMs,
-} from '../src/client/games/morse/logic.ts'
+ } from '../src/client/games/morse/logic.ts'
 
 /** 完成当前一轮（按 state.word 正确作答，解码/编码两种模式都覆盖）。 */
 function solveRound(state: ReturnType<typeof createMorseState>, elapsedMs: number): void {
@@ -50,11 +50,11 @@ describe('morse logic', () => {
     ])
     // 'IE' = 两点中间是符号隔（120ms），字母隔只在字母之间。
     expect(expandWord('IE')).toEqual([
-      { on: true, ms: DIT_MS }, { on: false, ms: 120 }, { on: true, ms: DIT_MS },
+      { on: true, ms: DIT_MS }, { on: false, ms: SYMBOL_GAP_MS }, { on: true, ms: DIT_MS },
       { on: false, ms: LETTER_GAP_MS }, { on: true, ms: DIT_MS },
     ])
     // 总时长 = 各段之和。
-    expect(totalDurationMs(expandWord('SOS'))).toBe(3340) // 2×S(600) + 2×字母隔(500×2) + O(1140)
+    expect(totalDurationMs(expandWord('SOS'))).toBe(5180) // 2×S(900) + 2×字母隔(700×2) + O(1980)
   })
 
   it('signalAt 按播放进度判定指示灯亮灭', () => {
@@ -69,14 +69,14 @@ describe('morse logic', () => {
   })
 
   it('按压时长分桶：<180ms 为点、≥180ms 为划；停顿 375ms 判字母结束', () => {
-    expect(ELEMENT_THRESHOLD_MS).toBe(180)
+    expect(ELEMENT_THRESHOLD_MS).toBe(360)
     expect(classifyElementDuration(30)).toBe('.')
-    expect(classifyElementDuration(179)).toBe('.')
-    expect(classifyElementDuration(180)).toBe('-')
+    expect(classifyElementDuration(359)).toBe('.')
+    expect(classifyElementDuration(360)).toBe('-')
     expect(classifyElementDuration(1000)).toBe('-')
-    expect(LETTER_END_GAP_MS).toBe(375)
-    expect(gapEndsLetter(374)).toBe(false)
-    expect(gapEndsLetter(375)).toBe(true)
+    expect(LETTER_END_GAP_MS).toBe(525)
+    expect(gapEndsLetter(524)).toBe(false)
+    expect(gapEndsLetter(525)).toBe(true)
   })
 
   it('startRound 用注入种子确定性选词并交替两种模式', () => {

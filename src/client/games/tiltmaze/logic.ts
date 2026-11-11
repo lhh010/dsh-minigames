@@ -18,7 +18,7 @@ export const CX = 240
 /** 盘面中心 y px。 */
 export const CY = 300
 /** 小球半径 px。 */
-export const BALL_R = 8
+export const BALL_R = 6
 /** 屏幕系重力加速度 px/s²（恒向下）。 */
 export const GRAVITY = 760
 /** 按住左/右时盘面旋转角速度 rad/s。 */
@@ -239,7 +239,7 @@ export function buildSegments(maze: TiltMazeLevel): Segment[] {
     return Math.max(1, Math.ceil(arcLen / MAX_CHORD))
   }
   for (let i = 1; i <= maze.rings; i += 1) {
-    const radius = i * maze.ringGap
+    const radius = HUB_R + i * maze.ringGap
     for (let s = 0; s < maze.spokes; s += 1) {
       if (!maze.ringWalls[i]![s]) continue
       const n = arcSteps(radius)
@@ -254,8 +254,8 @@ export function buildSegments(maze: TiltMazeLevel): Segment[] {
     }
   }
   for (let i = 1; i <= maze.rings; i += 1) {
-    const inner = (i - 1) * maze.ringGap + (i === 1 ? HUB_R : 0)
-    const outer = i * maze.ringGap
+    const inner = HUB_R + (i - 1) * maze.ringGap
+    const outer = HUB_R + i * maze.ringGap
     for (let s = 0; s < maze.spokes; s += 1) {
       if (!maze.spokeWalls[i]![s]) continue
       const a = s * step
@@ -316,7 +316,9 @@ export function generateLevel(seed: number, level: number): TiltMazeLevel {
   const rings = cfg.rings
   const spokes = cfg.spokes
   const outerR = 150 + Math.min(Math.max(level, 1), 5) * 13
-  const ringGap = outerR / rings
+  // 环半径从轮毂起均匀分布（原 0..outerR 使内环格径向 ~27px、弧向更窄，
+  // 球径 12px 几乎卡死）。改为 HUB_R..outerR 分布，内环格显著加宽。
+  const ringGap = (outerR - HUB_R) / rings
   const rand = mulberry32((seed + level * 7919) >>> 0)
 
   const ringWalls: boolean[][] = []
@@ -368,7 +370,7 @@ export function generateLevel(seed: number, level: number): TiltMazeLevel {
   for (let n = 0; n < cfg.traps && candidates.length > 0; n += 1) {
     const idx = Math.floor(rand() * candidates.length)
     const [i, s] = candidates.splice(idx, 1)[0]!
-    const rad = (i - 0.5) * ringGap
+    const rad = HUB_R + (i - 0.5) * ringGap
     const ang = (s + 0.5) * TAU / spokes
     traps.push({ x: Math.cos(ang) * rad, y: Math.sin(ang) * rad })
   }

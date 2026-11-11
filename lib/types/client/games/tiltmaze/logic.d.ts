@@ -17,7 +17,7 @@ export declare const CX = 240;
 /** 盘面中心 y px。 */
 export declare const CY = 300;
 /** 小球半径 px。 */
-export declare const BALL_R = 8;
+export declare const BALL_R = 6;
 /** 屏幕系重力加速度 px/s²（恒向下）。 */
 export declare const GRAVITY = 760;
 /** 按住左/右时盘面旋转角速度 rad/s。 */

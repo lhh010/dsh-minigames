@@ -7,15 +7,15 @@
 /** 36 字符摩斯表：A-Z 与 0-9 的标准电码（'.' 点，'-' 划）。 */
 export declare const MORSE_TABLE: Readonly<Record<string, string>>;
 /** 点的播放时长（ms）。 */
-export declare const DIT_MS = 120;
+export declare const DIT_MS = 180;
 /** 划的播放时长（ms）。 */
-export declare const DAH_MS = 300;
+export declare const DAH_MS = 540;
 /** 点/划分桶阈值：按压时长 <180ms 记点，≥180ms 记划。 */
-export declare const ELEMENT_THRESHOLD_MS = 180;
+export declare const ELEMENT_THRESHOLD_MS = 360;
 /** 字母内点划之间的熄灭间隔（ms）。 */
-export declare const SYMBOL_GAP_MS = 120;
+export declare const SYMBOL_GAP_MS = 180;
 /** 播放时字母之间的空隙（ms）。 */
-export declare const LETTER_GAP_MS = 500;
+export declare const LETTER_GAP_MS = 700;
 /** 编码判定容差 ±25%：抬键后的停顿达到该时长的 75% 即判定字母结束。 */
 export declare const TOLERANCE = 0.25;
 /** 字母结束判定阈值：LETTER_GAP_MS * (1 - TOLERANCE) = 375ms。 */
