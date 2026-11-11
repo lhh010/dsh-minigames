@@ -31,7 +31,7 @@ export declare const SUBSTEP: number;
 /** 尖刺陷阱判定半径 px。 */
 export declare const TRAP_R = 10;
 /** 中心轮毂半径 px（环 1 辐条不伸进轮毂，出生点无墙重叠）。 */
-export declare const HUB_R = 14;
+export declare const HUB_R = 58;
 /** 二维向量 / 点。 */
 export interface Vec {
     /** x 分量。 */

@@ -339,6 +339,11 @@ export function finishEncodeLetter(
   if (state.phase !== 'encode') return 'ignored'
   if (state.encodeBuffer.length === 0) return 'pending'
   const target = MORSE_TABLE[state.word[state.encodeIndex] ?? ''] ?? ''
+  // 字母中途停顿（还在想下一个点/划）：缓冲是目标的真前缀时不算错、
+  // 保持等待——只有明确打出不匹配的电码才判错扣命（「思考被断电」）。
+  if (state.encodeBuffer !== target && target.startsWith(state.encodeBuffer)) {
+    return 'pending'
+  }
   if (state.encodeBuffer === target) {
     state.encodeIndex += 1
     state.encodeBuffer = ''

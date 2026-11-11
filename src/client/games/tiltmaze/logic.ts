@@ -32,7 +32,7 @@ export const SUBSTEP = 1 / 240
 /** 尖刺陷阱判定半径 px。 */
 export const TRAP_R = 10
 /** 中心轮毂半径 px（环 1 辐条不伸进轮毂，出生点无墙重叠）。 */
-export const HUB_R = 14
+export const HUB_R = 58
 /** 撞墙切向摩擦保留系数（每次反弹后整体速度乘子）。 */
 const WALL_FRICTION = 0.985
 /** 低速法向速度阈值 px/s（低于则贴合墙面不反弹）。 */
@@ -44,11 +44,11 @@ const TAU = Math.PI * 2
 
 /** 每关递进配置：环数 / 辐条数 / 陷阱数 / 额外缺口概率。 */
 const LEVEL_CONFIG = [
-  { rings: 4, spokes: 8, traps: 2, open: 0.30 },
-  { rings: 5, spokes: 10, traps: 3, open: 0.24 },
-  { rings: 6, spokes: 10, traps: 4, open: 0.18 },
-  { rings: 7, spokes: 12, traps: 5, open: 0.12 },
-  { rings: 8, spokes: 12, traps: 6, open: 0.07 },
+  { rings: 3, spokes: 8, traps: 2, open: 0.30 },
+  { rings: 4, spokes: 8, traps: 3, open: 0.24 },
+  { rings: 5, spokes: 10, traps: 4, open: 0.18 },
+  { rings: 6, spokes: 10, traps: 5, open: 0.12 },
+  { rings: 7, spokes: 12, traps: 6, open: 0.07 },
 ] as const
 
 /** 二维向量 / 点。 */
