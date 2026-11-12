@@ -246,7 +246,8 @@ function endTurn(state: DartsState, who: 'human' | 'ai'): void {
   if (who === 'human') {
     state.turn = 'ai'
     state.ai.turnStart = state.ai.remaining
-    state.marks = []
+    // 标记不清：展示窗口里玩家还要看自己第三镖的落点——AI 开投前
+    // 由 runAiTurn 开头清（原先这里立即清导致第三镖瞬间消失）。
   } else {
     state.turn = 'human'
     nextHumanRound(state)
@@ -300,6 +301,8 @@ export function throwDart(state: DartsState, aimX: number, aimY: number, t: numb
  */
 export function runAiTurn(state: DartsState): ThrowResult[] {
   if (state.winner !== null || state.turn !== 'ai') return []
+  // AI 开始投掷时才清玩家标记（endTurn 不再清——给第三镖留展示窗口）。
+  state.marks = []
   const out: ThrowResult[] = []
   while (state.turn === 'ai' && state.winner === null) {
     const aim = aiAim(state.ai.remaining, state.rng)
