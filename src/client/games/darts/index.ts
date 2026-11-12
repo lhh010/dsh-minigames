@@ -49,14 +49,21 @@ function createDartsGame(host: HTMLElement, options?: MiniGameMountOptions): Min
     }
   }
 
+  let aiPendingMs = 0
   const maybeAiTurn = (): void => {
     if (state.turn === 'ai' && state.winner === null) {
-      runAiTurn(state)
-      animMs = Math.max(animMs, 420)
-      if (state.winner !== null) phase = 'over'
-      reportScore()
+      // 第三镖落点先给玩家看清楚：AI 回合延迟 900ms 再开始。
+      aiPendingMs = 900
     }
     if (state.winner !== null && phase === 'playing') phase = 'over'
+  }
+
+  const runAiNow = (): void => {
+    if (state.turn !== 'ai' || state.winner !== null) return
+    runAiTurn(state)
+    animMs = Math.max(animMs, 420)
+    if (state.winner !== null) phase = 'over'
+    reportScore()
   }
 
   const doThrow = (): void => {
@@ -133,6 +140,11 @@ function createDartsGame(host: HTMLElement, options?: MiniGameMountOptions): Min
 
   const frame = (f: FrameInfo): void => {
     if (phase === 'playing') t += f.dt
+    if (aiPendingMs > 0) {
+      aiPendingMs -= f.wallMs
+      loop.markDirty()
+      if (aiPendingMs <= 0) runAiNow()
+    }
     if (animMs > 0) {
       animMs -= f.wallMs
       loop.markDirty()
