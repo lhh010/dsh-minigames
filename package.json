@@ -24,7 +24,8 @@
     "lib",
     "cordis.patch.yml",
     "dsh.plugin.json",
-    "src"
+    "src",
+    "locale"
   ],
   "scripts": {
     "build": "node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\" && tsc -p tsconfig.build.json && tsdown",
