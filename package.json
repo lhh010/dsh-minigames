@@ -10,6 +10,8 @@
     "./client": "./lib/client.js",
     "./invariant": "./lib/invariant.js",
     "./src/*": "./src/*",
+    "./locale/*": "./locale/*",
+    "./locale/*.json": "./locale/*.json",
     "./package.json": "./package.json"
   },
   "dsh": {
