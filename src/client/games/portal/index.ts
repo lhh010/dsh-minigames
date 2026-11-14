@@ -97,7 +97,8 @@ function createPortalGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       case 'KeyW':
       case 'Space':
         event.preventDefault()
-        input.jump = true
+        // 只在非自动重复的按下沿触发（配合逻辑层消费即清的二段跳）。
+        if (!event.repeat) input.jump = true
         break
       case 'KeyR':
         event.preventDefault()

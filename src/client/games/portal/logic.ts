@@ -613,10 +613,12 @@ function substep(state: PortalState, dt: number, input: PortalInput): void {
     else state.vx = Math.min(0, state.vx + damp)
   }
   // 二段跳：落地回满 2 跳；空中仍可用一次（JUMP_VY 的 0.9 倍略弱）。
+  // jump 为一次性触发（消费即清）——按住键不会连跳两下把次数耗尽。
   if (input.jump && state.jumpsLeft > 0) {
     state.vy = state.grounded ? JUMP_VY : JUMP_VY * 0.9
     state.jumpsLeft -= 1
     state.grounded = false
+    input.jump = false
   }
   state.vy += GRAVITY * dt
   if (state.vy > MAX_FALL) state.vy = MAX_FALL

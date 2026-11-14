@@ -257,6 +257,13 @@ export function renderPortal(ctx: CanvasRenderingContext2D, state: PortalState, 
   ctx.textAlign = 'center'
   ctx.fillStyle = THEME.textMuted
   ctx.fillText('左键蓝门 · 右键/Shift+点橙门 · 只能贴竖直墙', W / 2, H - 12)
+  // 第一关教学提示：直接点名解法，避免「门放歪了走不过去」的挫败。
+  if (state.levelIndex === 0 && state.phase === 'playing') {
+    glow(ctx, THEME.accents[0]!, 6)
+    ctx.fillStyle = THEME.accents[0]!
+    ctx.fillText('提示：蓝门贴墙的左侧面（点墙左半），橙门贴墙的右侧面（点墙右半），然后向右走过去', W / 2, 44)
+    noGlow(ctx)
+  }
   const last = state.levelIndex === 4
   if (paused && state.phase === 'playing') {
     drawOverlay(ctx, W, H, '暂停', '按 P 继续 · R 重开本关')

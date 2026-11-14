@@ -15,13 +15,16 @@ export const logicalH = 600
 /** 等轴测参数：块宽单元 / 屏幕层高 / 塔心水平位置。 */
 const U = 34
 const BLOCK_LEN = 3 * U
-const LEVEL_H = 22
+const LEVEL_H = 26
 const CX = 320
-const TOP_Y = 150
+const TOP_Y = 330
+/** 块间视觉缝隙（世界单位）——无缝则塔读不出层与块。 */
+const GAP = 2.5
 
 /** 3D 坐标（x/z 为等轴测平面，yLev 为 0 起的层号）→ 屏幕坐标。 */
-function project(x: number, z: number, yLev: number): { x: number, y: number } {
-  return { x: CX + (x - z) * 0.866, y: TOP_Y + yLev * LEVEL_H + (x + z) * 0.5 }
+/** 世界 y 向上：sy = 基线 + (x+z)*0.5 − y（层高直接用世界单位，比例正确）。 */
+function project(x: number, z: number, yUp: number): { x: number, y: number } {
+  return { x: CX + (x - z) * 0.866, y: TOP_Y + (x + z) * 0.5 - yUp }
 }
 
 /** 一个块的投影布局：顶面四边形 + 屏幕包围盒。 */
@@ -35,6 +38,8 @@ export interface BlockLayout {
   /** 等轴测深度（块中心 x+z）：画家算法排序键——原 (maxX-CX)+maxY
    * 混合横纵坐标，同层横排块排序错乱导致前排画到后排之后（穿模错位）。 */
   depth: number
+  /** 层号（1 起）——排序次键。 */
+  levelIndex: number
 }
 
 /**
@@ -51,12 +56,13 @@ export function computeLayout(state: JengaState): BlockLayout[] {
     const x1 = alongX ? halfLen : c + U / 2
     const z0 = alongX ? c - U / 2 : -halfLen
     const z1 = alongX ? c + U / 2 : halfLen
-    const yBase = b.level - 1
+    const yBase = (b.level - 1) * LEVEL_H
+    const yTop = b.level * LEVEL_H
     const corners = [
       project(x0, z0, yBase), project(x1, z0, yBase),
       project(x1, z1, yBase), project(x0, z1, yBase),
-      project(x0, z0, yBase + 1), project(x1, z0, yBase + 1),
-      project(x1, z1, yBase + 1), project(x0, z1, yBase + 1),
+      project(x0, z0, yTop), project(x1, z0, yTop),
+      project(x1, z1, yTop), project(x0, z1, yTop),
     ]
     const xs = corners.map(p => p.x)
     const ys = corners.map(p => p.y)
@@ -67,6 +73,7 @@ export function computeLayout(state: JengaState): BlockLayout[] {
       minX: Math.min(...xs), minY: Math.min(...ys),
       maxX: Math.max(...xs), maxY: Math.max(...ys),
       depth: (x0 + x1) / 2 + (z0 + z1) / 2,
+      levelIndex: b.level,
     })
   }
   return out
@@ -143,26 +150,26 @@ export function renderJenga(
   ctx.fill()
 
   const layout = computeLayout(state)
-  // 画家算法：按等轴测深度（块中心 x+z）排序，同柱再按层——远（小 x+z）
-  // 先画、近后画。深度相同（同柱不同层）时低层先画，覆盖关系正确。
+  // 画家算法：层低先画，同层远（小 x+z）先画、近后画——光栅化验证的正确顺序。
   const order = layout
-    .map((l, i) => ({ l, i, key: l.depth * 1000 + l.level }))
-    .sort((a, b) => a.key - b.key)
+    .map((l, i) => ({ l, i }))
+    .sort((a, b) => (a.l.levelIndex - b.l.levelIndex) || (a.l.depth - b.l.depth))
 
   for (const { l, i } of order) {
     const b = state.blocks[i]!
     if (!b.present) continue
     const alongX = b.level % 2 === 0
-    const halfLen = BLOCK_LEN / 2
+    const halfLen = BLOCK_LEN / 2 - GAP
     const c = b.slot * U
-    const x0 = alongX ? -halfLen : c - U / 2
-    const x1 = alongX ? halfLen : c + U / 2
-    const z0 = alongX ? c - U / 2 : -halfLen
-    const z1 = alongX ? c + U / 2 : halfLen
-    const yb = b.level - 1
+    const x0 = alongX ? -halfLen : c - U / 2 + GAP
+    const x1 = alongX ? halfLen : c + U / 2 - GAP
+    const z0 = alongX ? c - U / 2 + GAP : -halfLen
+    const z1 = alongX ? c + U / 2 - GAP : halfLen
+    const yb = (b.level - 1) * LEVEL_H + 1
+    const yEdge = b.level * LEVEL_H - 1
     const p000 = project(x0, z0, yb), p100 = project(x1, z0, yb)
     const p101 = project(x1, z1, yb), p001 = project(x0, z1, yb)
-    const pTop = [project(x0, z0, yb + 1), project(x1, z0, yb + 1), project(x1, z1, yb + 1), project(x0, z1, yb + 1)]
+    const pTop = [project(x0, z0, yEdge), project(x1, z0, yEdge), project(x1, z1, yEdge), project(x0, z1, yEdge)]
     const risk = canPull(state, b.level, b.slot) ? previewStress(state, b.level, b.slot) : 0
     const hot = risk > 0.9
     if (hot) { glow(ctx, THEME.bad, 10) }
@@ -178,8 +185,13 @@ export function renderJenga(
     ctx.fillStyle = woodColor(risk, '#c9a06a')
     ctx.fill()
     noGlow(ctx)
-    ctx.strokeStyle = 'rgba(20,16,10,0.5)'
-    ctx.lineWidth = 1
+    // 三面统一深色描边——块与块的缝隙让层结构和正交交替可读。
+    ctx.strokeStyle = 'rgba(24,18,10,0.75)'
+    ctx.lineWidth = 1.5
+    facePath(ctx, [p100, p101, pTop[2]!, pTop[1]!])
+    ctx.stroke()
+    facePath(ctx, [p001, p101, pTop[2]!, pTop[3]!])
+    ctx.stroke()
     facePath(ctx, pTop)
     ctx.stroke()
     // hover 高亮：合法抽块描边

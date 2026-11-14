@@ -26,6 +26,8 @@ export interface BlockLayout {
     /** 等轴测深度（块中心 x+z）：画家算法排序键——原 (maxX-CX)+maxY
      * 混合横纵坐标，同层横排块排序错乱导致前排画到后排之后（穿模错位）。 */
     depth: number;
+    /** 层号（1 起）——排序次键。 */
+    levelIndex: number;
 }
 /**
  * 计算整塔布局：底层到顶层逐块投影。块长沿层方向（偶层沿 X、奇层

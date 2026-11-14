@@ -206,7 +206,10 @@ describe('二段跳', () => {
     s.y = 32 * 8 // 空中
     s.vy = 0
     stepPortal(s, 16, { ...STILL, jump: true } as never)
-    expect(s.vy).toBe(JUMP_VY * 0.9 + 1800 * 0.008)
+    expect(s.vy).toBe(JUMP_VY * 0.9 + 1800 * 0.016)
+    expect(s.jumpsLeft).toBe(1)
+    // 空中第二跳（最后一跳）仍可用。
+    stepPortal(s, 16, { ...STILL, jump: true } as never)
     expect(s.jumpsLeft).toBe(0)
     // 空中第三跳无效。
     s.vy = 100
