@@ -28,9 +28,9 @@ export const GRAVITY = 900
 /** 出手竖直初速 px/s（固定向上）。 */
 export const LAUNCH_VY = -540
 /** 最小水平初速 px/s（零力度）。 */
-export const MIN_VX = 330
+export const MIN_VX = 140
 /** 最大水平初速 px/s（满力度）。 */
-export const MAX_VX = 940
+export const MAX_VX = 460
 /** 蓄力速度（力度/秒）。 */
 export const POWER_RATE = 1.2
 /** 每轮环数。 */
