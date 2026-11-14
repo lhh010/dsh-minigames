@@ -85,18 +85,18 @@ describe('portal logic', () => {
   })
 
   it('瓦片碰撞与危险：撞墙停、落地稳、尖刺致死重开', () => {
-    const state = createPortalState(7, 0)
+    let state = createPortalState(7, 0)
     // 向左走 1s：贴上 col0 边界墙停下（x 卡在墙外半宽处），速度清零。
     drive(state, 1000, LEFT)
     expect(state.x).toBeCloseTo(32 + 11 + 0.01, 1)
     expect(state.vx).toBe(0)
-    // 从空中垂直落下：落到左平台顶（row16 顶面 y=512）站稳。
+    // 从空中垂直落下：落到左平台顶（row19 顶面 y=608）站稳。
     const drop = createPortalState(7, 0)
     drop.y = 200
     drop.vy = 0
     drive(drop, 2000, STILL)
     expect(drop.grounded).toBe(true)
-    expect(drop.y + 13).toBeLessThanOrEqual(512 + 0.02)
+    expect(drop.y + 13).toBeLessThanOrEqual(608 + 0.02)
     expect(drop.vy).toBe(0)
     // 高速下砸（> 1 帧 / 子步位移）也不穿透 32px 地板。
     const slam = createPortalState(7, 0)
@@ -104,8 +104,12 @@ describe('portal logic', () => {
     slam.vy = 950
     drive(slam, 2000, STILL)
     expect(slam.grounded).toBe(true)
-    // 向右跑过平台边缘坠入尖刺坑：本关重来，死亡计数由重开累计。
-    const seen = collect(state, 3000, RIGHT)
+    // 尖刺致死（第 1 关已无坑——改用第 2 关尖刺地）：坠刺即死、重开计死。
+    state = createPortalState(3, 1)
+    state.x = 32 + 16
+    state.y = 32 * 8
+    state.vy = 0
+    const seen = collect(state, 3000, STILL)
     expect(state.phase).toBe('dead')
     expect(seen.some(type => type === 'die')).toBe(true)
     expect(state.deaths).toBe(0)
@@ -119,8 +123,8 @@ describe('portal logic', () => {
 
   it('第 1 关（初见门径）：蓝橙门对穿到达旗帜', () => {
     const state = createPortalState(1, 0)
-    expect(placePortal(state, 0, 14, 1, 'blue')).toBe(true)
-    expect(placePortal(state, 11, 14, 1, 'orange')).toBe(true)
+    expect(placePortal(state, 0, 18, 1, 'blue')).toBe(true)
+    expect(placePortal(state, 11, 18, 1, 'orange')).toBe(true)
     const seen = collect(state, 300, LEFT)
     expect(seen.includes('warp')).toBe(true)
     // 传送后落在右侧平台，速度大小守恒（入门 |240| 出门 |240|）。
@@ -193,5 +197,25 @@ describe('portal logic', () => {
       return JSON.stringify([s.x, s.y, s.vx, s.vy, s.t, s.phase, s.trail.length, s.trail[0], s.trail[3]])
     }
     expect(run()).toBe(run())
+  })
+})
+describe('二段跳', () => {
+  it('空中可再跳一次；二跳用尽后落地回满', async () => {
+    const { createPortalState, stepPortal, JUMP_VY } = await import('../src/client/games/portal/logic.ts')
+    const s = createPortalState(5, 0)
+    s.y = 32 * 8 // 空中
+    s.vy = 0
+    stepPortal(s, 16, { ...STILL, jump: true } as never)
+    expect(s.vy).toBe(JUMP_VY * 0.9 + 1800 * 0.008)
+    expect(s.jumpsLeft).toBe(0)
+    // 空中第三跳无效。
+    s.vy = 100
+    stepPortal(s, 16, { ...STILL, jump: true } as never)
+    expect(s.vy).toBeGreaterThan(100) // 只受重力叠加，未重置跳
+    // 落地回满。
+    s.x = 32 * 2 + 16
+    for (let i = 0; i < 400; i += 1) stepPortal(s, 16, STILL)
+    expect(s.grounded).toBe(true)
+    expect(s.jumpsLeft).toBe(2)
   })
 })

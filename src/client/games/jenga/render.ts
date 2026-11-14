@@ -32,6 +32,9 @@ export interface BlockLayout {
   top: Array<{ x: number, y: number }>
   /** 全部 8 角的包围盒。 */
   minX: number, minY: number, maxX: number, maxY: number
+  /** 等轴测深度（块中心 x+z）：画家算法排序键——原 (maxX-CX)+maxY
+   * 混合横纵坐标，同层横排块排序错乱导致前排画到后排之后（穿模错位）。 */
+  depth: number
 }
 
 /**
@@ -63,6 +66,7 @@ export function computeLayout(state: JengaState): BlockLayout[] {
       top: [corners[4]!, corners[5]!, corners[6]!, corners[7]!],
       minX: Math.min(...xs), minY: Math.min(...ys),
       maxX: Math.max(...xs), maxY: Math.max(...ys),
+      depth: (x0 + x1) / 2 + (z0 + z1) / 2,
     })
   }
   return out
@@ -139,9 +143,10 @@ export function renderJenga(
   ctx.fill()
 
   const layout = computeLayout(state)
-  // 画家算法：按 (minX + maxY) 排序，远（左上）先画、近（右下）后画。
+  // 画家算法：按等轴测深度（块中心 x+z）排序，同柱再按层——远（小 x+z）
+  // 先画、近后画。深度相同（同柱不同层）时低层先画，覆盖关系正确。
   const order = layout
-    .map((l, i) => ({ l, i, key: (l.maxX - CX) + (l.maxY) }))
+    .map((l, i) => ({ l, i, key: l.depth * 1000 + l.level }))
     .sort((a, b) => a.key - b.key)
 
   for (const { l, i } of order) {

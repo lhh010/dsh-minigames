@@ -228,6 +228,6 @@ export const portalGame: MiniGameDefinition = {
   title: '传送门 Portal',
   icon: '🚪',
   description: '蓝橙双门穿越空间——动量守恒的解谜艺术。',
-  controls: ['←→ / A D：移动 · ↑ / W / 空格：跳跃', '左键：蓝门 · 右键 / Shift+点击：橙门（只能贴竖直墙面）', '同朝向门对 = 落差弹射 · R：重开 · P：暂停'],
+  controls: ['←→ / A D：移动 · ↑ / W / 空格：跳跃（支持二段跳）', '左键：蓝门 · 右键 / Shift+点击：橙门（只能贴竖直墙面）', '同朝向门对 = 落差弹射 · R：重开 · P：暂停'],
   create: createPortalGame,
 }

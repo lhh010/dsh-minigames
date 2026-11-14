@@ -113,24 +113,24 @@ export const LEVELS: PortalLevel[] = [
     name: '初见门径',
     rows: [
       '#####################',
-      '#...................#',
-      '#...................#',
-      '#...................#',
-      '#...................#',
-      '#...................#',
-      '#...................#',
-      '#...................#',
-      '#...................#',
-      '#...................#',
-      '#...................#',
-      '#...................#',
+      '#.........##........#',
+      '#.........##........#',
+      '#.........##........#',
+      '#.........##........#',
+      '#.........##........#',
+      '#.........##........#',
+      '#.........##........#',
+      '#.........##........#',
+      '#.........##........#',
+      '#.........##........#',
+      '#.........##........#',
+      '#.........##........#',
+      '#.........##........#',
+      '#.........##........#',
       '#.........##........#',
       '#.........##........#',
       '#.........##........#',
       '#.S.......##....F...#',
-      '#######...###########',
-      '#######...###########',
-      '#######^^^###########',
       '#####################',
     ],
   },
@@ -383,6 +383,8 @@ export interface PortalState {
   vy: number
   /** 是否踩地。 */
   grounded: boolean
+  /** 剩余跳数（落地回满 2——支持二段跳）。 */
+  jumpsLeft: number
   phase: PortalPhase
   /** 阶段最近一次切换时的 t。 */
   phaseAt: number
@@ -417,6 +419,7 @@ export function createPortalState(seed: number, levelIndex = 0, deaths = 0): Por
     vx: 0,
     vy: 0,
     grounded: false,
+  jumpsLeft: 2,
     phase: 'playing',
     phaseAt: 0,
     deaths,
@@ -553,7 +556,10 @@ function probeGrounded(state: PortalState): void {
   const row = Math.floor(y / TILE)
   state.grounded = false
   for (let col = c0; col <= c1; col += 1) {
-    if (isSolid(state.info, col, row)) state.grounded = true
+    if (isSolid(state.info, col, row)) {
+    state.grounded = true
+    state.jumpsLeft = 2
+  }
   }
 }
 
@@ -606,8 +612,10 @@ function substep(state: PortalState, dt: number, input: PortalInput): void {
     if (state.vx > 0) state.vx = Math.max(0, state.vx - damp)
     else state.vx = Math.min(0, state.vx + damp)
   }
-  if (input.jump && state.grounded) {
-    state.vy = JUMP_VY
+  // 二段跳：落地回满 2 跳；空中仍可用一次（JUMP_VY 的 0.9 倍略弱）。
+  if (input.jump && state.jumpsLeft > 0) {
+    state.vy = state.grounded ? JUMP_VY : JUMP_VY * 0.9
+    state.jumpsLeft -= 1
     state.grounded = false
   }
   state.vy += GRAVITY * dt

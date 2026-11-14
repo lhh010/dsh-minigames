@@ -194,6 +194,8 @@ export interface PortalState {
     vy: number;
     /** 是否踩地。 */
     grounded: boolean;
+    /** 剩余跳数（落地回满 2——支持二段跳）。 */
+    jumpsLeft: number;
     phase: PortalPhase;
     /** 阶段最近一次切换时的 t。 */
     phaseAt: number;
