@@ -35,9 +35,11 @@ export interface BlockLayout {
   top: Array<{ x: number, y: number }>
   /** 全部 8 角的包围盒。 */
   minX: number, minY: number, maxX: number, maxY: number
-  /** 等轴测深度（块中心 x+z）：画家算法排序键——原 (maxX-CX)+maxY
-   * 混合横纵坐标，同层横排块排序错乱导致前排画到后排之后（穿模错位）。 */
+  /** 等轴测深度（块中心 x+z）：画家算法排序键。 */
   depth: number
+  /** 可见侧面（+x / +z，与绘制同几何）——命中测试与显示一致。 */
+  sideX: Array<{ x: number, y: number }>
+  sideZ: Array<{ x: number, y: number }>
   /** 层号（1 起）——排序次键。 */
   levelIndex: number
 }
@@ -52,12 +54,12 @@ export function computeLayout(state: JengaState): BlockLayout[] {
     const alongX = b.level % 2 === 0
     const halfLen = BLOCK_LEN / 2
     const c = alongX ? b.slot * U : b.slot * U
-    const x0 = alongX ? -halfLen : c - U / 2
-    const x1 = alongX ? halfLen : c + U / 2
-    const z0 = alongX ? c - U / 2 : -halfLen
-    const z1 = alongX ? c + U / 2 : halfLen
-    const yBase = (b.level - 1) * LEVEL_H
-    const yTop = b.level * LEVEL_H
+    const x0 = alongX ? -halfLen : c - U / 2 + GAP
+    const x1 = alongX ? halfLen : c + U / 2 - GAP
+    const z0 = alongX ? c - U / 2 + GAP : -halfLen
+    const z1 = alongX ? c + U / 2 - GAP : halfLen
+    const yBase = (b.level - 1) * LEVEL_H + 1
+    const yTop = b.level * LEVEL_H - 1
     const corners = [
       project(x0, z0, yBase), project(x1, z0, yBase),
       project(x1, z1, yBase), project(x0, z1, yBase),
@@ -74,6 +76,8 @@ export function computeLayout(state: JengaState): BlockLayout[] {
       maxX: Math.max(...xs), maxY: Math.max(...ys),
       depth: (x0 + x1) / 2 + (z0 + z1) / 2,
       levelIndex: b.level,
+      sideX: [corners[1]!, corners[2]!, corners[6]!, corners[5]!],
+      sideZ: [corners[2]!, corners[3]!, corners[7]!, corners[6]!],
     })
   }
   return out
@@ -96,12 +100,19 @@ function inQuad(px: number, py: number, quad: Array<{ x: number, y: number }>): 
  */
 export function blockHitTest(state: JengaState, x: number, y: number): string | null {
   const layout = computeLayout(state)
-  for (let i = layout.length - 1; i >= 0; i -= 1) {
-    const l = layout[i]!
+  // 与绘制同序（层低→近后），命中从最上层近处块往回找——点侧面选中
+  // 视觉上覆盖该点的块，而不是它身后块的顶面。
+  const order = layout
+    .map((l, i) => ({ l, i }))
+    .sort((a, c) => (a.l.levelIndex - c.l.levelIndex) || (a.l.depth - c.l.depth))
+  for (let k = order.length - 1; k >= 0; k -= 1) {
+    const { l, i } = order[k]!
     const b = state.blocks[i]!
     if (!b.present) continue
     if (x < l.minX || x > l.maxX || y < l.minY || y > l.maxY) continue
-    if (inQuad(x, y, l.top)) return b.level + ':' + b.slot
+    if (inQuad(x, y, l.top) || inQuad(x, y, l.sideX) || inQuad(x, y, l.sideZ)) {
+      return b.level + ':' + b.slot
+    }
   }
   return null
 }

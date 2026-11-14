@@ -23,9 +23,17 @@ export interface BlockLayout {
     minY: number;
     maxX: number;
     maxY: number;
-    /** 等轴测深度（块中心 x+z）：画家算法排序键——原 (maxX-CX)+maxY
-     * 混合横纵坐标，同层横排块排序错乱导致前排画到后排之后（穿模错位）。 */
+    /** 等轴测深度（块中心 x+z）：画家算法排序键。 */
     depth: number;
+    /** 可见侧面（+x / +z，与绘制同几何）——命中测试与显示一致。 */
+    sideX: Array<{
+        x: number;
+        y: number;
+    }>;
+    sideZ: Array<{
+        x: number;
+        y: number;
+    }>;
     /** 层号（1 起）——排序次键。 */
     levelIndex: number;
 }

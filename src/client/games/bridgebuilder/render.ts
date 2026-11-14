@@ -215,7 +215,9 @@ export function stressColor(ratio: number): string {
 
 function drawBeams(ctx: CanvasRenderingContext2D, view: BuilderView): void {
   if (view.world !== null) {
-    // 测试期：按物理节点实况绘制，颜色随应力比。
+    // 测试期：按物理节点实况绘制，颜色随应力比。物理世界存的是网格×CELL
+    // 原始坐标——绘制时补 OX/OY 偏移，与建造期蓝图完全同一坐标系（否则
+    // 空格开测后整座桥相对蓝图错位 40/30px）。
     for (let bi = 0; bi < view.world.beams.length; bi += 1) {
       const beam = view.world.beams[bi]!
       if (beam.broken) continue
@@ -227,8 +229,8 @@ function drawBeams(ctx: CanvasRenderingContext2D, view: BuilderView): void {
       ctx.lineWidth = 5
       if (ratio >= 0.75) glow(ctx, color, 8)
       ctx.beginPath()
-      ctx.moveTo(a.x, a.y)
-      ctx.lineTo(b.x, b.y)
+      ctx.moveTo(a.x + OX, a.y + OY)
+      ctx.lineTo(b.x + OX, b.y + OY)
       ctx.stroke()
       noGlow(ctx)
     }
@@ -318,7 +320,8 @@ export function renderBuilderScene(ctx: CanvasRenderingContext2D, view: BuilderV
   if (view.world !== null) {
     const w0 = view.world.wheels[0]!
     const w1 = view.world.wheels[1]!
-    drawCar(ctx, w0.x, w0.y, w1.x, w1.y, view.travel)
+    // 车轮同为网格原始坐标——补 OX/OY 与蓝图对齐。
+    drawCar(ctx, w0.x + OX, w0.y + OY, w1.x + OX, w1.y + OY, view.travel)
   } else {
     // 建造期：左岸待发的预告车。
     const y = py(DECK_ROW) - WHEEL_R - 4
