@@ -90,13 +90,13 @@ describe('portal logic', () => {
     drive(state, 1000, LEFT)
     expect(state.x).toBeCloseTo(32 + 11 + 0.01, 1)
     expect(state.vx).toBe(0)
-    // 从空中垂直落下：落到左平台顶（row15 顶面 y=480）站稳。
+    // 从空中垂直落下：落到左平台顶（row16 顶面 y=512）站稳。
     const drop = createPortalState(7, 0)
     drop.y = 200
     drop.vy = 0
     drive(drop, 2000, STILL)
     expect(drop.grounded).toBe(true)
-    expect(drop.y + 13).toBeLessThanOrEqual(480 + 0.02)
+    expect(drop.y + 13).toBeLessThanOrEqual(512 + 0.02)
     expect(drop.vy).toBe(0)
     // 高速下砸（> 1 帧 / 子步位移）也不穿透 32px 地板。
     const slam = createPortalState(7, 0)
