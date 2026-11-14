@@ -45,9 +45,9 @@ export declare const MAX_SUBSTEP_DT: number;
 /** 方向摆针最大偏角（弧度，0 = 中线直掷）。 */
 export declare const AIM_MAX_ANGLE = 0.45;
 /** 方向摆动角速度。 */
-export declare const AIM_SWING_SPEED = 2.2;
+export declare const AIM_SWING_SPEED = 1.1;
 /** 力度条往复角速度。 */
-export declare const POWER_SWING_SPEED = 2.6;
+export declare const POWER_SWING_SPEED = 1.3;
 /** 每方每局掷壶数。 */
 export declare const STONES_PER_SIDE = 4;
 /** 总局数。 */
