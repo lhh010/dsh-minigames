@@ -126,21 +126,38 @@ function createBuilderGame(host: HTMLElement, options?: MiniGameMountOptions): M
     buildLoop.start()
   }
 
-  const onMouseDown = (event: MouseEvent): void => {
+  /** 右键：显式拆除命中的杆件（不受格点优先约束）。 */
+  const onContextMenu = (event: MouseEvent): void => {
+    event.preventDefault()
     if (!running || paused || mode !== 'build') return
     const rect = canvas.getBoundingClientRect()
     const x = ((event.clientX - rect.left) * LOGICAL_W) / rect.width
     const y = ((event.clientY - rect.top) * LOGICAL_H) / rect.height
-    // 先看是否点中已有杆件 → 拆除。
     const hitIdx = pickBeam(x, y, beams)
     if (hitIdx !== null) {
       beams = beams.filter((_, i) => i !== hitIdx)
       selected = null
       buildLoop.markDirty()
-      return
     }
+  }
+
+  const onMouseDown = (event: MouseEvent): void => {
+    if (!running || paused || mode !== 'build') return
+    const rect = canvas.getBoundingClientRect()
+    const x = ((event.clientX - rect.left) * LOGICAL_W) / rect.width
+    const y = ((event.clientY - rect.top) * LOGICAL_H) / rect.height
+    // 格点优先：先找最近节点——建造时点在格点附近（格点与杆件视觉重叠
+    // 处处存在）应继续选点/放杆，而不是误拆既有杆件。只有点空白区（无
+    // 附近格点）且命中杆件时才拆除；右键恒拆除（显式删除通道）。
     const node = nearestNode(x, y, levelFor(levelIndex))
     if (node === null) {
+      const hitIdx = pickBeam(x, y, beams)
+      if (hitIdx !== null) {
+        beams = beams.filter((_, i) => i !== hitIdx)
+        selected = null
+        buildLoop.markDirty()
+        return
+      }
       selected = null
       buildLoop.markDirty()
       return
@@ -246,6 +263,7 @@ function createBuilderGame(host: HTMLElement, options?: MiniGameMountOptions): M
   }
 
   canvas.addEventListener('mousedown', onMouseDown)
+canvas.addEventListener('contextmenu', onContextMenu)
   canvas.addEventListener('mousemove', onMouseMove)
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
@@ -262,6 +280,7 @@ function createBuilderGame(host: HTMLElement, options?: MiniGameMountOptions): M
       testLoop.destroy()
       fit.dispose()
       canvas.removeEventListener('mousedown', onMouseDown)
+canvas.removeEventListener('contextmenu', onContextMenu)
       canvas.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('keydown', onKeyDown)
     },
