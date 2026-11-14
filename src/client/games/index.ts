@@ -137,6 +137,10 @@ import { curlingGame } from './curling/index.ts'
 import { ringtossGame } from './ringtoss/index.ts'
 import { akariGame } from './akari/index.ts'
 import { rainwaterGame } from './rainwater/index.ts'
+import { gearsGame } from './gears/index.ts'
+import { digGame } from './dig/index.ts'
+import { lockpickGame } from './lockpick/index.ts'
+import { colormixGame } from './colormix/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -196,6 +200,7 @@ export function registerBuiltinGames(): void {
     tiltmazeGame, morseGame, dartsGame, onestrokeGame,
     magnetGame, bridgeBuilderGame, jengaGame, portalGame,
     curlingGame, ringtossGame, akariGame, rainwaterGame,
+    gearsGame, digGame, lockpickGame, colormixGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
