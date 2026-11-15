@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
+import { PRIMARIES,
   colorDistance,
   isWithinThreshold,
   makeLevel,
@@ -8,20 +8,42 @@ import {
   nameFor,
   scoreFor,
   LEVELS,
-} from '../src/client/games/colormix/logic.ts'
+ } from '../src/client/games/colormix/logic.ts'
 
 describe('colormix mixColor', () => {
-  it('averages channels linearly across drops', () => {
-    // 红+黄+蓝 各一滴：通道平均 (170, 85, 85)。
-    expect(mixColor([0, 1, 2])).toEqual([170, 85, 85])
-    // 两红一黄：((255*2+255)/3, 255/3, 0) = (255, 85, 0)。
-    expect(mixColor([0, 0, 1])).toEqual([255, 85, 0])
+  it('减色混合：蓝+黄=绿、红+黄=橙、红+蓝=紫、三色=浑浊棕', () => {
+    // 蓝+黄 → 绿（G 通道最高）——RGB 平均会得灰，几何平均得青绿。
+    const green = mixColor([1, 2])
+    expect(green[1]).toBeGreaterThan(green[0])
+    expect(green[1]).toBeGreaterThan(green[2])
+    // 红+黄 → 橙（R > G > B）。
+    const orange = mixColor([0, 1])
+    expect(orange[0]).toBeGreaterThan(orange[1])
+    expect(orange[1]).toBeGreaterThan(orange[2])
+    // 红+蓝 → 紫（R、B 高于 G）。
+    const purple = mixColor([0, 2])
+    expect(purple[1]).toBeLessThan(purple[0])
+    expect(purple[1]).toBeLessThan(purple[2])
+    // 三色各一 → 浑浊棕（三通道接近且中等）。
+    const mud = mixColor([0, 1, 2])
+    expect(Math.max(...mud) - Math.min(...mud)).toBeLessThan(80)
+    // 精确值：几何平均公式复算。
+    const geo = (vals: readonly number[]): number => Math.round(Math.pow(vals.reduce((a, v) => a * Math.max(1, v) / 255, 1), 1 / vals.length) * 255)
+    expect(mixColor([0, 1, 2])).toEqual([
+      geo([PRIMARIES[0]![0], PRIMARIES[1]![0], PRIMARIES[2]![0]]),
+      geo([PRIMARIES[0]![1], PRIMARIES[1]![1], PRIMARIES[2]![1]]),
+      geo([PRIMARIES[0]![2], PRIMARIES[1]![2], PRIMARIES[2]![2]]),
+    ])
   })
 
-  it('rounds each channel and returns black for no drops', () => {
-    // 三红一蓝：(191.25, 0, 63.75) → 四舍五入 (191, 0, 64)。
-    expect(mixColor([0, 0, 0, 2])).toEqual([191, 0, 64])
+  it('多滴几何平均与空盘黑色', () => {
+    // 三红一蓝：红占主导，红通道明显高于蓝，绿通道最低。
+    const mix = mixColor([0, 0, 0, 2])
+    expect(mix[0]).toBeGreaterThan(mix[2])
+    expect(mix[1]).toBeLessThanOrEqual(mix[2] + 2)
     expect(mixColor([])).toEqual([0, 0, 0])
+    // 全同色 = 原色本身（几何平均不变式）。
+    expect(mixColor([2, 2, 2])).toEqual([...PRIMARIES[2]!])
   })
 })
 

@@ -7,7 +7,8 @@
 export declare function mulberry32(seed: number): () => number;
 /** 一格 RGB 颜色（各通道 0..255）。 */
 export type RGB = readonly [number, number, number];
-/** 三原色滴剂：红 / 黄 / 蓝（色号 0 / 1 / 2）。 */
+/** 三原色滴剂：红 / 黄 / 蓝（色号 0 / 1 / 2）——颜料化的原色（带杂色
+ * 光谱），配合减色混合：蓝+黄=绿、红+黄=橙、红+蓝=紫，而非 RGB 平均的灰。 */
 export declare const PRIMARIES: readonly RGB[];
 /** 一关的难度参数。 */
 export interface LevelConfig {
@@ -21,7 +22,9 @@ export interface LevelConfig {
 /** 五关递进：滴数收紧、阈值逐关收窄。 */
 export declare const LEVELS: readonly LevelConfig[];
 /**
- * 混合累积平均：所有已滴滴剂按通道线性平均后四舍五入。
+ * 减色混合（颜料模型）：所有已滴滴剂按通道取几何平均——各通道透光率
+ * 相乘再开 n 次方。蓝+黄得绿、红+蓝得紫、三色同混得浑浊棕，符合真实
+ * 颜料直觉；RGB 线性平均会把蓝+黄混成灰（加色模型），不符合滴剂玩法。
  * @param drops - 已滴的原色色号序列（每个 0..2）。
  * @returns 混合色；空序列返回 [0,0,0]（表示尚未滴入，画布以空盘呈现）。
  */
