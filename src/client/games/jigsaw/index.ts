@@ -295,7 +295,7 @@ function createJigsawGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 export const jigsawGame: MiniGameDefinition = {
   id: 'jigsaw',
   title: '百变拼图 Jigsaw',
-  icon: '\ud83e\udde9',
+  icon: '🧷',
   description: '碎片散落一桌，拼回完整的图案——咬合的手感与完成的满足。',
   controls: [
     '拖拽：把碎片拖到盘面（近了自动吸附）',

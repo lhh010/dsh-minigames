@@ -228,7 +228,7 @@ function createDiceMazeGame(host: HTMLElement, options?: MiniGameMountOptions): 
 export const dicemazeGame: MiniGameDefinition = {
   id: 'dicemaze',
   title: '骰子行军 DiceMaze',
-  icon: '🔢',
+  icon: '🕯️',
   description: '翻滚骰子走出迷宫——只有底面朝上才能踏过那扇门。',
   controls: ['方向键 / WASD：翻滚骰子', '数字门：顶面点数匹配才能通过', 'U：撤回 · R：重开本关', 'P：暂停'],
   create: createDiceMazeGame,
