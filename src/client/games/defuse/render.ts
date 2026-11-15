@@ -106,7 +106,7 @@ export function defuseParticlesActive(): boolean {
  * @param color - 线缆颜色。
  * @param isCut - 是否已剪断。
  */
-function drawWire(ctx: CanvasRenderingContext2D, i: number, y: number, color: string, isCut: boolean): void {
+function drawWire(ctx: CanvasRenderingContext2D, i: number, y: number, color: string, isCut: boolean, name: string): void {
   ctx.lineCap = 'round'
   ctx.strokeStyle = color
   ctx.lineWidth = 7
@@ -137,6 +137,12 @@ function drawWire(ctx: CanvasRenderingContext2D, i: number, y: number, color: st
   ctx.fillStyle = THEME.panelEdge
   ctx.fillRect(TERMINAL_L - 7, y - 7, 14, 14)
   ctx.fillRect(TERMINAL_R - 7, y - 7, 14, 14)
+  // 颜色名称标签（左端子左侧）——规则卡以名称指代线缆，色弱或色近
+  // （蓝/绿）时靠文字对应；已剪的线加删除线样式表示完成。
+  ctx.font = '600 12px system-ui, sans-serif'
+  ctx.textAlign = 'right'
+  ctx.fillStyle = isCut ? THEME.textMuted : color
+  ctx.fillText(name + '线' + (isCut ? ' ✓' : ''), TERMINAL_L - 12, y + 4)
 }
 
 /**
@@ -240,7 +246,7 @@ export function renderDefuse(ctx: CanvasRenderingContext2D, state: DefuseState, 
   // 线缆。
   const wireCount = bomb.wires.length
   for (let i = 0; i < wireCount; i += 1) {
-    drawWire(ctx, i, wireY(wireCount, i), WIRE_HEX[bomb.wires[i]!], state.cut[i] === true)
+    drawWire(ctx, i, wireY(wireCount, i), WIRE_HEX[bomb.wires[i]!], state.cut[i] === true, bomb.wires[i]!)
   }
 
   // 面板属性可视化：序列号 / 标记 / 电池。
