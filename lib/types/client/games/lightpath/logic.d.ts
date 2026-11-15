@@ -25,9 +25,8 @@ export declare const MAX_BEAM_STEPS = 400;
 /** 激光源的固定发射方向。 */
 export type Dir = 'up' | 'down' | 'left' | 'right';
 /** 镜面两档朝向。 */
-/** 镜面朝向：'/' 与 '\\' 反射；'|' 与 '-' 为透光玻璃态（光线直穿）。
- * 点击按 /→|→\\→-→/ 循环旋转——到位常需 2-3 次点击，玻璃态大幅提高试错成本。 */
-export type MirrorKind = '/' | '|' | '\\' | '-';
+/** 镜面朝向：'/' 与 '\\'（一键翻转，挑战在于要翻的面数多）。 */
+export type MirrorKind = '/' | '\\';
 /** 格坐标。 */
 export interface Cell {
     /** 行号（0 起，向下）。 */
