@@ -219,7 +219,18 @@ export function renderLockpick(ctx: CanvasRenderingContext2D, state: LockpickSta
   hudPair(ctx, 16, 50, '锁', String(state.lockIndex + 1) + '/' + String(MAX_LOCKS), 'left', THEME.gold)
   hudPair(ctx, W - 16, 28, '分数', String(state.score), 'right')
   const setCount = state.set.filter((s) => s).length
-  hudPair(ctx, W - 16, 50, '已设定', setCount + '/' + String(state.pins.length), 'right', THEME.good)
+  hudPair(ctx, W - 16, 50, '已设定', setCount + '/' + String(state.pins.length), 'right')
+  // 新手教学横幅（前两把锁常驻）：分步图解核心循环。
+  if (state.lockIndex < 2) {
+    ctx.font = '600 12px system-ui, sans-serif'
+    ctx.textAlign = 'center'
+    glow(ctx, THEME.accents[0]!, 5)
+    ctx.fillStyle = THEME.accents[0]!
+    ctx.fillText('① ←/→ 绷张力过刻度  ② 数字键选弹子  ③ 空格顶起  ④ 暗区内松开=设定', W / 2, 74)
+    ctx.fillStyle = THEME.textMuted
+    ctx.fillText('过冲=弹回+崩已设定（张力越高崩越多） · 全设定自动开锁', W / 2, 92)
+    noGlow(ctx)
+  }
   // 耐久点。
   for (let i = 0; i < 3; i += 1) {
     ctx.beginPath()

@@ -17,10 +17,9 @@ export type CellKind = 'void' | 'empty' | 'motor' | 'target';
 /** 一个目标轮：位置与齿数固定，附带方向与最低转速要求。 */
 export interface OutputReq {
     pos: Cell;
-    teeth: number;
     /** 'cw' 与动力轮同向，'ccw' 反向，'any' 不限。 */
     dir: DirReq;
-    /** 最低转速（°/s）；0 表示不考核转速。 */
+    /** 最低转速（°/s）；0 表示不考核转速。目标轮齿数由玩家放置决定。 */
     minSpeed: number;
 }
 /** 生成一关所需的全部 authored 骨架信息。 */
@@ -54,7 +53,7 @@ export declare const WIN_BASE = 100;
 export declare const GEAR_COST = 20;
 /** 效率奖励上限。 */
 export declare const BONUS_MAX = 200;
-export type GearsStatus = 'playing' | 'won';
+export type GearsStatus = 'playing' | 'won' | 'cleared';
 export interface GearsState {
     /** 1-based 关卡号。 */
     level: number;
@@ -89,7 +88,8 @@ export declare function buildLevel(def: LevelDef, rng: () => number): GearsLevel
 export declare function generateLevel(level: number, rng: () => number): GearsLevel;
 /** (r,c) 的上下左右在界内邻格。 */
 export declare function neighbors(r: number, c: number, w: number, h: number): Cell[];
-/** (r,c) 处齿轮的齿数：动力轮/目标轮取固定值，空位取放置值。 */
+/** (r,c) 处齿轮的齿数：动力轮固定；目标格与空位都取玩家放置值——
+ * 目标轮齿数由玩家选择（这正是转速谜题：速度=60×动力齿/目标齿）。 */
 export declare function teethAt(level: GearsLevel, placed: (number | null)[][], r: number, c: number): number;
 /** 一枚被传动齿轮的解析结果：方向（1 顺时针 / -1 逆时针）与转速 °/s。 */
 export interface Spin {

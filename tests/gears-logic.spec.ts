@@ -11,10 +11,13 @@ function rng(seed: number): () => number {
   return mulberry32(seed)
 }
 
-/** 用走廊铺满一条通关链：state.board 的 corridor 全放上齿轮。 */
+/** 用走廊铺满一条通关链：corridor + 目标格都放上齿轮（目标轮由玩家放置）。 */
 function fillCorridor(def: LevelDef, state: GearsState, teeth: number): void {
   for (const cell of def.corridor) {
     expect(placeGear(state, cell.r, cell.c, teeth)).toBe(true)
+  }
+  for (const out of def.outputs) {
+    expect(placeGear(state, out.pos.r, out.pos.c, teeth)).toBe(true)
   }
 }
 
@@ -76,7 +79,7 @@ describe('gears logic', () => {
     // 手工 1×5 盘：动力 12 齿在 (0,0)，目标 8 齿在 (0,4)。
     const def: LevelDef = {
       w: 5, h: 1, motor: { r: 0, c: 0 }, motorTeeth: 12,
-      outputs: [{ pos: { r: 0, c: 4 }, teeth: 8, dir: 'any', minSpeed: 0 }],
+      outputs: [{ pos: { r: 0, c: 4 }, dir: 'any', minSpeed: 0 }],
       corridor: [{ r: 0, c: 1 }, { r: 0, c: 2 }, { r: 0, c: 3 }],
       voidChance: 0,
     }
@@ -85,6 +88,7 @@ describe('gears logic', () => {
     placed[0]![1] = 8
     placed[0]![2] = 24
     placed[0]![3] = 16
+    placed[0]![4] = 8
     const info = computeTransmission(level, placed)
     expect(info[0]![1]!.dir).toBe(-1)
     expect(info[0]![2]!.dir).toBe(1)
@@ -129,7 +133,7 @@ describe('gears logic', () => {
     const state = createGearsState(1, 0, 7)
     fillCorridor({
       w: 5, h: 4, motor: { r: 1, c: 0 }, motorTeeth: 12,
-      outputs: [{ pos: { r: 1, c: 4 }, teeth: 12, dir: 'any', minSpeed: 0 }],
+      outputs: [{ pos: { r: 1, c: 4 }, dir: 'any', minSpeed: 0 }],
       corridor: [{ r: 1, c: 1 }, { r: 1, c: 2 }, { r: 1, c: 3 }], voidChance: 0.12,
     }, state, 12)
     const before = state.score
@@ -139,13 +143,14 @@ describe('gears logic', () => {
     // 手工盘：距离奇数 → 目标逆时针；要求 'cw' 不达标。
     const oddDef: LevelDef = {
       w: 4, h: 1, motor: { r: 0, c: 0 }, motorTeeth: 12,
-      outputs: [{ pos: { r: 0, c: 3 }, teeth: 12, dir: 'cw', minSpeed: 0 }],
+      outputs: [{ pos: { r: 0, c: 3 }, dir: 'cw', minSpeed: 0 }],
       corridor: [{ r: 0, c: 1 }, { r: 0, c: 2 }], voidChance: 0,
     }
     const oddLevel = buildLevel(oddDef, rng(1))
     const oddPlaced = initPlaced(oddLevel)
     oddPlaced[0]![1] = 12
     oddPlaced[0]![2] = 12
+    oddPlaced[0]![3] = 12
     let check = checkOutput(oddLevel, oddPlaced, oddDef.outputs[0]!)
     expect(check.powered).toBe(true)
     expect(check.dir).toBe(-1)
@@ -153,12 +158,13 @@ describe('gears logic', () => {
     // 转速阈值不可达：minSpeed 高于望远镜转速。
     const fastDef: LevelDef = {
       ...oddDef,
-      outputs: [{ pos: { r: 0, c: 3 }, teeth: 24, dir: 'any', minSpeed: MOTOR_SPEED * 2 }],
+      outputs: [{ pos: { r: 0, c: 3 }, dir: 'any', minSpeed: MOTOR_SPEED * 2 }],
     }
     const fastLevel = buildLevel(fastDef, rng(1))
     const fastPlaced = initPlaced(fastLevel)
     fastPlaced[0]![1] = 8
     fastPlaced[0]![2] = 8
+    fastPlaced[0]![3] = 24
     check = checkOutput(fastLevel, fastPlaced, fastDef.outputs[0]!)
     expect(check.powered).toBe(true)
     expect(check.met).toBe(false) // 转速不足
@@ -168,7 +174,7 @@ describe('gears logic', () => {
     const state = createGearsState(2, 0, 31)
     fillCorridor({
       w: 5, h: 4, motor: { r: 0, c: 0 }, motorTeeth: 12,
-      outputs: [{ pos: { r: 3, c: 4 }, teeth: 8, dir: 'ccw', minSpeed: 0 }],
+      outputs: [{ pos: { r: 3, c: 4 }, dir: 'ccw', minSpeed: 0 }],
       corridor: [
         { r: 0, c: 1 }, { r: 1, c: 1 }, { r: 2, c: 1 }, { r: 3, c: 1 },
         { r: 3, c: 2 }, { r: 3, c: 3 },

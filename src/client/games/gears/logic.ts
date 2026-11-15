@@ -21,10 +21,9 @@ export type CellKind = 'void' | 'empty' | 'motor' | 'target'
 /** 一个目标轮：位置与齿数固定，附带方向与最低转速要求。 */
 export interface OutputReq {
   pos: Cell
-  teeth: number
   /** 'cw' 与动力轮同向，'ccw' 反向，'any' 不限。 */
   dir: DirReq
-  /** 最低转速（°/s）；0 表示不考核转速。 */
+  /** 最低转速（°/s）；0 表示不考核转速。目标轮齿数由玩家放置决定。 */
   minSpeed: number
 }
 
@@ -64,7 +63,7 @@ export const GEAR_COST = 20
 /** 效率奖励上限。 */
 export const BONUS_MAX = 200
 
-export type GearsStatus = 'playing' | 'won'
+export type GearsStatus = 'playing' | 'won' | 'cleared'
 
 export interface GearsState {
   /** 1-based 关卡号。 */
@@ -104,27 +103,27 @@ export function levelSeed(seed: number, level: number): number {
 export const LEVEL_DEFS: LevelDef[] = [
   {
     w: 5, h: 4, motor: { r: 1, c: 0 }, motorTeeth: 12,
-    outputs: [{ pos: { r: 1, c: 4 }, teeth: 12, dir: 'any', minSpeed: 0 }],
+    outputs: [{ pos: { r: 1, c: 4 }, dir: 'any', minSpeed: 0 }],
     corridor: [{ r: 1, c: 1 }, { r: 1, c: 2 }, { r: 1, c: 3 }],
     voidChance: 0.12,
   },
   {
     w: 5, h: 4, motor: { r: 0, c: 0 }, motorTeeth: 12,
-    outputs: [{ pos: { r: 3, c: 4 }, teeth: 8, dir: 'ccw', minSpeed: 0 }],
+    outputs: [{ pos: { r: 3, c: 4 }, dir: 'ccw', minSpeed: 0 }],
     corridor: [{ r: 0, c: 1 }, { r: 1, c: 1 }, { r: 2, c: 1 }, { r: 3, c: 1 }, { r: 3, c: 2 }, { r: 3, c: 3 }],
     voidChance: 0.2,
   },
   {
     w: 6, h: 5, motor: { r: 2, c: 0 }, motorTeeth: 16,
-    outputs: [{ pos: { r: 3, c: 5 }, teeth: 8, dir: 'cw', minSpeed: 0 }],
+    outputs: [{ pos: { r: 3, c: 5 }, dir: 'cw', minSpeed: 90 }],
     corridor: [{ r: 2, c: 1 }, { r: 3, c: 1 }, { r: 3, c: 2 }, { r: 3, c: 3 }, { r: 3, c: 4 }],
     voidChance: 0.25,
   },
   {
     w: 6, h: 5, motor: { r: 2, c: 0 }, motorTeeth: 12,
     outputs: [
-      { pos: { r: 1, c: 5 }, teeth: 8, dir: 'cw', minSpeed: 0 },
-      { pos: { r: 4, c: 5 }, teeth: 16, dir: 'ccw', minSpeed: 0 },
+      { pos: { r: 1, c: 5 }, dir: 'cw', minSpeed: 0 },
+      { pos: { r: 4, c: 5 }, dir: 'ccw', minSpeed: 0 },
     ],
     corridor: [
       { r: 2, c: 1 }, { r: 1, c: 1 }, { r: 1, c: 2 }, { r: 1, c: 3 }, { r: 1, c: 4 },
@@ -134,7 +133,7 @@ export const LEVEL_DEFS: LevelDef[] = [
   },
   {
     w: 7, h: 6, motor: { r: 2, c: 0 }, motorTeeth: 16,
-    outputs: [{ pos: { r: 3, c: 6 }, teeth: 12, dir: 'ccw', minSpeed: 40 }],
+    outputs: [{ pos: { r: 3, c: 6 }, dir: 'ccw', minSpeed: 120 }],
     corridor: [{ r: 2, c: 1 }, { r: 2, c: 2 }, { r: 2, c: 3 }, { r: 3, c: 3 }, { r: 3, c: 4 }, { r: 3, c: 5 }],
     voidChance: 0.35,
   },
@@ -183,14 +182,11 @@ export function neighbors(r: number, c: number, w: number, h: number): Cell[] {
   return out
 }
 
-/** (r,c) 处齿轮的齿数：动力轮/目标轮取固定值，空位取放置值。 */
+/** (r,c) 处齿轮的齿数：动力轮固定；目标格与空位都取玩家放置值——
+ * 目标轮齿数由玩家选择（这正是转速谜题：速度=60×动力齿/目标齿）。 */
 export function teethAt(level: GearsLevel, placed: (number | null)[][], r: number, c: number): number {
   const kind = level.cells[r]![c]!
   if (kind === 'motor') return level.motorTeeth
-  if (kind === 'target') {
-    const out = level.outputs.find(o => o.pos.r === r && o.pos.c === c)
-    return out !== undefined ? out.teeth : 12
-  }
   return placed[r]![c] ?? 0
 }
 
@@ -212,7 +208,7 @@ export function computeTransmission(
     Array.from({ length: level.w }, () => null))
   const hasGear = (r: number, c: number): boolean => {
     const kind = level.cells[r]![c]!
-    return kind === 'motor' || kind === 'target' || placed[r]![c] !== null
+    return kind === 'motor' || placed[r]![c] !== null
   }
   const motor = level.motor
   info[motor.r]![motor.c] = { dir: 1, speed: MOTOR_SPEED }
@@ -279,7 +275,7 @@ export function placeGear(state: GearsState, r: number, c: number, teeth: number
   if (state.status !== 'playing') return false
   const level = state.board
   if (r < 0 || r >= level.h || c < 0 || c >= level.w) return false
-  if (level.cells[r]![c] !== 'empty') return false
+  if (level.cells[r]![c] === 'void' || level.cells[r]![c] === 'motor') return false
   state.placed[r]![c] = teeth
   state.moves += 1
   return true
@@ -317,6 +313,12 @@ export function initPlaced(level: GearsLevel): (number | null)[][] {
 /** 过关后进入下一关：布局按种子重生成，分数与 levelStartScore 结转。 */
 export function advanceLevel(state: GearsState): void {
   if (state.status !== 'won') return
+  // 第 5 关获胜即整局终了——不再递增关卡（原实现 6、7…关复用第 5 关
+  // 骨架，HUD 出现 8/5 之类的错乱显示）。
+  if (state.level >= LEVEL_DEFS.length) {
+    state.status = 'cleared'
+    return
+  }
   state.level += 1
   state.board = generateLevel(state.level, mulberry32(levelSeed(state.seed, state.level)))
   state.placed = initPlaced(state.board)

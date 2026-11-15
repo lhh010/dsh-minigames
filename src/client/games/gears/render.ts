@@ -237,7 +237,20 @@ export function renderGears(ctx: CanvasRenderingContext2D, state: GearsState, vi
       } else if (kind === 'target') {
         const check = checkOutput(level, state.placed, out!)
         const hub = check.met ? THEME.good : THEME.gold
-        drawGear(ctx, cx, cy, out!.teeth, angle, powered, hub)
+        const teeth = state.placed[out!.pos.r]![out!.pos.c]
+        // 目标轮未放置时画虚线空槽提示（放置后按实际齿数绘制）。
+        if (teeth === null) {
+          ctx.save()
+          ctx.setLineDash([4, 3])
+          ctx.strokeStyle = THEME.gold
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.arc(cx, cy, CELL * 0.36, 0, Math.PI * 2)
+          ctx.stroke()
+          ctx.restore()
+        } else {
+          drawGear(ctx, cx, cy, teeth ?? 12, angle, powered, hub)
+        }
         // 方向要求箭头 + 实时转速。
         ctx.font = 'bold 13px system-ui, sans-serif'
         ctx.textAlign = 'center'
