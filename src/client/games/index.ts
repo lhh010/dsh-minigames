@@ -141,6 +141,10 @@ import { gearsGame } from './gears/index.ts'
 import { digGame } from './dig/index.ts'
 import { lockpickGame } from './lockpick/index.ts'
 import { colormixGame } from './colormix/index.ts'
+import { farmGame } from './farm/index.ts'
+import { dicemazeGame } from './dicemaze/index.ts'
+import { idiomchainGame } from './idiomchain/index.ts'
+import { defuseGame } from './defuse/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -201,6 +205,7 @@ export function registerBuiltinGames(): void {
     magnetGame, bridgeBuilderGame, jengaGame, portalGame,
     curlingGame, ringtossGame, akariGame, rainwaterGame,
     gearsGame, digGame, lockpickGame, colormixGame,
+    farmGame, dicemazeGame, idiomchainGame, defuseGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
