@@ -71,8 +71,10 @@ function drawMirror(ctx: CanvasRenderingContext2D, mirror: Mirror, hovered: bool
   const half = CELL * 0.32
   ctx.save()
   ctx.translate(x, y)
-  if (mirror.kind === '/') ctx.rotate(-Math.PI / 4)
-  else ctx.rotate(Math.PI / 4)
+  // 画布 y 向下：rotate(+45°) 顺时针把竖条转成 /（右上-左下），rotate(-45°)
+  // 得 \.原实现两者对调——显示与逻辑朝向相反，玩家看到的光路对不上。
+  if (mirror.kind === '/') ctx.rotate(Math.PI / 4)
+  else ctx.rotate(-Math.PI / 4)
   ctx.fillStyle = hovered ? '#e2e2ee' : '#b7c6f2'
   glow(ctx, hovered ? '#ffffff' : BEAM, hovered ? 14 : 8)
   roundRectPath(ctx, -4, -half, 8, half * 2, 4)

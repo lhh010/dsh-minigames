@@ -302,7 +302,7 @@ export function levelSpec(level: number): { mirrors: number, crystals: number, s
     mirrors: Math.min(Math.round(6 + (level - 1) * 1.5), 12),
     crystals: Math.min(2 + Math.ceil(level / 2), 5),
     splitters: level >= 5 ? 2 : level >= 3 ? 1 : 0,
-    walls: Math.min(4 + level * 2 + (level >= 4 ? 2 : 0), 16),
+    walls: Math.min(3 + level + (level >= 4 ? 2 : 0), 10),
   }
 }
 
@@ -316,7 +316,7 @@ export function levelSpec(level: number): { mirrors: number, crystals: number, s
  */
 export function generateLevel(seed: number, level: number): LightPathState {
   const spec = levelSpec(level)
-  for (let attempt = 0; attempt < 400; attempt += 1) {
+  for (let attempt = 0; attempt < 4000; attempt += 1) {
     const rand = mulberry32((seed + level * 7919 + attempt * 104729) >>> 0)
     const walls: boolean[][] = []
     for (let r = 0; r < SIZE; r += 1) walls.push(new Array<boolean>(SIZE).fill(false))
@@ -361,11 +361,42 @@ export function generateLevel(seed: number, level: number): LightPathState {
     const occupied = new Set<number>([key(source.row, source.col)])
     for (const m of mirrors) occupied.add(key(m.row, m.col))
     for (const s of splitters) occupied.add(key(s.row, s.col))
-    const litEmpty: Cell[] = []
+    let litEmpty: Cell[] = []
     for (const k of solvedEval.lit) {
-      if (!occupied.has(k)) litEmpty.push({ row: Math.floor(k / SIZE), col: k % SIZE })
+      if (occupied.has(k)) continue
+      const cell = { row: Math.floor(k / SIZE), col: k % SIZE }
+      // 水晶避开光源的十字直线（否则开局直射即亮、点一面镜就赢）。
+      if (cell.row === source.row || cell.col === source.col) continue
+      litEmpty.push(cell)
     }
-    if (litEmpty.length < spec.crystals) continue
+    // 稀有度过滤：随机采样 40 种镜面配置统计每格被照亮频率，只留
+    // 「少数配置才能照亮」的格作水晶候选——普通格几乎任何朝向都亮，
+    // 开局直接全亮/一两翻可胜的根源。
+    if (litEmpty.length > spec.crystals) {
+      const freq = new Map<number, number>()
+      const SAMPLES = 40
+      const savedKinds = mirrors.map((m) => m.kind)
+      for (let s2 = 0; s2 < SAMPLES; s2 += 1) {
+        for (const m of mirrors) m.kind = rand() < 0.5 ? '/' : '\\'
+        const sample = evaluate({
+          seed, level, walls, source, mirrors, splitters, crystals: [], moves: 0,
+          score: 0, won: false,
+        })
+        for (const k of sample.lit) freq.set(k, (freq.get(k) ?? 0) + 1)
+      }
+      for (let i = 0; i < mirrors.length; i += 1) mirrors[i]!.kind = savedKinds[i]!
+      const rare = litEmpty.filter((c) => (freq.get(key(c.row, c.col)) ?? 0) <= SAMPLES * 0.25)
+      if (rare.length >= spec.crystals) litEmpty = rare
+    }
+    if (litEmpty.length < spec.crystals) {
+      // 离线照亮格不足：回退补光源十字线上的照亮格（保可解优先）。
+      for (const k of solvedEval.lit) {
+        if (occupied.has(k)) continue
+        const cell = { row: Math.floor(k / SIZE), col: k % SIZE }
+        if (cell.row === source.row || cell.col === source.col) litEmpty.push(cell)
+      }
+      if (litEmpty.length < spec.crystals) continue
+    }
     // 洗牌取前 N 个照亮空格作水晶。
     for (let i = litEmpty.length - 1; i > 0; i -= 1) {
       const j = Math.floor(rand() * (i + 1))
@@ -375,21 +406,33 @@ export function generateLevel(seed: number, level: number): LightPathState {
     }
     const crystals = litEmpty.slice(0, spec.crystals).map((c) => ({ ...c }))
 
-    // 打乱开局朝向（两态随机）：保证未直接获胜（最多翻一面镜修正）。
-    for (const m of mirrors) m.kind = rand() < 0.5 ? '/' : '\\'
-    let start: LightPathState = {
+    // 开局=解状态定向翻转 ≥4 面不同镜（而非均匀随机——后者常直接就是
+    // 获胜态或一步可胜，730/2000 的开局即刻全亮）。
+    for (let i = 0; i < mirrors.length; i += 1) mirrors[i]!.kind = solution[i]!
+    const flipCount = Math.min(mirrors.length, Math.max(4, Math.ceil(mirrors.length / 2)))
+    const flipIdx = new Set<number>()
+    while (flipIdx.size < flipCount) flipIdx.add(Math.floor(rand() * mirrors.length))
+    for (const i of flipIdx) mirrors[i]!.kind = mirrors[i]!.kind === '/' ? '\\' : '/'
+    const start: LightPathState = {
       seed, level, walls, source, mirrors, splitters, crystals, moves: 0,
       score: computeScore(level, 0), won: false,
     }
-    let guard = 0
-    while (evaluate(start).litCrystals === crystals.length && guard < spec.mirrors + 2) {
-      const flipped = applyFlip(start, mirrors[guard % mirrors.length]!.row, mirrors[guard % mirrors.length]!.col)
-      if (flipped !== null) start = flipped
-      guard += 1
+    // 难度闸门：拒绝任何 0/1/2 翻即可全亮的开局——保证通关至少点 3 次
+    // 镜（0 翻 n + 1 翻 n + 2 翻 n²/2 组合枚举，代价可忽略）。
+    const winOf = (s: LightPathState): boolean => evaluate(s).litCrystals === crystals.length
+    if (winOf(start))continue
+    let easy = false
+    oneFlip: for (let i = 0; i < mirrors.length && !easy; i += 1) {
+      for (let j = i; j < mirrors.length; j += 1) {
+        const probe = cloneState(start)
+        const mi = mirrors[i]!
+        const mj = mirrors[j]!
+        probe.mirrors[i]!.kind = mi.kind === '/' ? '\\' : '/'
+        if (j !== i) probe.mirrors[j]!.kind = mj.kind === '/' ? '\\' : '/'
+        if (winOf(probe)) { easy = true; break oneFlip }
+      }
     }
-    if (evaluate(start).litCrystals === crystals.length) continue
-    // 修正翻不算玩家步数：开局恒 0 步。
-    start.moves = 0
+    if (easy)continue
     return start
   }
   throw new Error('lightpath: generateLevel failed to produce a solvable level')
