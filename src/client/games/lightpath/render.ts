@@ -65,14 +65,28 @@ function drawWalls(ctx: CanvasRenderingContext2D, state: LightPathState): void {
   }
 }
 
-/** 一面镜：斜向高亮条（'/' 或 '\\'），hover 时画旋转预览弧。 */
+/** 一面镜：'/' '\\' 斜向高亮条反射态；'|' '-' 竖/横玻璃态（半透明、
+ * 更细，透光不反射），hover 时画旋转预览弧。 */
 function drawMirror(ctx: CanvasRenderingContext2D, mirror: Mirror, hovered: boolean): void {
   const { x, y } = cellCenter(mirror.row, mirror.col)
   const half = CELL * 0.32
+  const isGlass = mirror.kind === '|' || mirror.kind === '-'
   ctx.save()
   ctx.translate(x, y)
-  if (mirror.kind === '/') ctx.rotate(-Math.PI / 4)
+  if (mirror.kind === '/' || mirror.kind === '-') ctx.rotate(-Math.PI / 4)
   else ctx.rotate(Math.PI / 4)
+  if (isGlass) {
+    // 玻璃态：水平横条（'-' 已随上面 rotate(-45°) 转向；'|' 画竖条）。
+    ctx.restore()
+    ctx.save()
+    ctx.translate(x, y)
+    if (mirror.kind === '-') ctx.rotate(Math.PI / 2)
+    ctx.fillStyle = 'rgba(183,198,242,0.45)'
+    roundRectPath(ctx, -3, -half, 6, half * 2, 3)
+    ctx.fill()
+    ctx.restore()
+    return
+  }
   ctx.fillStyle = hovered ? '#e2e2ee' : '#b7c6f2'
   glow(ctx, hovered ? '#ffffff' : BEAM, hovered ? 14 : 8)
   roundRectPath(ctx, -4, -half, 8, half * 2, 4)

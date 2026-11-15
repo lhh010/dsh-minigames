@@ -27,7 +27,9 @@ export const MAX_BEAM_STEPS = 400
 /** 激光源的固定发射方向。 */
 export type Dir = 'up' | 'down' | 'left' | 'right'
 /** 镜面两档朝向。 */
-export type MirrorKind = '/' | '\\'
+/** 镜面朝向：'/' 与 '\\' 反射；'|' 与 '-' 为透光玻璃态（光线直穿）。
+ * 点击按 /→|→\\→-→/ 循环旋转——到位常需 2-3 次点击，玻璃态大幅提高试错成本。 */
+export type MirrorKind = '/' | '|' | '\\' | '-'
 
 /** 格坐标。 */
 export interface Cell {
@@ -125,7 +127,9 @@ export function mulberry32(seed: number): () => number {
 export function reflect(kind: MirrorKind, dr: number, dc: number): [number, number] {
   // + 0 归一化：-dr 在 dr=0 时产生 -0，与 toEqual 的 +0 不等（浅比较区分正负零）。
   if (kind === '/') return [-dc + 0, -dr + 0]
-  return [dc + 0, dr + 0]
+  if (kind === '\\') return [dc + 0, dr + 0]
+  // 玻璃态透光（调用方已门控，此处防御性直穿）。
+  return [dr + 0, dc + 0]
 }
 
 /**
@@ -189,7 +193,8 @@ export function evaluate(state: LightPathState): LightResult {
       lit.add(key(r, c))
       if (key(r, c) === sourceKey) { pushSeg(segR, segC, r, c); break }
       const mk = mirrorAt.get(key(r, c))
-      if (mk !== undefined) {
+      // 玻璃态（|/-）透光直穿，只有 / 与 \\ 反射。
+      if (mk === '/' || mk === '\\') {
         pushSeg(segR, segC, r, c)
         const out = reflect(mk, dr, dc)
         dr = out[0]
@@ -263,7 +268,9 @@ export function applyFlip(state: LightPathState, row: number, col: number): Ligh
   if (idx < 0) return null
   const next = cloneState(state)
   const mirror = next.mirrors[idx]!
-  mirror.kind = mirror.kind === '/' ? '\\' : '/'
+  // 四向旋转循环：/→|→\\→-→/（玻璃态透光不反射）。
+  const cycle: Record<MirrorKind, MirrorKind> = { '/': '|', '|': '\\', '\\': '-', '-': '/' }
+  mirror.kind = cycle[mirror.kind]
   next.moves = state.moves + 1
   const result = evaluate(next)
   next.won = result.litCrystals === next.crystals.length
@@ -283,12 +290,16 @@ export function hintFlip(state: LightPathState): LightPathState | null {
   let best: LightPathState | null = null
   let bestLit = current
   for (const m of state.mirrors) {
-    const next = applyFlip(state, m.row, m.col)
-    if (next === null) continue
-    const lit = evaluate(next).litCrystals
-    if (lit > bestLit) {
-      bestLit = lit
-      best = next
+    // 四态旋转下，一面镜可能有 3 种一步不可达的朝向——逐旋 1..3 步取最优。
+    let cur: LightPathState | null = state
+    for (let rot = 0; rot < 3; rot += 1) {
+      cur = cur === null ? null : applyFlip(cur, m.row, m.col)
+      if (cur === null) break
+      const lit = evaluate(cur).litCrystals
+      if (lit > bestLit) {
+        bestLit = lit
+        best = cur
+      }
     }
   }
   return best
@@ -374,8 +385,9 @@ export function generateLevel(seed: number, level: number): LightPathState {
     }
     const crystals = litEmpty.slice(0, spec.crystals).map((c) => ({ ...c }))
 
-    // 打乱开局朝向：保证未直接获胜（最多翻一面镜修正）。
-    for (const m of mirrors) m.kind = rand() < 0.5 ? '/' : '\\'
+    // 打乱开局朝向（四态均匀随机）：保证未直接获胜（最多旋一面镜修正）。
+    const scrambledKinds: MirrorKind[] = ['/', '|', '\\', '-']
+    for (const m of mirrors) m.kind = scrambledKinds[Math.floor(rand() * 4)]!
     let start: LightPathState = {
       seed, level, walls, source, mirrors, splitters, crystals, moves: 0,
       score: computeScore(level, 0), won: false,
