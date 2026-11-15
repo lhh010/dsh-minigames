@@ -138,7 +138,8 @@ export declare function applyFlip(state: LightPathState, row: number, col: numbe
  * @returns 翻转后的新状态；无改善返回 null。
  */
 export declare function hintFlip(state: LightPathState): LightPathState | null;
-/** 各关参数：镜数 3→7、水晶 2→4、第 3 关起引入分光镜。 */
+/** 各关参数：镜数 5→10（组合空间 2^n 从 32 到 1024）、水晶 3→5、
+ * 第 3 关起引入分光镜、第 5 关两面；墙 6→16（遮挡直路，逼迫多段折射）。 */
 export declare function levelSpec(level: number): {
     mirrors: number;
     crystals: number;

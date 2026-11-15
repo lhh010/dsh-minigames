@@ -178,7 +178,7 @@ describe('lightpath logic', () => {
       expect(evaluate(s).litCrystals).toBeLessThan(s.crystals.length)
       expect(solvableByEnumeration(s)).toBe(true)
       // 第 3 关起引入分光镜。
-      expect(s.splitters.length).toBe(level >= 3 ? 1 : 0)
+      expect(s.splitters.length).toBe(level >= 5 ? 2 : level >= 3 ? 1 : 0)
     }
   }, 60000)
 

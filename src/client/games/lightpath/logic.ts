@@ -294,13 +294,14 @@ export function hintFlip(state: LightPathState): LightPathState | null {
   return best
 }
 
-/** 各关参数：镜数 3→7、水晶 2→4、第 3 关起引入分光镜。 */
+/** 各关参数：镜数 5→10（组合空间 2^n 从 32 到 1024）、水晶 3→5、
+ * 第 3 关起引入分光镜、第 5 关两面；墙 6→16（遮挡直路，逼迫多段折射）。 */
 export function levelSpec(level: number): { mirrors: number, crystals: number, splitters: number, walls: number } {
   return {
-    mirrors: Math.min(2 + level, 8),
-    crystals: Math.min(1 + Math.ceil(level / 2), 4),
-    splitters: level >= 3 ? 1 : 0,
-    walls: 2 + level,
+    mirrors: Math.min(4 + level, 10),
+    crystals: Math.min(2 + Math.ceil(level / 2), 5),
+    splitters: level >= 5 ? 2 : level >= 3 ? 1 : 0,
+    walls: Math.min(4 + level * 2 + (level >= 4 ? 2 : 0), 16),
   }
 }
 
