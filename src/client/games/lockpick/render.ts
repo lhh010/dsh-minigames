@@ -153,13 +153,16 @@ export function renderLockpick(ctx: CanvasRenderingContext2D, state: LockpickSta
   for (let i = 0; i < count; i += 1) {
     const x = pinX(count, i)
     const spec = state.pins[i]!
-    // 弹子孔通道。
+    // 弹子孔通道（上缘抬高到 SHEAR_Y-36：满行程弹子顶（SHEAR_Y-8）与
+    // 窗口暗区都收在通道内，不再画出孔外）。
+    const HOLE_TOP = SHEAR_Y - 36
     ctx.fillStyle = 'rgba(13,13,20,0.55)'
-    ctx.fillRect(x - 10, SHEAR_Y - 6, 20, PIN_BOTTOM - SHEAR_Y + 34)
-    // 设定窗口暗区（低难度提示；高难度不显示）。
+    ctx.fillRect(x - 10, HOLE_TOP, 20, PIN_BOTTOM - HOLE_TOP + 34)
+    // 设定窗口暗区（低难度提示；高难度不显示）——按弹子顶几何对齐
+    // （pin top = PIN_BOTTOM - pos*TRAVEL - 26），并钳制在通道内。
     if (showWindow) {
-      const loY = PIN_BOTTOM - spec.windowHigh * TRAVEL - 32
-      const hiY = PIN_BOTTOM - spec.windowLow * TRAVEL - 32
+      const loY = Math.max(HOLE_TOP + 1, PIN_BOTTOM - spec.windowHigh * TRAVEL - 26)
+      const hiY = Math.min(PIN_BOTTOM + 8, PIN_BOTTOM - spec.windowLow * TRAVEL - 26)
       ctx.fillStyle = WINDOW_BAND
       ctx.fillRect(x - 10, loY, 20, hiY - loY)
       ctx.strokeStyle = 'rgba(122,162,247,0.35)'
@@ -220,15 +223,16 @@ export function renderLockpick(ctx: CanvasRenderingContext2D, state: LockpickSta
   hudPair(ctx, W - 16, 28, '分数', String(state.score), 'right')
   const setCount = state.set.filter((s) => s).length
   hudPair(ctx, W - 16, 50, '已设定', setCount + '/' + String(state.pins.length), 'right')
-  // 新手教学横幅（前两把锁常驻）：分步图解核心循环。
+  // 新手教学横幅（前两把锁常驻）：分步图解核心循环——放在弹子编号
+  // 之下、结束遮罩之上的空带（原放在 y74 与张力弧/耐久点重叠）。
   if (state.lockIndex < 2) {
     ctx.font = '600 12px system-ui, sans-serif'
     ctx.textAlign = 'center'
     glow(ctx, THEME.accents[0]!, 5)
     ctx.fillStyle = THEME.accents[0]!
-    ctx.fillText('① ←/→ 绷张力过刻度  ② 数字键选弹子  ③ 空格顶起  ④ 暗区内松开=设定', W / 2, 74)
+    ctx.fillText('① ←/→ 绷张力过刻度  ② 数字键选弹子  ③ 空格顶起  ④ 暗区内松开', W / 2, BODY_Y + BODY_H + 58)
     ctx.fillStyle = THEME.textMuted
-    ctx.fillText('过冲=弹回+崩已设定（张力越高崩越多） · 全设定自动开锁', W / 2, 92)
+    ctx.fillText('过冲=弹回+崩已设定（张力越高崩越多） · 全设定自动开锁', W / 2, BODY_Y + BODY_H + 78)
     noGlow(ctx)
   }
   // 耐久点。
