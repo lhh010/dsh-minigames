@@ -149,6 +149,11 @@ import { jigsawGame } from './jigsaw/index.ts'
 import { lightpathGame } from './lightpath/index.ts'
 import { platesGame } from './plates/index.ts'
 import { rpsGame } from './rps/index.ts'
+import { petpalGame } from './petpal/index.ts'
+import { bonsaiGame } from './bonsai/index.ts'
+import { fishpondGame } from './fishpond/index.ts'
+import { logigridGame } from './logigrid/index.ts'
+import { starbattleGame } from './starbattle/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -211,6 +216,7 @@ export function registerBuiltinGames(): void {
     gearsGame, digGame, lockpickGame, colormixGame,
     farmGame, dicemazeGame, idiomchainGame, defuseGame,
     jigsawGame, lightpathGame, platesGame, rpsGame,
+    petpalGame, bonsaiGame, fishpondGame, logigridGame, starbattleGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
