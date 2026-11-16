@@ -101,8 +101,10 @@ describe('bonsai logic', () => {
     expect(state.waterBoostDays).toBe(0)
     expect(state.fertBoostDays).toBe(0)
     expect(growthMult(state)).toBe(1)
-    // 空格直接推进 1 日同样翻页并评分
+    // 空格直接推进 1 日同样翻页并评分（宽松评分可能已提前过关——本测
+    // 只验证翻页机制，把阶段拨回 playing 再翻）。
     expect(state.lastScore).toBeGreaterThanOrEqual(0)
+    if (state.phase === 'won') state.phase = 'playing'
     expect(advanceDay(state)).toBe(true)
     expect(state.day).toBe(3)
   })
@@ -238,6 +240,9 @@ describe('bonsai logic', () => {
       const state = createBonsaiState(seed, 4)
       for (let i = 0; i < 300; i += 1) {
         tickBonsai(state)
+        // 宽松评分下小树也可能提前过关冻结时间轴——本测验证纯生长重放，
+        // 过关即拨回继续 tick。
+        if (state.phase !== 'playing') state.phase = 'playing'
         for (const n of [...state.nodes]) if (n.depth >= 4) pruneNode(state, n.id)
         if (i % 30 === 0) water(state)
         if (i % 45 === 0) fertilize(state)

@@ -82,7 +82,7 @@ export declare const ROT_LIMIT = 3;
 /** 每 tick 健康自然恢复。 */
 export declare const HEALTH_REGEN = 1;
 /** 过关分数线。 */
-export declare const SCORE_PASS = 70;
+export declare const SCORE_PASS = 58;
 /** 评分离散网格：局部坐标范围与格宽（IoU 近似用）。 */
 export declare const GRID_X0 = -180;
 export declare const GRID_Y0 = -380;

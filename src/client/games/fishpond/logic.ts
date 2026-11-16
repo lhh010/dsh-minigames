@@ -619,7 +619,8 @@ export function pondClick(state: FishpondState, slot: number): PondClickResult {
     }
     state.food -= 1
     fish.fedToday = true
-    state.message = '喂了 ' + SPECIES[fish.species].name + '（今天还能长一截）'
+    const remain = Math.max(0, SPECIES[fish.species].growDays - fish.growthDays - 1)
+    state.message = '喂了 ' + SPECIES[fish.species].name + (remain > 0 ? '（再喂约 ' + remain + ' 天长成成鱼可出售）' : '（明天就长成成鱼，可以出售啦）')
     return 'fed'
   }
   if (state.pendingSell === slot) {

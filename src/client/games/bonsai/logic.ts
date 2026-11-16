@@ -92,7 +92,7 @@ export const ROT_LIMIT = 3
 /** 每 tick 健康自然恢复。 */
 export const HEALTH_REGEN = 1
 /** 过关分数线。 */
-export const SCORE_PASS = 70
+export const SCORE_PASS = 58
 /** 评分离散网格：局部坐标范围与格宽（IoU 近似用）。 */
 export const GRID_X0 = -180
 export const GRID_Y0 = -380
@@ -588,9 +588,23 @@ export function scoreBonsai(state: BonsaiState): BonsaiScore {
       if (inTree || inTarget) union += 1
     }
   }
-  const iou = union > 0 ? inter / union : 0
+  // 宽容轮廓分：以「覆盖率」（inter / targetCells）为主、严格 IoU 为辅——
+  // 长满目标区域即高分，多余枝条只轻度惩罚（原严格 IoU 使溢出枝严重扣分，
+  // 实测难以同时满足密度与轮廓，通关几乎不可达）。
+  const targetCells: number[] = []
+  for (let gy = 0; gy < rows; gy += 1) {
+    for (let gx = 0; gx < cols; gx += 1) {
+      const x = GRID_X0 + (gx + 0.5) * GRID_CELL
+      const y = GRID_Y1 - (gy + 0.5) * GRID_CELL
+      if (isInsideTarget(level, x, y)) targetCells.push(gy * cols + gx)
+    }
+  }
+  const targetCount = targetCells.length
+  const coverage = targetCount > 0 ? inter / targetCount : 0
+  const iouStrict = union > 0 ? inter / union : 0
+  const iou = Math.max(coverage * 0.85, iouStrict)
   const leaves = state.nodes.filter((n) => n.children.length === 0).length
-  const density = Math.min(1, leaves / level.targetLeaves)
+  const density = Math.min(1, leaves / (level.targetLeaves * 0.7))
   const health = Math.max(0, Math.min(1, state.health / 100))
   const pos = nodeEndPositions(state)
   let top = 0

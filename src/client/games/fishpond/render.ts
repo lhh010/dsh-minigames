@@ -202,6 +202,19 @@ function drawFish(ctx: CanvasRenderingContext2D, fish: PondFish, nowMs: number, 
     }
     ctx.globalAlpha = 1
   }
+  // 成鱼可卖标记：金色币徽——不点开也看得出哪条能出售。
+  if (stageOf(fish) === 2) {
+    ctx.beginPath()
+    ctx.arc(px + bodyR + 2, py - bodyR + 2, 7, 0, Math.PI * 2)
+    ctx.fillStyle = THEME.gold
+    glow(ctx, THEME.gold, 5)
+    ctx.fill()
+    noGlow(ctx)
+    ctx.font = '700 10px system-ui, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillStyle = '#1a1a24'
+    ctx.fillText('¥', px + bodyR + 2, py - bodyR + 5.5)
+  }
   // 出售确认挂牌
   if (state.pendingSell === fish.slot) {
     const price = sellPrice(state, fish)
