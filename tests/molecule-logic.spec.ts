@@ -13,10 +13,10 @@ import {
 } from '../src/client/games/molecule/logic.ts'
 
 describe('molecule logic', () => {
-  it('五关解析合法：唯一主原子、元素计数与分子式一致、初始无相邻原子', () => {
-    expect(LEVELS).toHaveLength(5)
+  it('十关解析合法：唯一主原子、元素计数与分子式一致、初始无相邻原子', () => {
+    expect(LEVELS).toHaveLength(10)
     const formulas = LEVELS.map(l => l.formula)
-    expect(formulas).toEqual(['H2O', 'CO2', 'H3N', 'CH4', 'C2H4'])
+    expect(formulas).toEqual(['H2O', 'CO2', 'H3N', 'CH4', 'C2H4', 'O2', 'H2O2', 'CH2O', 'CH4O', 'CH2O2'])
     for (const def of LEVELS) {
       const parsed = parseLevel(def)
       expect(parsed.atoms.filter(a => a.el === def.mainEl).length).toBeGreaterThanOrEqual(1)
@@ -189,7 +189,7 @@ describe('molecule logic', () => {
     expect(shimmerOrder(createMoleculeState(4, 42)).slice().sort()).toEqual([0, 1, 2, 3, 4, 5])
   })
 
-  it('五关均在预算内可解，且 PAR 等于 BFS 最优步数', { timeout: 120_000 }, () => {
+  it('十关均在预算内可解，且 PAR 等于 BFS 最优步数', { timeout: 120_000 }, () => {
     for (let i = 0; i < LEVELS.length; i += 1) {
       const s = createMoleculeState(i)
       const best = solve(s, 400_000)

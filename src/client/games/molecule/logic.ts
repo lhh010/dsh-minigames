@@ -68,7 +68,9 @@ export interface MoleculeLevelDef {
 }
 
 /**
- * 五个手工关卡，递进：H₂O → CO₂ → NH₃ → CH₄ → C₂H₄。
+ * 十个手工关卡，递进：H₂O → CO₂ → NH₃ → CH₄ → C₂H₄ → O₂ → H₂O₂ →
+ * CH₂O → CH₄O → CH₂O₂。后五关引入双键练习与多原子长链（键级上限 2，
+ * 无三键；CO/乙炔因 C 无法在全饱和规则下成键，以甲醇/甲酸替代）。
  */
 export const LEVELS: MoleculeLevelDef[] = [
   {
@@ -152,6 +154,91 @@ export const LEVELS: MoleculeLevelDef[] = [
       '#  H    #',
       '#########',
     ],
+  },  {
+    name: '氧气',
+    formula: 'O2',
+    display: 'O₂',
+    hint: 'O=O（双键练习）',
+    mainEl: 'O',
+    grid: [
+      '#######',
+      '#     #',
+      '#   # #',
+      '# O # #',
+      '#   # #',
+      '# ### #',
+      '#     #',
+      '#  @  #',
+      '#######',
+    ],
+  },
+  {
+    name: '过氧化氢',
+    formula: 'H2O2',
+    display: 'H₂O₂',
+    hint: 'H–O–O–H（两个 O 单键相连）',
+    mainEl: 'O',
+    grid: [
+      '#########',
+      '#       #',
+      '# H   H #',
+      '#       #',
+      '#  @ O  #',
+      '#       #',
+      '#########',
+    ],
+  },
+  {
+    name: '甲醛',
+    formula: 'CH2O',
+    display: 'CH₂O',
+    hint: 'H₂C=O',
+    mainEl: 'C',
+    grid: [
+      '#########',
+      '#     H #',
+      '#       #',
+      '# O     #',
+      '#   @   #',
+      '#       #',
+      '#  H    #',
+      '#########',
+    ],
+  },
+  {
+    name: '甲醇',
+    formula: 'CH4O',
+    display: 'CH₄O',
+    hint: 'CH₃–O–H',
+    mainEl: 'C',
+    grid: [
+      '##########',
+      '#        #',
+      '# H    H #',
+      '#       O#',
+      '#    @   #',
+      '# H      #',
+      '#  H     #',
+      '##########',
+    ],
+  },
+  {
+    name: '甲酸',
+    formula: 'CH2O2',
+    display: 'CH₂O₂',
+    hint: 'H–C(=O)–O–H',
+    mainEl: 'C',
+    grid: [
+      '##########',
+      '#        #',
+      '#  H    H#',
+      '# O      #',
+      '#        #',
+      '#     @  #',
+      '#   O    #',
+      '#        #',
+      '##########',
+    ],
   },
 ]
 
@@ -159,7 +246,7 @@ export const LEVELS: MoleculeLevelDef[] = [
  * 每关最短解题步数（BFS 最优，测试与 PAR 常量互校验；渲染层显示为
  * “参考”步数）。
  */
-export const PAR: number[] = [3, 3, 4, 7, 9]
+export const PAR: number[] = [3, 3, 4, 7, 9, 6, 7, 8, 11, 12]
 
 /** 解析后的关卡：静态几何 + 初始原子布局。 */
 export interface ParsedLevel {

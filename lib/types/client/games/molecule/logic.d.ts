@@ -54,7 +54,9 @@ export interface MoleculeLevelDef {
     grid: string[];
 }
 /**
- * 五个手工关卡，递进：H₂O → CO₂ → NH₃ → CH₄ → C₂H₄。
+ * 十个手工关卡，递进：H₂O → CO₂ → NH₃ → CH₄ → C₂H₄ → O₂ → H₂O₂ →
+ * CH₂O → CH₄O → CH₂O₂。后五关引入双键练习与多原子长链（键级上限 2，
+ * 无三键；CO/乙炔因 C 无法在全饱和规则下成键，以甲醇/甲酸替代）。
  */
 export declare const LEVELS: MoleculeLevelDef[];
 /**

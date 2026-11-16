@@ -96,7 +96,7 @@ export function renderMolecule(ctx: CanvasRenderingContext2D, state: MoleculeSta
   ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H)
   drawBackground(ctx, LOGICAL_W, LOGICAL_H)
   const def = state.def
-  hudPair(ctx, 14, 22, '关卡 ', (state.levelIndex + 1) + '/5 · ' + def.name + ' ' + def.display)
+  hudPair(ctx, 14, 22, '关卡 ', (state.levelIndex + 1) + '/10 · ' + def.name + ' ' + def.display)
   hudPair(ctx, LOGICAL_W - 14, 22, '步数 ', state.moves + ' / 参考 ' + state.par, 'right', THEME.gold)
 
   // 目标面板第二行：元素达成 chips（该元素全部原子价饱和则点亮）。
