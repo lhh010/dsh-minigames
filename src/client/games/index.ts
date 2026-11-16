@@ -158,6 +158,10 @@ import { alchemyGame } from './alchemy/index.ts'
 import { watersortGame } from './watersort/index.ts'
 import { moleculeGame } from './molecule/index.ts'
 import { orbitGame } from './orbit/index.ts'
+import { dominorunGame } from './dominorun/index.ts'
+import { cakecutGame } from './cakecut/index.ts'
+import { liardiceGame } from './liardice/index.ts'
+import { caravanGame } from './caravan/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -222,6 +226,7 @@ export function registerBuiltinGames(): void {
     jigsawGame, lightpathGame, platesGame, rpsGame,
     petpalGame, bonsaiGame, fishpondGame, logigridGame, starbattleGame,
     alchemyGame, watersortGame, moleculeGame, orbitGame,
+    dominorunGame, cakecutGame, liardiceGame, caravanGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
