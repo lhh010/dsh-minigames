@@ -204,8 +204,10 @@ export function renderCake(ctx: CanvasRenderingContext2D, input: CakeRenderInput
     hud.cutsLeft === 0 ? THEME.bad : THEME.text)
   hudPair(ctx, logicalW / 2 + 20, 34, '份数', hud.piecesNow + '/' + hud.piecesTarget, 'left',
     hud.piecesNow === hud.piecesTarget ? THEME.good : THEME.text)
-  hudPair(ctx, logicalW - 40, 34, '容差', '±' + hud.tolerancePct)
-  hudPair(ctx, logicalW - 40, 58, '用时', hud.time)
+  // 右对齐 HUD 用 'right' 对齐贴边——原先默认 left 对齐把文本画到 x 右侧，
+  // 容差/用时整段出屏。
+  hudPair(ctx, logicalW - 40, 34, '容差', '±' + hud.tolerancePct, 'right')
+  hudPair(ctx, logicalW - 40, 58, '用时', hud.time, 'right')
 
   if (input.hud.failText !== null && input.winText === null && !input.paused) {
     ctx.textAlign = 'center'
