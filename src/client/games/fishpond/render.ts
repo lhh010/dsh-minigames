@@ -648,7 +648,6 @@ export function renderFishpond(ctx: CanvasRenderingContext2D, state: FishpondSta
   const now = performance.now()
   ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H)
   drawBackground(ctx, LOGICAL_W, LOGICAL_H)
-  drawHud(ctx, state, view)
   if (view === 'pond') drawPondView(ctx, state, now)
   else if (view === 'fish') drawFishingView(ctx, state, now)
   else drawMarketView(ctx, state)
@@ -665,6 +664,9 @@ export function renderFishpond(ctx: CanvasRenderingContext2D, state: FishpondSta
     ctx.fillStyle = THEME.good
     ctx.fillText('结束今天 ▶', NEXT_DAY_RECT.x + NEXT_DAY_RECT.w / 2, NEXT_DAY_RECT.y + 21)
   }
+  // HUD 与导航标签后置绘制：钓点视图的整幅水面会盖掉先画的导航——
+  // 改为视图画完再画 HUD，标签永远在最上层可见可点。
+  drawHud(ctx, state, view)
   // 粒子：卖出入账 / 钓到鱼水花
   if (state.coins > prevCoins && prevCoins !== -1) {
     particles.burst(SIDE_X + SIDE_W / 2, 60, THEME.gold, 12, 140)
