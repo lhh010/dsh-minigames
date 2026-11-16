@@ -101,14 +101,14 @@ function createFishpondGame(host: HTMLElement, options?: MiniGameMountOptions): 
       return
     }
     if (state.phase !== 'playing') return
-    if (view === 'pond') {
-      const inNextDay = x >= NEXT_DAY_RECT.x && x <= NEXT_DAY_RECT.x + NEXT_DAY_RECT.w
-        && y >= NEXT_DAY_RECT.y && y <= NEXT_DAY_RECT.y + NEXT_DAY_RECT.h
-      if (inNextDay) nextDay(state)
-      else {
-        const slot = pondSlotAt(x, y, state)
-        if (slot !== null) pondClick(state, slot)
-      }
+    // 「结束今天」按钮在所有视图都可点（钓点/市场常驻按钮）。
+    const inNextDay = x >= NEXT_DAY_RECT.x && x <= NEXT_DAY_RECT.x + NEXT_DAY_RECT.w
+      && y >= NEXT_DAY_RECT.y && y <= NEXT_DAY_RECT.y + NEXT_DAY_RECT.h
+    if (inNextDay) {
+      nextDay(state)
+    } else if (view === 'pond') {
+      const slot = pondSlotAt(x, y, state)
+      if (slot !== null) pondClick(state, slot)
     } else if (view === 'fish') {
       fishingClick()
     } else {
@@ -130,6 +130,12 @@ function createFishpondGame(host: HTMLElement, options?: MiniGameMountOptions): 
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()
+    } else if (event.code === 'Space') {
+      event.preventDefault()
+      // 空格：任何视图就地结束今天（体力回复入口常驻）。
+      if (state.phase === 'playing') nextDay(state)
+      reportScore()
+      loop.markDirty()
     } else if (event.code === 'KeyN') {
       event.preventDefault()
       if (state.phase === 'won' && state.levelIndex < LEVELS.length - 1) {

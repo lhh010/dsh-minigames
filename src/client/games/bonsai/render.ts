@@ -319,6 +319,41 @@ function drawHud(ctx: CanvasRenderingContext2D, state: BonsaiState): void {
  * @param hoverId - 鼠标悬停的枝节点 id（高亮），无则 null。
  * @param dtMs - 本帧间隔毫秒（粒子推进用）。
  */
+/** 静态层缓存：背景+目标轮廓+盆+树只在结构/健康/关卡变化时重绘——
+ * 原实现每帧全量重绘整棵树（贝塞尔+叶簇+glow 阴影），是卡顿的主因。 */
+let sceneCanvas: HTMLCanvasElement | null = null
+let sceneKey = ''
+
+function sceneSignature(state: BonsaiState, hoverId: number | null): string {
+  return [
+    state.levelIndex, Math.round(state.health), state.phase === 'dead' ? 1 : 0, state.phase,
+    state.nodes.length, hoverId ?? -1,
+    state.nodes.map((n) => Math.round(n.length * 4)).join(','),
+  ].join('|')
+}
+
+function drawStaticScene(state: BonsaiState, hoverId: number | null): void {
+  const sig = sceneSignature(state, hoverId)
+  const w = Math.max(1, Math.round(LOGICAL_W))
+  const h = Math.max(1, Math.round(LOGICAL_H))
+  if (sceneCanvas === null || sceneCanvas.width !== w || sceneCanvas.height !== h) {
+    sceneCanvas = document.createElement('canvas')
+    sceneCanvas.width = w
+    sceneCanvas.height = h
+    sceneKey = ''
+  }
+  if (sig === sceneKey) return
+  const sctx = sceneCanvas.getContext('2d')
+  if (sctx === null) return
+  sctx.setTransform(1, 0, 0, 1, 0, 0)
+  sctx.clearRect(0, 0, w, h)
+  drawBackground(sctx, w, h)
+  drawTargetOutline(sctx, state)
+  drawPot(sctx)
+  drawTree(sctx, state, hoverId)
+  sceneKey = sig
+}
+
 export function renderBonsai(
   ctx: CanvasRenderingContext2D,
   state: BonsaiState,
@@ -327,10 +362,8 @@ export function renderBonsai(
   hoverId: number | null,
   dtMs: number,
 ): void {
-  drawBackground(ctx, LOGICAL_W, LOGICAL_H)
-  drawTargetOutline(ctx, state)
-  drawPot(ctx)
-  drawTree(ctx, state, hoverId)
+  drawStaticScene(state, hoverId)
+  if (sceneCanvas !== null) ctx.drawImage(sceneCanvas, 0, 0)
   drawEnergyFlow(ctx, state, timeMs)
   drawFertShimmer(ctx, state, timeMs)
   drawSun(ctx, state)

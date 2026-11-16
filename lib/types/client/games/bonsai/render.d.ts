@@ -24,13 +24,4 @@ export declare function sunPosition(state: BonsaiState): {
  * @returns 'sun' | 节点 id | null。
  */
 export declare function pickAt(state: BonsaiState, x: number, y: number): 'sun' | number | null;
-/**
- * 整帧绘制（纯 canvas，无副作用除粒子推进）。
- * @param ctx - 已套用逻辑坐标变换的 2d 上下文。
- * @param state - 游戏状态。
- * @param paused - 是否处于暂停（画暂停遮罩）。
- * @param timeMs - 累积毫秒（能量微光与施肥闪点动画用）。
- * @param hoverId - 鼠标悬停的枝节点 id（高亮），无则 null。
- * @param dtMs - 本帧间隔毫秒（粒子推进用）。
- */
 export declare function renderBonsai(ctx: CanvasRenderingContext2D, state: BonsaiState, paused: boolean, timeMs: number, hoverId: number | null, dtMs: number): void;

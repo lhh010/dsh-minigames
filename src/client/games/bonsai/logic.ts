@@ -44,7 +44,7 @@ export const LEVELS: BonsaiLevel[] = [
 /** 一个游戏日包含的 tick 数（tick 自动推进游戏日）。 */
 export const DAY_TICKS = 24
 /** index 层逻辑 tick 间隔（毫秒）。 */
-export const TICK_MS = 240
+export const TICK_MS = 520
 /** 每 tick 每节点基础能量。 */
 export const BASE_ENERGY = 1
 /** 光照展开度系数：增益 = 1 + LIGHT_K × min(1, |x| / SPREAD_REF)。 */

@@ -743,6 +743,11 @@ export function canBreed(a: PondFish, b: PondFish, day: number): boolean {
  */
 export function nextDay(state: FishpondState): void {
   if (state.phase !== 'playing') return
+  // 跨日取消进行中的抛竿（力度/等待/结果态一并复位）——否则半途翻日
+  // 留下悬空状态机，钓点视图再也点不出新动作。
+  state.fishing.status = 'idle'
+  state.fishing.pending = null
+  state.fishing.failReason = ''
   for (const fish of state.pond) {
     if (fish === null || fish === undefined) continue
     if (fish.fedToday) {

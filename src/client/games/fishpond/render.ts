@@ -652,6 +652,19 @@ export function renderFishpond(ctx: CanvasRenderingContext2D, state: FishpondSta
   if (view === 'pond') drawPondView(ctx, state, now)
   else if (view === 'fish') drawFishingView(ctx, state, now)
   else drawMarketView(ctx, state)
+  // 全视图通用的「结束今天」按钮（鱼塘侧栏已有；钓点/市场也常驻——
+  // 体力耗尽时任何视图都能就地翻日回复，不再卡死在钓点）。
+  if (view !== 'pond') {
+    ctx.fillStyle = THEME.panel
+    roundRectPath(ctx, NEXT_DAY_RECT.x, NEXT_DAY_RECT.y, NEXT_DAY_RECT.w, NEXT_DAY_RECT.h, 8)
+    ctx.fill()
+    ctx.strokeStyle = THEME.panelEdge
+    ctx.stroke()
+    ctx.textAlign = 'center'
+    ctx.font = '700 14px system-ui, sans-serif'
+    ctx.fillStyle = THEME.good
+    ctx.fillText('结束今天 ▶', NEXT_DAY_RECT.x + NEXT_DAY_RECT.w / 2, NEXT_DAY_RECT.y + 21)
+  }
   // 粒子：卖出入账 / 钓到鱼水花
   if (state.coins > prevCoins && prevCoins !== -1) {
     particles.burst(SIDE_X + SIDE_W / 2, 60, THEME.gold, 12, 140)
