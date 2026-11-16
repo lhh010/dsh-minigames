@@ -136,6 +136,8 @@ export interface CakeState {
     cutsUsed: number;
     nextId: number;
     solved: boolean;
+    /** 容差倍率（难度选择）：1 = 标准 / 2 = 宽松 / 4 = 很宽松。只影响过关判定。 */
+    toleranceScale: number;
 }
 /**
  * 开局：整只蛋糕作为 id 0 的单块。
@@ -168,6 +170,10 @@ export declare function cakeDeviations(state: CakeState): number[];
  * 等分判定：块数恰为目标份数且每块偏差在容差内。
  * @param state - 当前状态。
  */
+/** 容差倍率档位（升序），[ / ] 键或按钮循环切换。 */
+export declare const TOLERANCE_SCALES: number[];
+/** 切换容差倍率：循环到下一档；返回新倍率（原位更新，无历史开销）。 */
+export declare function cycleToleranceScale(state: CakeState): number;
 export declare function cakeIsSolved(state: CakeState): boolean;
 /**
  * 过关得分：关卡基数 + 剩余刀数效率奖励（共点切割可用更少刀达成更多份）。

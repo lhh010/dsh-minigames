@@ -151,6 +151,9 @@ export function renderCaravan(
   hudPair(ctx, 322, 28, '移动力', s.movePoints + '/' + cfg.camels)
   hudPair(ctx, W - 24, 28, '资产', assetValue(s) + ' / ' + cfg.goal, 'right', assetValue(s) >= cfg.goal ? THEME.good : THEME.text)
 
+  // 过关提示行：缺口 + 剩余天数换算的日均目标 + 下一步建议（物价导向）。
+  drawGoalHint(ctx, s)
+
   // 市场面板
   ctx.fillStyle = THEME.panel
   roundRectPath(ctx, PANEL_X, PANEL_Y, PANEL_W, 470, 10)
@@ -257,4 +260,48 @@ function drawButton(
   ctx.fillStyle = color
   ctx.fillText(label, x + w / 2, y + 15)
   if (hits !== undefined) hits.push({ x, y, w, h, kind, payload })
+}
+
+/** 过关提示：资产缺口、按剩余天数折算的日均目标与下一步建议（低买高卖导向）。
+ * @param ctx - 画布上下文。
+ * @param s - 当前状态。
+ */
+function drawGoalHint(ctx: CanvasRenderingContext2D, s: CaravanState): void {
+  const cfg = s.world.config
+  const net = assetValue(s)
+  const gap = Math.max(0, cfg.goal - net)
+  const daysLeft = Math.max(0, cfg.days - s.day)
+  ctx.textAlign = 'center'
+  ctx.font = '600 13px system-ui, sans-serif'
+  if (gap <= 0) {
+    glow(ctx, THEME.good, 6)
+    ctx.fillStyle = THEME.good
+    ctx.fillText('✓ 资产已达标——再完成任意买卖或结束今天即过关', W / 2, 52)
+    noGlow(ctx)
+    return
+  }
+  const perDay = daysLeft > 0 ? Math.ceil(gap / daysLeft) : gap
+  // 找全城最值钱的低买机会与最值钱的抛售城（已到访精确价）。
+  let best: { buy: string, sell: string, gain: number } | null = null
+  for (let gi = 0; gi < GOODS.length; gi += 1) {
+    let lo = Number.POSITIVE_INFINITY
+    let loCity = ''
+    let hi = 0
+    let hiCity = ''
+    for (let c = 0; c < s.world.cities.length; c += 1) {
+      const p = priceAt(s, c, gi)
+      if (p < lo) { lo = p; loCity = s.world.cities[c]!.name }
+      if (p > hi) { hi = p; hiCity = s.world.cities[c]!.name }
+    }
+    if (hi - lo > (best?.gain ?? 0)) best = { buy: loCity, sell: hiCity, gain: hi - lo }
+  }
+  glow(ctx, THEME.accents[0]!, 5)
+  ctx.fillStyle = THEME.accents[0]!
+  ctx.fillText('目标还差 ' + gap + ' 资产 · ' + (daysLeft > 0 ? '剩 ' + daysLeft + ' 天（日均需 +' + perDay + '）' : '今天最后一天！'), W / 2, 52)
+  noGlow(ctx)
+  if (best !== null && best.gain > 0) {
+    ctx.font = '600 12px system-ui, sans-serif'
+    ctx.fillStyle = THEME.textMuted
+    ctx.fillText('行情建议：' + best.buy + ' 买入 → ' + best.sell + ' 卖出（价差 ' + best.gain + '）', W / 2, 70)
+  }
 }

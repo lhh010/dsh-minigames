@@ -28,6 +28,12 @@ interface Geometry {
 export declare function geometry(level: Level): Geometry;
 /** 画布逻辑坐标 → 盘面列号（不在盘面竖向范围内返回 null）。 */
 export declare function columnAt(level: Level, px: number, py: number): number | null;
+/** 库存槽命中测试：点中哪个件型槽（与 drawInventoryBar 同一几何）。
+ * @param px - 逻辑横坐标。
+ * @param py - 逻辑纵坐标。
+ * @returns 件型；未命中返回 null。
+ */
+export declare function inventorySlotAt(px: number, py: number): PieceType | null;
 /** 整帧绘制入口（index 每个渲染帧调用一次）。 */
 export declare function renderScene(ctx: CanvasRenderingContext2D, view: DominoView): void;
 export {};

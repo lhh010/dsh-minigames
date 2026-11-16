@@ -22,7 +22,7 @@ import {
   undo,
   type PieceType,
 } from './logic.ts'
-import { LOGICAL_H, LOGICAL_W, columnAt, geometry, renderScene, type DominoView } from './render.ts'
+import { LOGICAL_H, LOGICAL_W, columnAt, geometry, inventorySlotAt, renderScene, type DominoView } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { THEME, createParticles } from '../theme.ts'
@@ -105,6 +105,13 @@ function createDominoRunGame(host: HTMLElement, options?: MiniGameMountOptions):
   const onMouseDown = (event: MouseEvent): void => {
     if (!running || paused || state.phase !== 'build') return
     const p = toLogical(event)
+    // 库存槽点击 = 切换件型（等同键盘 1/2/3）。
+    const slotType = inventorySlotAt(p.x, p.y)
+    if (slotType !== null && event.button !== 2) {
+      selectedType = slotType
+      buildLoop.markDirty()
+      return
+    }
     const col = columnAt(view().level, p.x, p.y)
     if (col === null) return
     if (event.button === 2 || event.shiftKey) {

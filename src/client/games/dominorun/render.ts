@@ -309,6 +309,24 @@ function drawInventoryBar(ctx: CanvasRenderingContext2D, view: DominoView): void
   }
 }
 
+/** 库存槽命中测试：点中哪个件型槽（与 drawInventoryBar 同一几何）。
+ * @param px - 逻辑横坐标。
+ * @param py - 逻辑纵坐标。
+ * @returns 件型；未命中返回 null。
+ */
+export function inventorySlotAt(px: number, py: number): PieceType | null {
+  const top = LOGICAL_H - BAR_H + 8
+  if (py < top + 10 || py > top + 10 + BAR_H - 36) return null
+  const slotW = 220
+  const startX = (LOGICAL_W - slotW * 3 - 16 * 2) / 2
+  const types: PieceType[] = ['domino', 'bridge', 'booster']
+  for (let i = 0; i < types.length; i += 1) {
+    const x = startX + i * (slotW + 16)
+    if (px >= x && px <= x + slotW) return types[i]!
+  }
+  return null
+}
+
 /** 整帧绘制入口（index 每个渲染帧调用一次）。 */
 export function renderScene(ctx: CanvasRenderingContext2D, view: DominoView): void {
   drawBackground(ctx, LOGICAL_W, LOGICAL_H)

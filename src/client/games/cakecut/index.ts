@@ -325,7 +325,7 @@ export const cakecutGame: MiniGameDefinition = {
   description: '有限的刀数把蛋糕切成完全等份——几何直觉就是你的刀工。',
   controls: [
     '点击两点定一刀（虚线预览吸附到刀路）',
-    'H：对称辅助线 · U：撤回一刀',
+    'H：对称辅助线 · U：撤回一刀 · T：容差档位（标准/宽松/很宽松——放宽也算过）',
     'R：重开本关 · P：暂停',
   ],
   create: createCakecutGame,

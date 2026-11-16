@@ -82,6 +82,9 @@ function createLiarDiceGame(host: HTMLElement, options?: MiniGameMountOptions): 
     }
     if (state.lastChallenge === null) reveal = 0
     if (state.phase === 'bidding' && state.turn === 'ai' && reveal >= 1) {
+      // 关键：先标记脏——dirty 模式下未置脏的帧不会回调（AI 思考倒计时
+      // 因此永不推进，永久卡在「对方思考中…」）。
+      loop.markDirty()
       aiTimer += dt
       animating = true
       if (aiTimer >= AI_THINK_S) {
