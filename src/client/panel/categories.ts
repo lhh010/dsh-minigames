@@ -34,6 +34,7 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   spotdiff: 'puzzle', memory: 'puzzle', match3: 'puzzle', iceslide: 'puzzle', link: 'puzzle', rivercross: 'puzzle', balance: 'puzzle',
   bridge: 'puzzle', jugs: 'puzzle', knightour: 'puzzle', nimgame: 'puzzle',
   queens8: 'puzzle', kenken: 'puzzle', futoshiki: 'puzzle', ricochet: 'puzzle', onestroke: 'puzzle', jenga: 'puzzle', portal: 'puzzle', akari: 'puzzle', rainwater: 'puzzle', gears: 'puzzle', colormix: 'puzzle', dicemaze: 'puzzle', idiomchain: 'puzzle', defuse: 'puzzle', jigsaw: 'puzzle', lightpath: 'puzzle', logigrid: 'puzzle', starbattle: 'puzzle',
+  alchemy: 'puzzle', watersort: 'puzzle', molecule: 'puzzle', orbit: 'puzzle',
   // 棋牌
   chess: 'board', xiangqi: 'board', gomoku: 'board', othello: 'board',
   connect4: 'board', minigo: 'board', blackjack: 'board', yahtzee: 'board',
