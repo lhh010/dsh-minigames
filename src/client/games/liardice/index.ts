@@ -81,9 +81,13 @@ function createLiarDiceGame(host: HTMLElement, options?: MiniGameMountOptions): 
       animating = true
     }
     if (state.lastChallenge === null) reveal = 0
-    if (state.phase === 'bidding' && state.turn === 'ai' && reveal >= 1) {
+    // AI 回合闸门：首次轮 AI（无开骰记录）直接倒计时；开骰结算后等翻面
+    // 动画播完（reveal 到 1）再行动。原条件要求 reveal>=1，而 reveal 只在
+    // 开骰动画中增长——首次 AI 回合 reveal 恒为 0，倒计时永不启动，
+    // 这才是「卡在对方思考中」的真根因。
+    if (state.phase === 'bidding' && state.turn === 'ai' && (state.lastChallenge === null || reveal >= 1)) {
       // 关键：先标记脏——dirty 模式下未置脏的帧不会回调（AI 思考倒计时
-      // 因此永不推进，永久卡在「对方思考中…」）。
+      // 因此永不推进）。
       loop.markDirty()
       aiTimer += dt
       animating = true
