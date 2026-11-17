@@ -162,6 +162,10 @@ import { dominorunGame } from './dominorun/index.ts'
 import { cakecutGame } from './cakecut/index.ts'
 import { liardiceGame } from './liardice/index.ts'
 import { caravanGame } from './caravan/index.ts'
+import { rubikGame } from './rubik/index.ts'
+import { battleshipGame } from './battleship/index.ts'
+import { darkmazeGame } from './darkmaze/index.ts'
+import { deepdiveGame } from './deepdive/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -227,6 +231,7 @@ export function registerBuiltinGames(): void {
     petpalGame, bonsaiGame, fishpondGame, logigridGame, starbattleGame,
     alchemyGame, watersortGame, moleculeGame, orbitGame,
     dominorunGame, cakecutGame, liardiceGame, caravanGame,
+    rubikGame, battleshipGame, darkmazeGame, deepdiveGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
