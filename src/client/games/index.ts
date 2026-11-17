@@ -170,6 +170,10 @@ import { backgammonGame } from './backgammon/index.ts'
 import { crazy8Game } from './crazy8/index.ts'
 import { clawGame } from './claw/index.ts'
 import { nbackGame } from './nback/index.ts'
+import { robocodeGame } from './robocode/index.ts'
+import { tronGame } from './tron/index.ts'
+import { artilleryGame } from './artillery/index.ts'
+import { plinkoGame } from './plinko/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -237,6 +241,7 @@ export function registerBuiltinGames(): void {
     dominorunGame, cakecutGame, liardiceGame, caravanGame,
     rubikGame, battleshipGame, darkmazeGame, deepdiveGame,
     backgammonGame, crazy8Game, clawGame, nbackGame,
+    robocodeGame, tronGame, artilleryGame, plinkoGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }

@@ -33,7 +33,7 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   mastermind: 'puzzle', circlemath: 'puzzle', game24: 'puzzle', tangram: 'puzzle',
   spotdiff: 'puzzle', memory: 'puzzle', match3: 'puzzle', iceslide: 'puzzle', link: 'puzzle', rivercross: 'puzzle', balance: 'puzzle',
   bridge: 'puzzle', jugs: 'puzzle', knightour: 'puzzle', nimgame: 'puzzle',
-  queens8: 'puzzle', kenken: 'puzzle', futoshiki: 'puzzle', ricochet: 'puzzle', onestroke: 'puzzle', jenga: 'puzzle', portal: 'puzzle', akari: 'puzzle', rainwater: 'puzzle', cakecut: 'puzzle', rubik: 'puzzle', gears: 'puzzle', colormix: 'puzzle', dicemaze: 'puzzle', idiomchain: 'puzzle', defuse: 'puzzle', jigsaw: 'puzzle', lightpath: 'puzzle', logigrid: 'puzzle', starbattle: 'puzzle',
+  queens8: 'puzzle', kenken: 'puzzle', futoshiki: 'puzzle', ricochet: 'puzzle', onestroke: 'puzzle', jenga: 'puzzle', portal: 'puzzle', akari: 'puzzle', rainwater: 'puzzle', cakecut: 'puzzle', rubik: 'puzzle', robocode: 'puzzle', gears: 'puzzle', colormix: 'puzzle', dicemaze: 'puzzle', idiomchain: 'puzzle', defuse: 'puzzle', jigsaw: 'puzzle', lightpath: 'puzzle', logigrid: 'puzzle', starbattle: 'puzzle',
   alchemy: 'puzzle', watersort: 'puzzle', molecule: 'puzzle', orbit: 'puzzle',
   // 棋牌
   chess: 'board', xiangqi: 'board', gomoku: 'board', othello: 'board',
@@ -47,7 +47,7 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   dodger: 'arcade', stack: 'arcade', jumper: 'arcade', avalanche: 'arcade',
   suika: 'arcade', tanks: 'arcade', td: 'arcade', slither: 'arcade',
   jungle: 'arcade', fruitslash: 'arcade', gravflip: 'arcade', copter: 'arcade',
-  whack: 'arcade', piano: 'arcade', rhythm: 'arcade', elevator: 'arcade', sorter: 'arcade', ringtoss: 'arcade', dig: 'arcade', claw: 'arcade', burger: 'arcade', missile: 'arcade',
+  whack: 'arcade', piano: 'arcade', rhythm: 'arcade', elevator: 'arcade', sorter: 'arcade', ringtoss: 'arcade', dig: 'arcade', claw: 'arcade', plinko: 'arcade', burger: 'arcade', missile: 'arcade',
   // 反应
   aimtrack: 'reflex', simon: 'reflex', schulte: 'reflex', stroop: 'reflex', morse: 'reflex', lockpick: 'reflex', plates: 'reflex', rps: 'reflex', nback: 'reflex',
   reaction: 'reflex', typing: 'reflex', juggle: 'reflex', steadyhand: 'reflex',
