@@ -47,9 +47,9 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   dodger: 'arcade', stack: 'arcade', jumper: 'arcade', avalanche: 'arcade',
   suika: 'arcade', tanks: 'arcade', td: 'arcade', slither: 'arcade',
   jungle: 'arcade', fruitslash: 'arcade', gravflip: 'arcade', copter: 'arcade',
-  whack: 'arcade', piano: 'arcade', rhythm: 'arcade', elevator: 'arcade', sorter: 'arcade', ringtoss: 'arcade', dig: 'arcade', burger: 'arcade', missile: 'arcade',
+  whack: 'arcade', piano: 'arcade', rhythm: 'arcade', elevator: 'arcade', sorter: 'arcade', ringtoss: 'arcade', dig: 'arcade', claw: 'arcade', burger: 'arcade', missile: 'arcade',
   // 反应
-  aimtrack: 'reflex', simon: 'reflex', schulte: 'reflex', stroop: 'reflex', morse: 'reflex', lockpick: 'reflex', plates: 'reflex', rps: 'reflex',
+  aimtrack: 'reflex', simon: 'reflex', schulte: 'reflex', stroop: 'reflex', morse: 'reflex', lockpick: 'reflex', plates: 'reflex', rps: 'reflex', nback: 'reflex',
   reaction: 'reflex', typing: 'reflex', juggle: 'reflex', steadyhand: 'reflex',
   qwop: 'reflex',
   // 物理·运动
