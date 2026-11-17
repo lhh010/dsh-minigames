@@ -33,7 +33,8 @@ function createRobocodeGame(host: HTMLElement, options?: MiniGameMountOptions): 
       paused: false,
       message: '',
       messageTtl: 0,
-      chipsLeft: level.chipsTotal,
+      levelCount: levels.length,
+    chipsLeft: level.chipsTotal,
       collected: [],
       trace: [],
       traceIndex: 0,
@@ -204,6 +205,17 @@ function createRobocodeGame(host: HTMLElement, options?: MiniGameMountOptions): 
       } else {
         resetToEdit()
       }
+    } else if (event.code === 'BracketRight') {
+      event.preventDefault()
+      // ]：下一关 · [：上一关（手动切换，参照其他游戏惯例）。
+      levelIndex = (levelIndex + 1) % levels.length
+      view = freshView()
+      markDirty()
+    } else if (event.code === 'BracketLeft') {
+      event.preventDefault()
+      levelIndex = (levelIndex - 1 + levels.length) % levels.length
+      view = freshView()
+      markDirty()
     } else if (event.code === 'KeyP') {
       event.preventDefault()
       togglePause()
@@ -300,7 +312,7 @@ export const robocodeGame: MiniGameDefinition = {
     '指令说明：F＝前进一格 · L＝左转 90° · R＝右转 90° · J＝跳跃（越过一格坑/尖刺）· F2＝前进两格',
     '⟲n…end＝循环块（重复其间指令 n 次，可嵌套两层；滚轮调 n）',
     '玩法：点击面板插入指令 → 空格运行 → 撞墙/踩尖刺会中断，收齐全部芯片后进入 ★ 终点过关',
-    '点击槽位：删除 · 空格：运行/停止 · R：重开 · P：暂停',
+    '点击槽位：删除 · 空格：运行/停止 · [ / ]：切换关卡 · R：重开 · P：暂停',
   ],
   create: createRobocodeGame,
 }

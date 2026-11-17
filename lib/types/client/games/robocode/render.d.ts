@@ -23,6 +23,8 @@ export interface RobocodeView {
     /** 短暂提示文本与剩余毫秒。 */
     message: string;
     messageTtl: number;
+    /** 关卡总数（HUD 显示 N/总数）。 */
+    levelCount: number;
     /** 剩余芯片数（0 时闸门开启）。 */
     chipsLeft: number;
     /** 已拾取芯片的格索引（渲染时消隐）。 */

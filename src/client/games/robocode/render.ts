@@ -55,6 +55,8 @@ export interface RobocodeView {
   /** 短暂提示文本与剩余毫秒。 */
   message: string
   messageTtl: number
+  /** 关卡总数（HUD 显示 N/总数）。 */
+  levelCount: number
   /** 剩余芯片数（0 时闸门开启）。 */
   chipsLeft: number
   /** 已拾取芯片的格索引（渲染时消隐）。 */
@@ -173,10 +175,11 @@ export function renderRobocode(ctx: CanvasRenderingContext2D, view: RobocodeView
 
   // HUD：关卡 / 芯片 / 槽位 / 预算（运行中额外显示步进度）
   ctx.textBaseline = 'alphabetic'
-  hudPair(ctx, 16, 26, '关卡', String(level.id + 1) + ' · ' + level.name)
+  // 列距加宽（16/250/420）避免长关卡名与后续列重叠出屏。
+  hudPair(ctx, 16, 26, '关卡', String(level.id + 1) + '/' + String(view.levelCount) + ' · ' + level.name)
   const chipColor = view.chipsLeft === 0 ? THEME.good : THEME.gold
-  hudPair(ctx, 210, 26, '芯片', String(level.chipsTotal - view.chipsLeft) + '/' + String(level.chipsTotal), 'left', chipColor)
-  hudPair(ctx, 360, 26, '槽位', String(view.tokens.length) + '/' + String(level.maxSlots), 'left',
+  hudPair(ctx, 250, 26, '芯片', String(level.chipsTotal - view.chipsLeft) + '/' + String(level.chipsTotal), 'left', chipColor)
+  hudPair(ctx, 420, 26, '槽位', String(view.tokens.length) + '/' + String(level.maxSlots), 'left',
     view.tokens.length > level.maxSlots ? THEME.bad : THEME.text)
   const stepText = view.mode === 'run'
     ? '步 ' + String(view.traceIndex) + '/' + String(view.trace.length)
