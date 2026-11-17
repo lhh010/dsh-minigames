@@ -101,11 +101,12 @@ function drawRail(ctx: CanvasRenderingContext2D, trolleyX: number): void {
  * @param doll - 娃娃数据。
  * @param t - 装饰时钟（ms，轻微呼吸浮动）。
  */
-function drawDoll(ctx: CanvasRenderingContext2D, doll: Doll, t: number): void {
+function drawDoll(ctx: CanvasRenderingContext2D, doll: Doll, t: number, yOverride: number | null = null): void {
   const depthScale = 1 - 0.3 * doll.z
   const s = doll.size * depthScale
-  const bob = Math.sin(t / 820 + doll.id * 1.7) * 2
-  const y = dollY(doll) + bob
+  const bob = yOverride === null ? Math.sin(t / 820 + doll.id * 1.7) * 2 : 0
+  // yOverride：携带时挂点固定（不呼吸浮动），地面娃娃走 dollY+bob。
+  const y = yOverride ?? (dollY(doll) + bob)
   const color = accent(doll.kind + 2)
   glow(ctx, color, 8)
   ctx.fillStyle = color
@@ -186,8 +187,8 @@ function drawClaw(ctx: CanvasRenderingContext2D, state: ClawState): void {
   if (state.carrying !== null) {
     // 携带娃娃完全跟随爪尖：横=clawX、纵=爪下挂点（clawY+指尖），并按
     // 爪的纵深缩放——原实现纵向仍画在地面 dollY，提升时娃娃不跟爪。
-    const hung = { ...state.carrying, x: clawX, y: clawY + 10 * scale, z: depth }
-    drawDoll(ctx, hung, state.animMs)
+    // 挂点：爪指尖下方、随爪深度缩放——娃娃真正跟着爪走。
+    drawDoll(ctx, { ...state.carrying, x: clawX, z: depth }, state.animMs, clawY + 12 * scale)
   }
 }
 
