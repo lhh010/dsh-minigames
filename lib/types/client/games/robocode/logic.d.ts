@@ -66,7 +66,7 @@ export interface RoboLevel {
  * @throws 网格非法（不等宽 / 缺 R / 缺 G / 未知字符）时抛错——关卡是内置数据，错误应在加载期暴露。
  */
 export declare function parseLevel(spec: RoboLevelSpec): RoboLevel;
-/** 内置 5 关：直线收集 → 转向序列 → 必须用循环 → 嵌套循环 → 综合迷宫。 */
+/** 内置 10 关：直线收集 → 转向序列 → 必须用循环 → 嵌套循环 → 综合迷宫 → 长途跋涉 → 环形回路 → 险途折返 → 十芯巡检 → 终极考验。 */
 export declare const ROBOCODE_LEVELS: readonly RoboLevelSpec[];
 /**
  * 全部内置关卡（按序解析）。

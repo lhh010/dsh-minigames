@@ -148,9 +148,9 @@ describe('robocode logic', () => {
     expect(validateProgram(level, ['F', 'F', 'F', 'F'])).toBeNull()
   })
 
-  it('全部 5 关的参考程序均可过关', () => {
+  it('全部 10 关的参考程序均可过关', () => {
     const levels = getLevels()
-    expect(levels.length).toBe(5)
+    expect(levels.length).toBe(10)
     for (const level of levels) {
       const run = runProgram(level, level.reference)
       expect(run.error, '关卡 ' + level.id + ' 参考程序校验失败').toBeNull()
@@ -168,6 +168,15 @@ describe('robocode logic', () => {
     const single: Token[] = [{ loop: 3 }, 'F', 'F', 'F', 'F', 'R', 'end']
     expect(validateProgram(nestedLevel, single)).toMatch(/槽位/)
     expect(validateProgram(nestedLevel, nestedLevel.reference)).toBeNull()
+    const ringLevel = levels[6]!
+    const unnested: Token[] = [
+      { loop: 5 }, 'F', 'end', 'R',
+      { loop: 5 }, 'F', 'end', 'R',
+      { loop: 5 }, 'F', 'end', 'R',
+      { loop: 5 }, 'F', 'end', 'R',
+    ]
+    expect(validateProgram(ringLevel, unnested)).toMatch(/槽位/)
+    expect(validateProgram(ringLevel, ringLevel.reference)).toBeNull()
   })
 
   it('确定性重放：同一关卡同一程序两次执行轨迹逐字段一致', () => {

@@ -113,7 +113,7 @@ export function parseLevel(spec: RoboLevelSpec): RoboLevel {
   }
 }
 
-/** 内置 5 关：直线收集 → 转向序列 → 必须用循环 → 嵌套循环 → 综合迷宫。 */
+/** 内置 10 关：直线收集 → 转向序列 → 必须用循环 → 嵌套循环 → 综合迷宫 → 长途跋涉 → 环形回路 → 险途折返 → 十芯巡检 → 终极考验。 */
 export const ROBOCODE_LEVELS: readonly RoboLevelSpec[] = [
   {
     id: 0, name: '直线收集',
@@ -174,6 +174,94 @@ export const ROBOCODE_LEVELS: readonly RoboLevelSpec[] = [
     ],
     startDir: 1, maxSlots: 16, budget: 48,
     reference: ['F', 'F', 'R', 'R', 'F', 'F', 'L', 'F2', 'F2', 'L', 'F', 'J', 'F', 'F'],
+  },
+  {
+    id: 5, name: '长途跋涉',
+    grid: [
+      '###############',
+      '#R..C....C....#',
+      '#############.#',
+      '#.....C.......#',
+      '#.#############',
+      '#..C.....C....#',
+      '#############G#',
+    ],
+    startDir: 1, maxSlots: 26, budget: 48,
+    reference: [
+      { loop: 4 }, { loop: 3 }, 'F', 'end', 'end',
+      'R', 'F', 'F', 'R',
+      { loop: 4 }, { loop: 3 }, 'F', 'end', 'end',
+      'L', 'F', 'F', 'L',
+      { loop: 4 }, { loop: 3 }, 'F', 'end', 'end',
+      'R', 'F',
+    ],
+  },
+  {
+    id: 6, name: '环形回路',
+    grid: [
+      '#G######',
+      '#R..C..#',
+      '#.####.#',
+      '#C####.#',
+      '#.####C#',
+      '#.####.#',
+      '#..C...#',
+      '########',
+    ],
+    startDir: 1, maxSlots: 8, budget: 32,
+    reference: [{ loop: 4 }, { loop: 5 }, 'F', 'end', 'R', 'end', 'L', 'F'],
+  },
+  {
+    id: 7, name: '险途折返',
+    grid: [
+      '#############',
+      '#R.OC^COC...#',
+      '###########.#',
+      '#G..COC^COC.#',
+      '#############',
+    ],
+    startDir: 1, maxSlots: 15, budget: 24,
+    reference: ['F', 'J', 'J', 'J', 'F2', 'F', 'R', 'F2', 'R', 'F', 'J', 'J', 'J', 'F', 'F2'],
+  },
+  {
+    id: 8, name: '十芯巡检',
+    grid: [
+      '###########',
+      '#R.C.C.C..#',
+      '#.#######.#',
+      '#..C.C.C..#',
+      '#.#######.#',
+      '#.C.C.C.CG#',
+      '###########',
+    ],
+    startDir: 1, maxSlots: 20, budget: 40,
+    reference: [
+      { loop: 4 }, { loop: 2 }, 'F', 'end', 'end',
+      'R', 'F2', 'R',
+      { loop: 4 }, { loop: 2 }, 'F', 'end', 'end',
+      'L', 'F2', 'L',
+      { loop: 8 }, 'F', 'end',
+    ],
+  },
+  {
+    id: 9, name: '终极考验',
+    grid: [
+      '###############',
+      '#R....C....C..#',
+      '#.###########.#',
+      '#.C....O....C.#',
+      '#.###########.#',
+      '#.C....^....CG#',
+      '###############',
+    ],
+    startDir: 1, maxSlots: 26, budget: 48,
+    reference: [
+      { loop: 3 }, { loop: 4 }, 'F', 'end', 'end',
+      'R', 'F2', 'R',
+      { loop: 5 }, 'F', 'end', 'J', { loop: 5 }, 'F', 'end',
+      'L', 'F2', 'L',
+      { loop: 5 }, 'F', 'end', 'J', { loop: 5 }, 'F', 'end',
+    ],
   },
 ]
 

@@ -31,16 +31,16 @@ const SLOT_GAP = 6
 const SLOTS_PER_ROW = 14
 /** 面板按钮定义：token 为点击插入的记号，'clear' 为清空按钮。 */
 const PALETTE: ReadonlyArray<{ label: string; token: Token | 'clear' }> = [
-  { label: 'F', token: 'F' },
-  { label: 'L', token: 'L' },
-  { label: 'R', token: 'R' },
-  { label: 'J', token: 'J' },
-  { label: 'F2', token: 'F2' },
-  { label: '⟲2', token: { loop: 2 } },
-  { label: 'end', token: 'end' },
+  { label: 'F 前进', token: 'F' },
+  { label: 'L 左转', token: 'L' },
+  { label: 'R 右转', token: 'R' },
+  { label: 'J 跳跃', token: 'J' },
+  { label: 'F2 两格', token: 'F2' },
+  { label: '⟲2 循环', token: { loop: 2 } },
+  { label: 'end 结束', token: 'end' },
   { label: '清空', token: 'clear' },
 ]
-const PALETTE_BTN_W = 76
+const PALETTE_BTN_W = 88
 
 /** 渲染所需的全部游戏状态（index.ts 持有并逐帧注入）。 */
 export interface RobocodeView {
