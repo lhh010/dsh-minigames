@@ -184,7 +184,10 @@ function drawClaw(ctx: CanvasRenderingContext2D, state: ClawState): void {
   ctx.lineCap = 'butt'
   // 携带的娃娃挂在爪下
   if (state.carrying !== null) {
-    drawDoll(ctx, { ...state.carrying, x: clawX }, state.animMs)
+    // 携带娃娃完全跟随爪尖：横=clawX、纵=爪下挂点（clawY+指尖），并按
+    // 爪的纵深缩放——原实现纵向仍画在地面 dollY，提升时娃娃不跟爪。
+    const hung = { ...state.carrying, x: clawX, y: clawY + 10 * scale, z: depth }
+    drawDoll(ctx, hung, state.animMs)
   }
 }
 

@@ -104,6 +104,17 @@ export function renderNBack(ctx: CanvasRenderingContext2D, state: NBackState, t:
   hudPair(ctx, LOGICAL_W - 10, 20, '进度 ' + Math.min(state.trialIndex + 1, TRIALS_PER_SESSION) + '/' + TRIALS_PER_SESSION + ' · ',
     '准确率 ' + acc + '%', 'right')
 
+  // 常驻教学横幅：一句话讲清规则 + 具体例子（首节玩家常看不懂玩法）。
+  ctx.textAlign = 'center'
+  ctx.font = '600 13px system-ui, sans-serif'
+  glow(ctx, accent(0), 5)
+  ctx.fillStyle = accent(0)
+  ctx.fillText('当前格子与 ' + state.n + ' 步前的格子相同 → 按 A；不同 → 什么都不按', LOGICAL_W / 2, 44)
+  noGlow(ctx)
+  ctx.font = '600 12px system-ui, sans-serif'
+  ctx.fillStyle = THEME.textMuted
+  ctx.fillText('例：左上 → 中下 → 左上（第 3 格与 2 步前相同，按 A！误按会扣分）', LOGICAL_W / 2, 62)
+
   // 3×3 网格。
   for (let i = 0; i < GRID_CELLS; i += 1) {
     const cx = GRID_X + (i % 3) * (CELL + GAP)

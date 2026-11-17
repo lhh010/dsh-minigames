@@ -187,20 +187,27 @@ export function renderDeepDive(ctx: CanvasRenderingContext2D, state: DeepDiveSta
     }
     prevHaul = state.haul
 
-    // 深水黑暗：深度越大越黑，照明灯在潜水员周围挖出光圈。
+    // 深水黑暗与浑浊：两层遮罩——①绝对深度越深越黑（原有）；②**离潜水员
+    // 垂直/水平距离越远越浑浊**（半径 220px 外近全黑）：在水面也能一眼望穿
+    // 深底是原实现的漏洞，浑浊层保证只有靠近（照明灯范围）才看得清宝物。
     const darkK = Math.min(0.86, Math.max(0, (state.depth - 40) / 160))
+    const py = sy(state.depth)
     if (darkK > 0.02) {
       const lightR = 95 + state.upgrades.lamp * 45
-      const py = sy(state.depth)
       const grad = ctx.createRadialGradient(state.x, py, lightR * 0.35, state.x, py, lightR)
       grad.addColorStop(0, 'rgba(2,4,10,0)')
       grad.addColorStop(1, 'rgba(2,4,10,' + darkK + ')')
       ctx.fillStyle = grad
       ctx.fillRect(0, HUD_H, LOGICAL_W, viewH)
     }
+    const murkR = 220 + state.upgrades.lamp * 30
+    const murk = ctx.createRadialGradient(state.x, py, murkR * 0.4, state.x, py, murkR)
+    murk.addColorStop(0, 'rgba(6,14,24,0)')
+    murk.addColorStop(1, 'rgba(6,14,24,0.92)')
+    ctx.fillStyle = murk
+    ctx.fillRect(0, HUD_H, LOGICAL_W, viewH)
 
-    // 潜水员：灯锥 + 身体 + 氧气表。
-    const py = sy(state.depth)
+    // 潜水员：灯锥 + 身体 + 氧气表（py 已在上方遮罩段声明，此处复用）。
     glow(ctx, '#7dcfff', 10)
     ctx.fillStyle = '#7dcfff'
     ctx.beginPath()

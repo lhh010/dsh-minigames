@@ -26,7 +26,7 @@ export interface Move {
 }
 
 /** 三维整向量（cubie 坐标或单位法向量，分量 ∈ {-1,0,1}）。 */
-type Vec = readonly [number, number, number]
+export type Vec = readonly [number, number, number]
 
 function dot(a: Vec, b: Vec): number {
   return a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]!
@@ -369,6 +369,22 @@ export function applyHint(state: RubikState): RubikState {
  */
 export function serializeCube(cube: Cube): string {
   return cube.join('')
+}
+
+/** 贴纸的三维几何真值：cubie 中心坐标 + 所在面外法向量。 */
+export interface StickerGeometry {
+  /** cubie 中心（分量 ∈ {-1,0,1}，恰有一个分量为 ±1 的面在该侧）。 */
+  pos: Vec
+  /** 贴纸所在面的单位外法向量。 */
+  normal: Vec
+}
+
+/**
+ * 54 张贴纸的几何表（下标 = 贴纸下标），供 3D 渲染与命中检测共用。
+ * @returns 只读数组，调用方不得修改。
+ */
+export function stickerGeometry(): readonly StickerGeometry[] {
+  return POS.map((pos, i) => ({ pos, normal: NRM[i]! }))
 }
 
 /**

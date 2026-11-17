@@ -21,6 +21,8 @@ export interface Move {
     id: string;
     turns: number;
 }
+/** 三维整向量（cubie 坐标或单位法向量，分量 ∈ {-1,0,1}）。 */
+export type Vec = readonly [number, number, number];
 /** 全部 18 个基础走法 id（6 面 × 3 层，层 0 为该面外层）。 */
 export declare const MOVE_IDS: readonly string[];
 /** 解析走法 id → { face, layer }；非法 id 抛错（配置性输入，尽早失败）。 */
@@ -116,6 +118,18 @@ export declare function applyHint(state: RubikState): RubikState;
  * @param cube - 待序列化状态。
  */
 export declare function serializeCube(cube: Cube): string;
+/** 贴纸的三维几何真值：cubie 中心坐标 + 所在面外法向量。 */
+export interface StickerGeometry {
+    /** cubie 中心（分量 ∈ {-1,0,1}，恰有一个分量为 ±1 的面在该侧）。 */
+    pos: Vec;
+    /** 贴纸所在面的单位外法向量。 */
+    normal: Vec;
+}
+/**
+ * 54 张贴纸的几何表（下标 = 贴纸下标），供 3D 渲染与命中检测共用。
+ * @returns 只读数组，调用方不得修改。
+ */
+export declare function stickerGeometry(): readonly StickerGeometry[];
 /**
  * 反序列化：仅接受 54 位、字符均在 0..5 的串。
  * @param text - 候选串。

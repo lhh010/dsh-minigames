@@ -22,9 +22,9 @@ export const TOTAL_ROUNDS = 3
 /** 爪最大下降深度（px，导轨以下）。 */
 export const DROP_DEPTH = 320
 /** 水平扫描周期（ms）。 */
-export const X_CYCLE_MS = 1600
+export const X_CYCLE_MS = 2600
 /** 前后深度扫描周期（ms）。 */
-export const Z_CYCLE_MS = 1150
+export const Z_CYCLE_MS = 1800
 /** 钟摆摆动周期（ms）。 */
 export const PEND_CYCLE_MS = 1250
 

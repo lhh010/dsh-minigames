@@ -24,9 +24,9 @@ export declare const TOTAL_ROUNDS = 3;
 /** 爪最大下降深度（px，导轨以下）。 */
 export declare const DROP_DEPTH = 320;
 /** 水平扫描周期（ms）。 */
-export declare const X_CYCLE_MS = 1600;
+export declare const X_CYCLE_MS = 2600;
 /** 前后深度扫描周期（ms）。 */
-export declare const Z_CYCLE_MS = 1150;
+export declare const Z_CYCLE_MS = 1800;
 /** 钟摆摆动周期（ms）。 */
 export declare const PEND_CYCLE_MS = 1250;
 /** 娃娃档次：大娃宽松低分、中娃均衡、钥匙扣难抓高分。 */

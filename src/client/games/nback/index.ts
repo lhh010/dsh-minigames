@@ -169,6 +169,11 @@ export const nbackGame: MiniGameDefinition = {
   title: 'N-Back 记忆 NBack',
   icon: '🔁',
   description: '这个位置，N 步之前出现过吗？——锻炼工作记忆的科学方法。',
-  controls: ['A：位置匹配（与 N 步前相同）', 'S：声音匹配（双流模式）', '空格：节间继续', 'P：暂停', 'R：重开'],
+  controls: [
+    '玩法：每 2.5 秒点亮一个格子。当前格子与 N 步之前的格子是同一个 → 按 A 得分；不同 → 不按（按了扣分）',
+    '例（N=2）：序列 左上→中下→左上 —— 第 3 格与 2 步前的左上相同，按 A！',
+    'N 档随准确率自动升降（≥80% 升、<50% 降）；后期双流：S 判断数字与 N 步前相同',
+    '空格：节间继续 · P：暂停 · R：重开',
+  ],
   create: createNBackGame,
 }

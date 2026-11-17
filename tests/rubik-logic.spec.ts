@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   FACES, MOVE_IDS, applyHint, applyMove, arrowMove, hintMove, isSolved, mulberry32,
   newGame, parseCube, parseMoveId, scrambleCount, scrambleMoves, serializeCube,
-  solvedCube, userMove, layerIndices,
+  solvedCube, userMove, layerIndices, stickerGeometry,
 } from '../src/client/games/rubik/logic.ts'
+import {
+  DEFAULT_VIEW, dragToMove, easeTwist, makeView, mat3Apply, pickSticker, projectPoint,
+  stickerLayout, viewMatrix,
+} from '../src/client/games/rubik/render.ts'
 
 const U = 0, D = 1, L = 2, R = 3, F = 4, B = 5
 const at = (cube: number[], face: number, r: number, c: number) => cube[face * 9 + r * 3 + c]!
@@ -202,5 +206,140 @@ describe('rubik logic', () => {
     for (let i = a.scramble.length - 1; i >= 0; i -= 1) cube = applyMove(cube, a.scramble[i]!, -1)
     expect(isSolved(cube)).toBe(true)
     expect(cube).toEqual(solvedCube())
+  })
+})
+
+describe('rubik 3d render pure functions', () => {
+  const view = makeView(DEFAULT_VIEW)
+
+  it('viewMatrix is orthonormal with det 1 for varied angles', () => {
+    for (const [yaw, pitch] of [[0, 0], [DEFAULT_VIEW.yaw, DEFAULT_VIEW.pitch], [1.2, -0.7], [-2, 1.4]]) {
+      const m = viewMatrix(yaw!, pitch!)
+      expect(m).toHaveLength(9)
+      const rows = [0, 1, 2].map((r) => [m[r * 3]!, m[r * 3 + 1]!, m[r * 3 + 2]!])
+      for (let i = 0; i < 3; i += 1) {
+        for (let j = 0; j < 3; j += 1) {
+          const d = rows[i]!.reduce((a, v, k) => a + v * rows[j]![k]!, 0)
+          expect(d).toBeCloseTo(i === j ? 1 : 0, 10)
+        }
+      }
+      const det3 =
+        m[0]! * (m[4]! * m[8]! - m[5]! * m[7]!) -
+        m[1]! * (m[3]! * m[8]! - m[5]! * m[6]!) +
+        m[2]! * (m[3]! * m[7]! - m[4]! * m[6]!)
+      expect(det3).toBeCloseTo(1, 10)
+    }
+  })
+
+  it('default view shows U/F/R toward the viewer and hides L/B/D', () => {
+    const normals: Array<[number, number, number]> = [[0, 1, 0], [0, 0, 1], [1, 0, 0], [-1, 0, 0], [0, 0, -1], [0, -1, 0]]
+    const depths = normals.map((n) => mat3Apply(viewMatrix(DEFAULT_VIEW.yaw, DEFAULT_VIEW.pitch), n[0], n[1], n[2])[2])
+    expect(depths[0]).toBeGreaterThan(0.25) // U
+    expect(depths[1]).toBeGreaterThan(0.25) // F
+    expect(depths[2]).toBeGreaterThan(0.25) // R
+    expect(depths[3]).toBeLessThan(-0.25) // L
+    expect(depths[4]).toBeLessThan(-0.25) // B
+    expect(depths[5]).toBeLessThan(-0.25) // D
+  })
+
+  it('projectPoint maps the world origin to the view center; depth = z view', () => {
+    const p = projectPoint(viewMatrix(0, 0), 0, 0, 0, view)
+    expect(p.x).toBeCloseTo(view.cx, 10)
+    expect(p.y).toBeCloseTo(view.cy, 10)
+    expect(p.depth).toBe(0)
+    // 正交视图（persp=0）下 +x 单位向右移动 scale 像素。
+    const ortho = { ...view, persp: 0 }
+    const q = projectPoint(viewMatrix(0, 0), 1, 0, 0, ortho)
+    expect(q.x).toBeCloseTo(view.cx + view.scale, 10)
+  })
+
+  it('stickerGeometry exposes 54 stickers across 26 cubies with face normals', () => {
+    const geo = stickerGeometry()
+    expect(geo).toHaveLength(54)
+    expect(new Set(geo.map((g) => g.pos.join(','))).size).toBe(26)
+    expect(geo[40]!.pos).toEqual([0, 0, 1])
+    expect(geo[40]!.normal).toEqual([0, 0, 1])
+  })
+
+  it('stickerLayout is deterministic and visible quads have positive area', () => {
+    const a = stickerLayout(view)
+    const b = stickerLayout(view)
+    expect(a).toHaveLength(54)
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b))
+    const visible = a.filter((q) => q.visible)
+    // 凸立方体任一视角恰可见 3 面 = 27 张贴纸。
+    expect(visible).toHaveLength(27)
+    for (const q of visible) {
+      const area = Math.abs(
+        (q.pts[1]!.x - q.pts[0]!.x) * (q.pts[3]!.y - q.pts[0]!.y) -
+        (q.pts[3]!.x - q.pts[0]!.x) * (q.pts[1]!.y - q.pts[0]!.y),
+      )
+      expect(area).toBeGreaterThan(100)
+    }
+  })
+
+  it('pickSticker hits visible sticker centroids and rejects hidden faces / empty space', () => {
+    const centroid = (i: number) => {
+      const q = stickerLayout(view).find((s) => s.index === i)!
+      return { x: q.pts.reduce((a, p) => a + p.x, 0) / 4, y: q.pts.reduce((a, p) => a + p.y, 0) / 4 }
+    }
+    for (const i of [4 /* U 中心 */, 40 /* F 中心 */, 31 /* R 中心 */, 42 /* F 左下 */]) {
+      const c = centroid(i)
+      expect(pickSticker(c.x, c.y, view)).toBe(i)
+    }
+    // 背面（B）与底面（D）中心贴纸被前面挡住：命中的是近处可见贴纸。
+    const back = centroid(49)
+    expect(pickSticker(back.x, back.y, view)).not.toBe(49)
+    const down = centroid(13)
+    expect(pickSticker(down.x, down.y, view)).not.toBe(13)
+    // 画布角落未命中。
+    expect(pickSticker(4, 4, view)).toBeNull()
+    expect(pickSticker(view.cx, 4, view)).toBeNull()
+  })
+
+  it('dragToMove maps screen drags to deterministic layer moves', () => {
+    // F 中心贴纸（下标 40）：向右拖 = 水平中层向右 → U1 逆时针；
+    // 向上拖 = 垂直中层向上 → L1 逆时针；反向拖给出等价反向旋转。
+    expect(dragToMove(40, 30, 0, view)).toEqual({ id: 'U1', turns: -1 })
+    expect(dragToMove(40, -30, 0, view)).toEqual({ id: 'D1', turns: -1 })
+    expect(dragToMove(40, 0, -30, view)).toEqual({ id: 'L1', turns: -1 })
+    expect(dragToMove(40, 0, 30, view)).toEqual({ id: 'R1', turns: -1 })
+    // U 中心贴纸（下标 4）右上拖 → 绕 -z 的 B 中层。
+    expect(dragToMove(4, 20, -20, view)).toEqual({ id: 'L1', turns: -1 })
+    // 零向量无走法；越界贴纸同样拒绝。
+    expect(dragToMove(40, 0, 0, view)).toBeNull()
+    expect(dragToMove(99, 30, 0, view)).toBeNull()
+  })
+
+  it('dragToMove results are legal moves whose layer contains the sticker and invert cleanly', () => {
+    for (const i of [4, 40, 10, 22, 31, 46]) {
+      for (const [dx, dy] of [[24, 3], [-18, 14], [5, -25], [-11, -19]]) {
+        const m1 = dragToMove(i, dx!, dy!, view)!
+        expect(layerIndices(m1.id)).toContain(i)
+        expect(MOVE_IDS).toContain(m1.id)
+        const m2 = dragToMove(i, -dx!, -dy!, view)!
+        // 反向拖拽给出同一层的反向旋转：两次叠加复原。
+        expect(applyMove(applyMove(solvedCube(), m1.id, m1.turns), m2.id, m2.turns)).toEqual(solvedCube())
+        expect(applyMove(solvedCube(), m1.id, m1.turns)).not.toEqual(solvedJson)
+      }
+    }
+  })
+
+  it('dragToMove is view-dependent: mirrored view flips the rotation axis choice', () => {
+    const flipped = makeView({ yaw: DEFAULT_VIEW.yaw + Math.PI, pitch: DEFAULT_VIEW.pitch })
+    const m = dragToMove(40, 30, 0, flipped)!
+    // 背面视角下同一右拖映射到镜像层（D1 逆时针），且仍是含该贴纸的合法层。
+    expect(m).toEqual({ id: 'D1', turns: -1 })
+    expect(layerIndices(m.id)).toContain(40)
+  })
+
+  it('twist animation angle is a pure easing of phase', () => {
+    expect(easeTwist(0)).toBe(0)
+    expect(easeTwist(1)).toBeCloseTo(1, 10)
+    expect(easeTwist(0.5)).toBeCloseTo(0.875, 10)
+    // 动画中的层贴纸绕轴移动：phase=0.5 时旋转贴纸的可见性与静止态不同布局仍确定。
+    const anim = { moveId: 'U0', turns: 1, phase: 0.5 }
+    expect(JSON.stringify(stickerLayout(view, anim))).toBe(JSON.stringify(stickerLayout(view, anim)))
+    expect(stickerLayout(view, anim)).toHaveLength(54)
   })
 })
