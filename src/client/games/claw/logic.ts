@@ -363,6 +363,8 @@ export function stepClaw(state: ClawState, dtMs: number): void {
     state.lastOff = off
     if (state.rng() < grabChance(target.size, off)) {
       state.carrying = target
+      // 夹中即从柜内移除：否则原地贴图仍在（被画两份——地上+爪下）。
+      state.dolls = state.dolls.filter((d) => d.id !== target.id)
       state.slipRoll = state.rng()
       state.slipDone = false
       state.events.push({ type: 'grab', x: target.x, y: dollY(target), value: target.value })
