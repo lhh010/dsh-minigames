@@ -436,13 +436,34 @@ function substep(st: SheepdogState, input: SheepdogInput): void {
 
     if (dist(s.x, s.y, st.dog.x, st.dog.y) < DOG_R) s.panic = 1
 
-    // 入栏判定：距开口中心不足半径即锁定入栏。
-    if (dist(s.x, s.y, opening.x, opening.y) < PEN_OPEN_R) {
+    // 入栏判定（完善版）：①羊心实际进入围栏内部（含 4px 边距）即入栏
+    // ——原实现只认「距开口中心 24px 圆」，羊从开口两侧贴墙走过会误吸、
+    // 深入栏内却远离开口时漏判；②围栏墙体阻挡：左墙与底墙开口外区段
+    // 把未入栏羊挡在栏外（穿墙不再可能），只有开口段（宽 PEN_OPEN_W）
+    // 能真正进入。
+    const pen = penRect(level)
+    const inPen = s.x > pen.x + 4 && s.x < pen.x + pen.w - 4
+      && s.y > pen.y + 4 && s.y < pen.y + pen.h - 4
+    const nearOpening = dist(s.x, s.y, opening.x, opening.y) < PEN_OPEN_R && s.y < opening.y + 6
+    if (inPen || nearOpening) {
       s.penned = true
       s.slotIndex = st.nextSlot
       st.nextSlot += 1
       st.pennedCount += 1
       st.score += SCORE_PER_SHEEP
+    } else {
+      // 左墙：栏左侧竖墙把外侧羊挡回。
+      if (s.y > pen.y - 2 && s.y < pen.y + pen.h && s.x > pen.x - SHEEP_R && s.x < pen.x) {
+        s.x = pen.x - SHEEP_R
+        s.vx = -Math.abs(s.vx) * 0.4
+      }
+      // 底墙：开口段以外的下边墙把下方羊挡回（开口段放行）。
+      const inGapX = Math.abs(s.x - opening.x) < PEN_OPEN_W / 2
+      if (!inGapX && s.x > pen.x - 2 && s.x < pen.x + pen.w + 2
+        && s.y > pen.y + pen.h && s.y < pen.y + pen.h + SHEEP_R) {
+        s.y = pen.y + pen.h + SHEEP_R
+        s.vy = Math.abs(s.vy) * 0.4
+      }
     }
   }
 
