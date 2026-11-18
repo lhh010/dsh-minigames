@@ -50,6 +50,29 @@ describe('flags logic', () => {
     }
   })
 
+  it('题库 stripes 字段完整：66 条全有、dir 合法、colors 数组非空', () => {
+    expect(FLAG_BANK).toHaveLength(66)
+    for (const e of FLAG_BANK) {
+      const s = e.stripes
+      expect(s).toBeDefined()
+      expect(s.dir === 'h' || s.dir === 'v').toBe(true)
+      expect(Array.isArray(s.colors)).toBe(true)
+      expect(s.colors.length).toBeGreaterThan(0)
+      for (const c of s.colors) expect(typeof c).toBe('string')
+      for (const opt of ['disc', 'inner', 'cross', 'cross2', 'saltire', 'canton', 'star', 'crescent', 'wedge'] as const) {
+        const v = s[opt]
+        if (v !== undefined) expect(typeof v).toBe('string')
+      }
+      for (const pos of ['discX', 'discY', 'crossX'] as const) {
+        const v = s[pos]
+        if (v !== undefined) {
+          expect(v).toBeGreaterThanOrEqual(0)
+          expect(v).toBeLessThanOrEqual(1)
+        }
+      }
+    }
+  })
+
   it('出题确定性：同一 seed 序列完全一致，不同 seed 题面可不同', () => {
     const a: unknown[] = []
     const b: unknown[] = []

@@ -19,9 +19,45 @@ export declare const COMBO_BONUS = 5;
 /** 大洲分类。 */
 export type Continent = '亚洲' | '欧洲' | '非洲' | '美洲' | '大洋洲';
 /**
+ * 程序化条纹描述：等分横/竖条纹 + 可选装饰，足以肉眼辨识国旗，
+ * 不追求纹章精确。所有绘制由 render.ts 的 drawFlag 消费，
+ * 彻底摆脱 emoji 字体依赖（Windows 的 Segoe 系列无彩色旗绘字形）。
+ */
+export interface FlagStripes {
+    /** 条纹方向：'h' 横条（自上向下）/ 'v' 竖条（自左向右）。 */
+    dir: 'h' | 'v';
+    /** 条纹颜色序列；重复同色可调整比例（如西班牙 1:2:1 用四段表示）。 */
+    colors: string[];
+    /** 中心圆颜色（日本/孟加拉等）；有 canton 时仍在全旗范围绘制。 */
+    disc?: string;
+    /** 圆点横向位置 0-1（默认 0.5；葡萄牙国徽、澳大利亚联邦星用）。 */
+    discX?: number;
+    /** 圆点纵向位置 0-1（默认 0.5；沙特铭文、克罗地亚盾徽用）。 */
+    discY?: number;
+    /** 圆内小圆颜色（巴西蓝心）。 */
+    inner?: string;
+    /** 十字颜色（瑞士/北欧十字；有 canton 时画在 canton 内，如希腊）。 */
+    cross?: string;
+    /** 叠在 cross 上的细十字颜色（挪威/英国的红十字）。 */
+    cross2?: string;
+    /** 竖条横向位置 0-1（默认 0.5 居中；北欧十字偏左约 0.34-0.38）。 */
+    crossX?: number;
+    /** 对角斜线颜色（英国米字等；有 canton 时画在 canton 内）。 */
+    saltire?: string;
+    /** 左上角矩形颜色（美国星区/马来西亚等）。 */
+    canton?: string;
+    /** 五角星颜色（越南/摩洛哥等；有 canton 时画在 canton 内，如智利）。 */
+    star?: string;
+    /** 月牙颜色（土耳其/巴基斯坦；开口朝旗尾侧）。 */
+    crescent?: string;
+    /** 旗杆侧三角形颜色（捷克/古巴）。 */
+    wedge?: string;
+}
+/**
  * 题库条目：emoji 旗帜、中文国名、所属大洲、一句话冷知识；group 为
  * 预置易混组（'cross' 北欧十字/瑞士十字旗，'tricolor' 竖三色旗），
- * 干扰项抽取时优先同组。
+ * 干扰项抽取时优先同组。stripes 为程序化条纹描述，是旗面的唯一绘制
+ * 来源（emoji 字段仅保留作元数据，不参与渲染）。
  */
 export interface FlagEntry {
     emoji: string;
@@ -29,6 +65,8 @@ export interface FlagEntry {
     continent: Continent;
     fact: string;
     group?: string;
+    /** 程序化条纹描述：drawFlag 按此绘制旗面。 */
+    stripes: FlagStripes;
 }
 /** 国旗题库（66 面，覆盖五大洲）。 */
 export declare const FLAG_BANK: FlagEntry[];

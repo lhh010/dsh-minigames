@@ -1,10 +1,12 @@
 /**
- * 旗帜竞猜画布渲染：题区居中大号旗帜 emoji（或国名）+ 2×2 选项卡片
+ * 旗帜竞猜画布渲染：题区居中大号程序化旗帜（或国名）+ 2×2 选项卡片
  * （国名或旗）、倒计时进度环、连击火花提示、答错红显与正确答案绿显、
  * 知识卡（答完即出该国冷知识）、节末小结（错题列表 + 冷知识）与结束 /
- * 暂停 overlay。渲染器无状态，所有状态由 index.ts 传入。
+ * 暂停 overlay。旗帜全部由 drawFlag 按题库 stripes 字段程序化绘制，
+ * 不依赖 emoji 字体（Windows 无彩色旗绘字形）。渲染器无状态，所有状态
+ * 由 index.ts 传入。
  */
-import type { FlagsState, FlagsQuestion } from './logic.ts'
+import type { FlagEntry, FlagsState, FlagsQuestion } from './logic.ts'
 import {
   FLAG_BANK, OPTION_COUNT, QUESTION_TIME_MS, QUESTIONS_PER_ROUND, TOTAL_ROUNDS,
 } from './logic.ts'
@@ -28,8 +30,8 @@ const RING_CX = LOGICAL_W - 48
 const RING_CY = 64
 const RING_R = 22
 
-/** 大号旗帜 emoji 的字体栈（跨平台的彩色 emoji 字体）。 */
-const EMOJI_FONT = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", system-ui'
+/** 旗面圆角边框色：深底上勾勒旗面边缘。 */
+const FLAG_EDGE = 'rgba(226,226,238,0.28)'
 
 /** 各选项卡片的矩形。 */
 function optionRect(i: number): { x: number; y: number } {
@@ -51,6 +53,153 @@ export function optionAt(x: number, y: number): number | null {
     if (x >= bx && x <= bx + OPT_W && y >= by && y <= by + OPT_H) return i
   }
   return null
+}
+
+/** 五角星路径（外接圆半径 r，尖角朝上）。 */
+function starPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number): void {
+  ctx.beginPath()
+  for (let i = 0; i < 10; i += 1) {
+    const rad = i % 2 === 0 ? r : r * 0.42
+    const a = -Math.PI / 2 + (i * Math.PI) / 5
+    const px = cx + Math.cos(a) * rad
+    const py = cy + Math.sin(a) * rad
+    if (i === 0) ctx.moveTo(px, py)
+    else ctx.lineTo(px, py)
+  }
+  ctx.closePath()
+}
+
+/**
+ * 程序化绘制一面国旗：圆角裁剪内按 stripes 描述依次画条纹、canton、
+ * 斜线/十字/三角/星月/圆点，最后描边。完全不依赖 emoji 字体，Windows
+ * 上旗面与任何平台渲染一致。十字/斜线/星在有 canton 时画在 canton 内
+ * （希腊十字、澳新小米字、智利星），圆点与月牙始终按全旗坐标绘制。
+ * @param ctx - 逻辑坐标系已就绪的 2d 上下文。
+ * @param entry - 题库条目（取其 stripes 描述）。
+ * @param x - 旗面左上角横坐标。
+ * @param y - 旗面左上角纵坐标。
+ * @param w - 旗面宽度。
+ * @param h - 旗面高度。
+ */
+export function drawFlag(ctx: CanvasRenderingContext2D, entry: FlagEntry, x: number, y: number, w: number, h: number): void {
+  const s = entry.stripes
+  ctx.save()
+  roundRectPath(ctx, x, y, w, h, Math.min(8, h * 0.12))
+  ctx.clip()
+
+  // 条纹：等分横条或竖条；重复同色即调整比例（西班牙 1:2:1、美国 13 道）。
+  const n = s.colors.length
+  for (let i = 0; i < n; i += 1) {
+    ctx.fillStyle = s.colors[i] as string
+    if (s.dir === 'h') ctx.fillRect(x, y + (h * i) / n, w, h / n + 1)
+    else ctx.fillRect(x + (w * i) / n, y, w / n + 1, h)
+  }
+
+  // canton：左上角矩形；十字/斜线/星随之画在其内，否则画满全旗。
+  const hasCanton = s.canton !== undefined
+  if (s.canton !== undefined) {
+    ctx.fillStyle = s.canton
+    ctx.fillRect(x, y, w * 0.4, h * 0.5)
+  }
+  const ex = x
+  const ey = y
+  const ew = hasCanton ? w * 0.4 : w
+  const eh = hasCanton ? h * 0.5 : h
+
+  // 对角斜线（英国米字；澳/新/斐济 canton 内的小米字）。
+  if (s.saltire !== undefined) {
+    ctx.strokeStyle = s.saltire
+    ctx.lineWidth = eh * 0.18
+    ctx.beginPath()
+    ctx.moveTo(ex, ey)
+    ctx.lineTo(ex + ew, ey + eh)
+    ctx.moveTo(ex, ey + eh)
+    ctx.lineTo(ex + ew, ey)
+    ctx.stroke()
+  }
+  // 十字：瑞士居中、北欧偏左（crossX）；cross2 为叠在上面的细十字
+  // （挪威/英国的红心或红十字）。
+  if (s.cross !== undefined) {
+    const cxp = ex + ew * (s.crossX ?? 0.5)
+    const t = eh * 0.22
+    ctx.fillStyle = s.cross
+    ctx.fillRect(cxp - t / 2, ey, t, eh)
+    ctx.fillRect(ex, ey + eh / 2 - t / 2, ew, t)
+    if (s.cross2 !== undefined) {
+      const t2 = t * 0.5
+      ctx.fillStyle = s.cross2
+      ctx.fillRect(cxp - t2 / 2, ey, t2, eh)
+      ctx.fillRect(ex, ey + eh / 2 - t2 / 2, ew, t2)
+    }
+  }
+
+  // 旗杆侧三角形（捷克/古巴）。
+  if (s.wedge !== undefined) {
+    ctx.fillStyle = s.wedge
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    ctx.lineTo(x, y + h)
+    ctx.lineTo(x + w * 0.42, y + h / 2)
+    ctx.closePath()
+    ctx.fill()
+  }
+
+  // 月牙（土耳其/巴基斯坦）：开口朝旗尾侧，底色盖出月牙形。
+  const crescentR = Math.min(w, h) * 0.26
+  if (s.crescent !== undefined) {
+    const ccx = x + w * 0.45
+    const ccy = y + h * 0.5
+    ctx.fillStyle = s.crescent
+    ctx.beginPath()
+    ctx.arc(ccx, ccy, crescentR, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = s.colors[0] as string
+    ctx.beginPath()
+    ctx.arc(ccx + crescentR * 0.55, ccy, crescentR * 0.82, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  // 星：有 canton 时画在 canton 中心（智利/中国），有月牙时跟在月牙
+  // 右侧（土耳其/巴基斯坦），否则居中（越南/摩洛哥等）。
+  if (s.star !== undefined) {
+    let sx = x + w * 0.5
+    const sy = y + h * 0.5
+    let sr = Math.min(w, h) * 0.2
+    if (hasCanton) {
+      sx = ex + ew * 0.5
+      sr = Math.min(ew, eh) * 0.28
+    } else if (s.crescent !== undefined) {
+      sx = x + w * 0.45 + crescentR * 0.95
+      sr = crescentR * 0.5
+    }
+    starPath(ctx, sx, sy, sr)
+    ctx.fillStyle = s.star
+    ctx.fill()
+  }
+
+  // 中心圆（日本/印度/阿根廷太阳等）与内层小圆（巴西蓝心）。
+  if (s.disc !== undefined) {
+    const dx = x + w * (s.discX ?? 0.5)
+    const dy = y + h * (s.discY ?? 0.5)
+    const dr = Math.min(w, h) * 0.26
+    ctx.fillStyle = s.disc
+    ctx.beginPath()
+    ctx.arc(dx, dy, dr, 0, Math.PI * 2)
+    ctx.fill()
+    if (s.inner !== undefined) {
+      ctx.fillStyle = s.inner
+      ctx.beginPath()
+      ctx.arc(dx, dy, dr * 0.45, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+
+  ctx.restore()
+  // 圆角边框：深底上勾勒旗面边缘。
+  roundRectPath(ctx, x, y, w, h, Math.min(8, h * 0.12))
+  ctx.lineWidth = Math.max(1, h * 0.03)
+  ctx.strokeStyle = FLAG_EDGE
+  ctx.stroke()
 }
 
 /** 画倒计时进度环：剩余比例越高越绿，末段转红。 */
@@ -108,9 +257,8 @@ function drawOption(
     ctx.font = '600 24px system-ui, sans-serif'
     ctx.fillStyle = THEME.text
     ctx.fillText(entry?.name ?? '?', x + OPT_W / 2, y + OPT_H / 2)
-  } else {
-    ctx.font = '48px ' + EMOJI_FONT
-    ctx.fillText(entry?.emoji ?? '?', x + OPT_W / 2, y + OPT_H / 2)
+  } else if (entry !== undefined) {
+    drawFlag(ctx, entry, x + (OPT_W - 70) / 2, y + (OPT_H - 48) / 2, 70, 48)
   }
   ctx.font = 'bold 12px system-ui, sans-serif'
   ctx.fillStyle = THEME.textMuted
@@ -131,11 +279,10 @@ function drawFactCard(ctx: CanvasRenderingContext2D, promptIndex: number): void 
   ctx.stroke()
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
-  ctx.font = '28px ' + EMOJI_FONT
-  ctx.fillText(entry.emoji, 40, y + 26)
+  drawFlag(ctx, entry, 40, y + 12, 44, 30)
   ctx.font = 'bold 16px system-ui, sans-serif'
   ctx.fillStyle = THEME.text
-  ctx.fillText(entry.name, 80, y + 26)
+  ctx.fillText(entry.name, 92, y + 26)
   ctx.font = '500 13px system-ui, sans-serif'
   ctx.fillStyle = THEME.textMuted
   const line = '💡 ' + entry.fact
@@ -202,10 +349,8 @@ export function renderFlags(
       const entry = FLAG_BANK[wrong.promptIndex]
       if (entry === undefined) return
       const y = 130 + i * 62
-      ctx.font = '30px ' + EMOJI_FONT
       ctx.textBaseline = 'middle'
-      ctx.fillStyle = THEME.bad
-      ctx.fillText(entry.emoji, 40, y)
+      drawFlag(ctx, entry, 40, y - 14, 40, 27)
       ctx.font = 'bold 15px system-ui, sans-serif'
       ctx.fillStyle = THEME.text
       ctx.textAlign = 'left'
@@ -225,9 +370,8 @@ export function renderFlags(
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   if (state.question.kind === 'flag-to-name') {
-    ctx.font = '104px ' + EMOJI_FONT
     glow(ctx, accent(4), 16)
-    ctx.fillText(prompt?.emoji ?? '?', LOGICAL_W / 2, 150)
+    if (prompt !== undefined) drawFlag(ctx, prompt, LOGICAL_W / 2 - 85, 93, 170, 115)
     noGlow(ctx)
     ctx.font = '600 14px system-ui, sans-serif'
     ctx.fillStyle = THEME.textMuted

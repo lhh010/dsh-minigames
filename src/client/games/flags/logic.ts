@@ -22,9 +22,46 @@ export const COMBO_BONUS = 5
 export type Continent = '亚洲' | '欧洲' | '非洲' | '美洲' | '大洋洲'
 
 /**
+ * 程序化条纹描述：等分横/竖条纹 + 可选装饰，足以肉眼辨识国旗，
+ * 不追求纹章精确。所有绘制由 render.ts 的 drawFlag 消费，
+ * 彻底摆脱 emoji 字体依赖（Windows 的 Segoe 系列无彩色旗绘字形）。
+ */
+export interface FlagStripes {
+  /** 条纹方向：'h' 横条（自上向下）/ 'v' 竖条（自左向右）。 */
+  dir: 'h' | 'v'
+  /** 条纹颜色序列；重复同色可调整比例（如西班牙 1:2:1 用四段表示）。 */
+  colors: string[]
+  /** 中心圆颜色（日本/孟加拉等）；有 canton 时仍在全旗范围绘制。 */
+  disc?: string
+  /** 圆点横向位置 0-1（默认 0.5；葡萄牙国徽、澳大利亚联邦星用）。 */
+  discX?: number
+  /** 圆点纵向位置 0-1（默认 0.5；沙特铭文、克罗地亚盾徽用）。 */
+  discY?: number
+  /** 圆内小圆颜色（巴西蓝心）。 */
+  inner?: string
+  /** 十字颜色（瑞士/北欧十字；有 canton 时画在 canton 内，如希腊）。 */
+  cross?: string
+  /** 叠在 cross 上的细十字颜色（挪威/英国的红十字）。 */
+  cross2?: string
+  /** 竖条横向位置 0-1（默认 0.5 居中；北欧十字偏左约 0.34-0.38）。 */
+  crossX?: number
+  /** 对角斜线颜色（英国米字等；有 canton 时画在 canton 内）。 */
+  saltire?: string
+  /** 左上角矩形颜色（美国星区/马来西亚等）。 */
+  canton?: string
+  /** 五角星颜色（越南/摩洛哥等；有 canton 时画在 canton 内，如智利）。 */
+  star?: string
+  /** 月牙颜色（土耳其/巴基斯坦；开口朝旗尾侧）。 */
+  crescent?: string
+  /** 旗杆侧三角形颜色（捷克/古巴）。 */
+  wedge?: string
+}
+
+/**
  * 题库条目：emoji 旗帜、中文国名、所属大洲、一句话冷知识；group 为
  * 预置易混组（'cross' 北欧十字/瑞士十字旗，'tricolor' 竖三色旗），
- * 干扰项抽取时优先同组。
+ * 干扰项抽取时优先同组。stripes 为程序化条纹描述，是旗面的唯一绘制
+ * 来源（emoji 字段仅保留作元数据，不参与渲染）。
  */
 export interface FlagEntry {
   emoji: string
@@ -32,82 +69,85 @@ export interface FlagEntry {
   continent: Continent
   fact: string
   group?: string
+  /** 程序化条纹描述：drawFlag 按此绘制旗面。 */
+  stripes: FlagStripes
 }
 
 /** 国旗题库（66 面，覆盖五大洲）。 */
 export const FLAG_BANK: FlagEntry[] = [
   // 欧洲（24）
-  { emoji: '🇮🇹', name: '意大利', continent: '欧洲', fact: '意大利拥有全球最多的联合国教科文组织世界遗产。', group: 'tricolor' },
-  { emoji: '🇫🇷', name: '法国', continent: '欧洲', fact: '法国是全球接待游客最多的国家。', group: 'tricolor' },
-  { emoji: '🇮🇪', name: '爱尔兰', continent: '欧洲', fact: '爱尔兰的国庆节圣帕特里克节在全球广泛庆祝。', group: 'tricolor' },
-  { emoji: '🇧🇪', name: '比利时', continent: '欧洲', fact: '比利时的巧克力门店密度居世界前列。', group: 'tricolor' },
-  { emoji: '🇭🇺', name: '匈牙利', continent: '欧洲', fact: '匈牙利首都布达佩斯拥有欧洲最多的温泉浴场。', group: 'tricolor' },
-  { emoji: '🇷🇴', name: '罗马尼亚', continent: '欧洲', fact: '罗马尼亚的特兰西瓦尼亚是吸血鬼传说的故乡。', group: 'tricolor' },
-  { emoji: '🇨🇭', name: '瑞士', continent: '欧洲', fact: '瑞士国旗是仅有的两面正方形国旗之一。', group: 'cross' },
-  { emoji: '🇩🇰', name: '丹麦', continent: '欧洲', fact: '丹麦的国旗是现今仍在使用的最古老国旗。', group: 'cross' },
-  { emoji: '🇸🇪', name: '瑞典', continent: '欧洲', fact: '瑞典每年把诺贝尔奖颁发给全球顶尖学者。', group: 'cross' },
-  { emoji: '🇳🇴', name: '挪威', continent: '欧洲', fact: '挪威峡湾由冰川切割而成，绵延数百公里。', group: 'cross' },
-  { emoji: '🇫🇮', name: '芬兰', continent: '欧洲', fact: '芬兰约有 188000 个湖泊，被称为千湖之国。', group: 'cross' },
-  { emoji: '🇮🇸', name: '冰岛', continent: '欧洲', fact: '冰岛几乎全部电力来自地热与水电。', group: 'cross' },
-  { emoji: '🇩🇪', name: '德国', continent: '欧洲', fact: '德国拥有超过 1500 种啤酒。' },
-  { emoji: '🇳🇱', name: '荷兰', continent: '欧洲', fact: '荷兰约四分之一的国土低于海平面。' },
-  { emoji: '🇦🇹', name: '奥地利', continent: '欧洲', fact: '奥地利维也纳连续多年被评为最宜居城市。' },
-  { emoji: '🇷🇺', name: '俄罗斯', continent: '欧洲', fact: '俄罗斯横跨 11 个时区，是世界最大国家。' },
-  { emoji: '🇵🇱', name: '波兰', continent: '欧洲', fact: '波兰的肖邦国际钢琴赛每五年举办一次。' },
-  { emoji: '🇺🇦', name: '乌克兰', continent: '欧洲', fact: '乌克兰是世界最大的葵花籽油出口国。' },
-  { emoji: '🇪🇸', name: '西班牙', continent: '欧洲', fact: '西班牙拥有世界第三多的联合国遗产。' },
-  { emoji: '🇵🇹', name: '葡萄牙', continent: '欧洲', fact: '葡萄牙是世界最古老的图书管理所在地。' },
-  { emoji: '🇬🇷', name: '希腊', continent: '欧洲', fact: '希腊拥有约 6000 个岛屿。' },
-  { emoji: '🇬🇧', name: '英国', continent: '欧洲', fact: '伦敦地铁是世界最古老的地铁系统。' },
-  { emoji: '🇭🇷', name: '克罗地亚', continent: '欧洲', fact: '克罗地亚的领带（克拉瓦塔）发源地。' },
-  { emoji: '🇨🇿', name: '捷克', continent: '欧洲', fact: '捷克人均啤酒消费量常年世界第一。' },
+  { emoji: '🇮🇹', name: '意大利', continent: '欧洲', fact: '意大利拥有全球最多的联合国教科文组织世界遗产。', group: 'tricolor', stripes: { dir: 'v', colors: ['#009246', '#ffffff', '#ce2b37'] } }, // 意大利
+  { emoji: '🇫🇷', name: '法国', continent: '欧洲', fact: '法国是全球接待游客最多的国家。', group: 'tricolor', stripes: { dir: 'v', colors: ['#0055a4', '#ffffff', '#ef4135'] } }, // 法国
+  { emoji: '🇮🇪', name: '爱尔兰', continent: '欧洲', fact: '爱尔兰的国庆节圣帕特里克节在全球广泛庆祝。', group: 'tricolor', stripes: { dir: 'v', colors: ['#169b62', '#ffffff', '#ff883e'] } }, // 爱尔兰
+  { emoji: '🇧🇪', name: '比利时', continent: '欧洲', fact: '比利时的巧克力门店密度居世界前列。', group: 'tricolor', stripes: { dir: 'v', colors: ['#000000', '#ffd90c', '#ef3340'] } }, // 比利时
+  { emoji: '🇭🇺', name: '匈牙利', continent: '欧洲', fact: '匈牙利首都布达佩斯拥有欧洲最多的温泉浴场。', group: 'tricolor', stripes: { dir: 'h', colors: ['#cd2a3e', '#ffffff', '#436f4d'] } }, // 匈牙利
+  { emoji: '🇷🇴', name: '罗马尼亚', continent: '欧洲', fact: '罗马尼亚的特兰西瓦尼亚是吸血鬼传说的故乡。', group: 'tricolor', stripes: { dir: 'v', colors: ['#002b7f', '#fcd116', '#ce1126'] } }, // 罗马尼亚
+  { emoji: '🇨🇭', name: '瑞士', continent: '欧洲', fact: '瑞士国旗是仅有的两面正方形国旗之一。', group: 'cross', stripes: { dir: 'h', colors: ['#da291c'], cross: '#ffffff' } }, // 瑞士
+  { emoji: '🇩🇰', name: '丹麦', continent: '欧洲', fact: '丹麦的国旗是现今仍在使用的最古老国旗。', group: 'cross', stripes: { dir: 'h', colors: ['#c8102e'], cross: '#ffffff', crossX: 0.34 } }, // 丹麦
+  { emoji: '🇸🇪', name: '瑞典', continent: '欧洲', fact: '瑞典每年把诺贝尔奖颁发给全球顶尖学者。', group: 'cross', stripes: { dir: 'h', colors: ['#006aa7'], cross: '#fecc00', crossX: 0.38 } }, // 瑞典
+  { emoji: '🇳🇴', name: '挪威', continent: '欧洲', fact: '挪威峡湾由冰川切割而成，绵延数百公里。', group: 'cross', stripes: { dir: 'h', colors: ['#ba0c2f'], cross: '#ffffff', cross2: '#00205b', crossX: 0.34 } }, // 挪威
+  { emoji: '🇫🇮', name: '芬兰', continent: '欧洲', fact: '芬兰约有 188000 个湖泊，被称为千湖之国。', group: 'cross', stripes: { dir: 'h', colors: ['#ffffff'], cross: '#002f6c', crossX: 0.38 } }, // 芬兰
+  { emoji: '🇮🇸', name: '冰岛', continent: '欧洲', fact: '冰岛几乎全部电力来自地热与水电。', group: 'cross', stripes: { dir: 'h', colors: ['#02529c'], cross: '#ffffff', cross2: '#dc1e35', crossX: 0.34 } }, // 冰岛
+  { emoji: '🇩🇪', name: '德国', continent: '欧洲', fact: '德国拥有超过 1500 种啤酒。', stripes: { dir: 'h', colors: ['#000000', '#dd0000', '#ffce00'] } }, // 德国
+  { emoji: '🇳🇱', name: '荷兰', continent: '欧洲', fact: '荷兰约四分之一的国土低于海平面。', stripes: { dir: 'h', colors: ['#ae1c28', '#ffffff', '#21468b'] } }, // 荷兰
+  { emoji: '🇦🇹', name: '奥地利', continent: '欧洲', fact: '奥地利维也纳连续多年被评为最宜居城市。', stripes: { dir: 'h', colors: ['#ed2939', '#ffffff', '#ed2939'] } }, // 奥地利
+  { emoji: '🇷🇺', name: '俄罗斯', continent: '欧洲', fact: '俄罗斯横跨 11 个时区，是世界最大国家。', stripes: { dir: 'h', colors: ['#ffffff', '#0039a6', '#d52b1e'] } }, // 俄罗斯
+  { emoji: '🇵🇱', name: '波兰', continent: '欧洲', fact: '波兰的肖邦国际钢琴赛每五年举办一次。', stripes: { dir: 'h', colors: ['#ffffff', '#dc143c'] } }, // 波兰
+  { emoji: '🇺🇦', name: '乌克兰', continent: '欧洲', fact: '乌克兰是世界最大的葵花籽油出口国。', stripes: { dir: 'h', colors: ['#005bbb', '#ffd500'] } }, // 乌克兰
+  { emoji: '🇪🇸', name: '西班牙', continent: '欧洲', fact: '西班牙拥有世界第三多的联合国遗产。', stripes: { dir: 'h', colors: ['#aa151b', '#f1bf00', '#f1bf00', '#aa151b'] } }, // 西班牙
+  { emoji: '🇵🇹', name: '葡萄牙', continent: '欧洲', fact: '葡萄牙是世界最古老的图书管理所在地。', stripes: { dir: 'v', colors: ['#046a38', '#046a38', '#da291c', '#da291c', '#da291c'], disc: '#ffe900', discX: 0.4 } }, // 葡萄牙
+  { emoji: '🇬🇷', name: '希腊', continent: '欧洲', fact: '希腊拥有约 6000 个岛屿。', stripes: { dir: 'h', colors: ['#0d5eaf', '#ffffff', '#0d5eaf', '#ffffff', '#0d5eaf', '#ffffff', '#0d5eaf', '#ffffff', '#0d5eaf'], canton: '#0d5eaf', cross: '#ffffff' } }, // 希腊
+  { emoji: '🇬🇧', name: '英国', continent: '欧洲', fact: '伦敦地铁是世界最古老的地铁系统。', stripes: { dir: 'h', colors: ['#012169'], saltire: '#ffffff', cross: '#ffffff', cross2: '#c8102e' } }, // 英国
+  { emoji: '🇭🇷', name: '克罗地亚', continent: '欧洲', fact: '克罗地亚的领带（克拉瓦塔）发源地。', stripes: { dir: 'h', colors: ['#ff2a2a', '#ffffff', '#171796'], disc: '#e8112d', discY: 0.3 } }, // 克罗地亚
+  { emoji: '🇨🇿', name: '捷克', continent: '欧洲', fact: '捷克人均啤酒消费量常年世界第一。', stripes: { dir: 'h', colors: ['#ffffff', '#dc143c'], wedge: '#11457e' } }, // 捷克
   // 亚洲（18）
-  { emoji: '🇨🇳', name: '中国', continent: '亚洲', fact: '中国的高铁运营里程占世界七成以上。' },
-  { emoji: '🇯🇵', name: '日本', continent: '亚洲', fact: '日本由约 14000 个岛屿组成。' },
-  { emoji: '🇰🇷', name: '韩国', continent: '亚洲', fact: '韩国的网络覆盖率常年居世界首位。' },
-  { emoji: '🇮🇳', name: '印度', continent: '亚洲', fact: '印度的官方语言多达 22 种。' },
-  { emoji: '🇹🇭', name: '泰国', continent: '亚洲', fact: '泰国是唯一未被欧洲殖民的东南亚国家。' },
-  { emoji: '🇻🇳', name: '越南', continent: '亚洲', fact: '越南的咖啡产量位居世界第二。' },
-  { emoji: '🇮🇩', name: '印度尼西亚', continent: '亚洲', fact: '印尼由超过 17000 个岛屿组成。' },
-  { emoji: '🇲🇾', name: '马来西亚', continent: '亚洲', fact: '马来西亚的首都吉隆坡塔曾是世界最高塔。' },
-  { emoji: '🇸🇬', name: '新加坡', continent: '亚洲', fact: '新加坡是东南亚人口密度最高的国家。' },
-  { emoji: '🇵🇭', name: '菲律宾', continent: '亚洲', fact: '菲律宾拥有超过 7000 个岛屿。' },
-  { emoji: '🇹🇷', name: '土耳其', continent: '亚洲', fact: '土耳其的伊斯坦布尔横跨欧亚两洲。' },
-  { emoji: '🇸🇦', name: '沙特阿拉伯', continent: '亚洲', fact: '沙特阿拉伯没有一条常年有水的河流。' },
-  { emoji: '🇦🇪', name: '阿联酋', continent: '亚洲', fact: '阿联酋的哈利法塔是世界最高建筑。' },
-  { emoji: '🇮🇱', name: '以色列', continent: '亚洲', fact: '以色列的死海是地球陆地最低点。' },
-  { emoji: '🇵🇰', name: '巴基斯坦', continent: '亚洲', fact: '巴基斯坦的喀喇昆仑公路是世界最高国际公路。' },
-  { emoji: '🇮🇷', name: '伊朗', continent: '亚洲', fact: '伊朗的波斯帝国历史超过 2500 年。' },
-  { emoji: '🇲🇳', name: '蒙古', continent: '亚洲', fact: '蒙古是世界人口密度最低的国家。' },
-  { emoji: '🇳🇵', name: '尼泊尔', continent: '亚洲', fact: '尼泊尔拥有世界十大高峰中的八座。' },
+  { emoji: '🇨🇳', name: '中国', continent: '亚洲', fact: '中国的高铁运营里程占世界七成以上。', stripes: { dir: 'h', colors: ['#de2910'], canton: '#de2910', star: '#ffde00' } }, // 中国
+  { emoji: '🇯🇵', name: '日本', continent: '亚洲', fact: '日本由约 14000 个岛屿组成。', stripes: { dir: 'h', colors: ['#ffffff'], disc: '#bc002d' } }, // 日本
+  { emoji: '🇰🇷', name: '韩国', continent: '亚洲', fact: '韩国的网络覆盖率常年居世界首位。', stripes: { dir: 'h', colors: ['#ffffff'], disc: '#cd2e3a', inner: '#0047a0' } }, // 韩国
+  { emoji: '🇮🇳', name: '印度', continent: '亚洲', fact: '印度的官方语言多达 22 种。', stripes: { dir: 'h', colors: ['#ff9933', '#ffffff', '#138808'], disc: '#000080' } }, // 印度
+  { emoji: '🇹🇭', name: '泰国', continent: '亚洲', fact: '泰国是唯一未被欧洲殖民的东南亚国家。', stripes: { dir: 'h', colors: ['#a51931', '#ffffff', '#2d2a4a', '#ffffff', '#a51931'] } }, // 泰国
+  { emoji: '🇻🇳', name: '越南', continent: '亚洲', fact: '越南的咖啡产量位居世界第二。', stripes: { dir: 'h', colors: ['#da251d'], star: '#ffff00' } }, // 越南
+  { emoji: '🇮🇩', name: '印度尼西亚', continent: '亚洲', fact: '印尼由超过 17000 个岛屿组成。', stripes: { dir: 'h', colors: ['#e70011', '#ffffff'] } }, // 印度尼西亚
+  { emoji: '🇲🇾', name: '马来西亚', continent: '亚洲', fact: '马来西亚的首都吉隆坡塔曾是世界最高塔。', stripes: { dir: 'h', colors: ['#cc0001', '#ffffff', '#cc0001', '#ffffff', '#cc0001', '#ffffff', '#cc0001', '#ffffff'], canton: '#010066' } }, // 马来西亚
+  { emoji: '🇸🇬', name: '新加坡', continent: '亚洲', fact: '新加坡是东南亚人口密度最高的国家。', stripes: { dir: 'h', colors: ['#ef3340', '#ffffff'], canton: '#ef3340', star: '#ffffff' } }, // 新加坡
+  { emoji: '🇵🇭', name: '菲律宾', continent: '亚洲', fact: '菲律宾拥有超过 7000 个岛屿。', stripes: { dir: 'h', colors: ['#0038a8', '#ce1126'], wedge: '#ffffff', star: '#fcd116' } }, // 菲律宾
+  { emoji: '🇹🇷', name: '土耳其', continent: '亚洲', fact: '土耳其的伊斯坦布尔横跨欧亚两洲。', stripes: { dir: 'h', colors: ['#e30a17'], crescent: '#ffffff', star: '#ffffff' } }, // 土耳其
+  { emoji: '🇸🇦', name: '沙特阿拉伯', continent: '亚洲', fact: '沙特阿拉伯没有一条常年有水的河流。', stripes: { dir: 'h', colors: ['#006c35'], disc: '#ffffff', discY: 0.42 } }, // 沙特阿拉伯
+  { emoji: '🇦🇪', name: '阿联酋', continent: '亚洲', fact: '阿联酋的哈利法塔是世界最高建筑。', stripes: { dir: 'v', colors: ['#ff0000', '#00732f', '#ffffff', '#000000'] } }, // 阿联酋
+  { emoji: '🇮🇱', name: '以色列', continent: '亚洲', fact: '以色列的死海是地球陆地最低点。', stripes: { dir: 'h', colors: ['#0038b8', '#ffffff', '#0038b8'], star: '#0038b8' } }, // 以色列
+  { emoji: '🇵🇰', name: '巴基斯坦', continent: '亚洲', fact: '巴基斯坦的喀喇昆仑公路是世界最高国际公路。', stripes: { dir: 'h', colors: ['#01411c'], crescent: '#ffffff', star: '#ffffff' } }, // 巴基斯坦
+  { emoji: '🇮🇷', name: '伊朗', continent: '亚洲', fact: '伊朗的波斯帝国历史超过 2500 年。', stripes: { dir: 'h', colors: ['#239f40', '#ffffff', '#da0000'] } }, // 伊朗
+  { emoji: '🇲🇳', name: '蒙古', continent: '亚洲', fact: '蒙古是世界人口密度最低的国家。', stripes: { dir: 'v', colors: ['#c4272f', '#c4272f', '#015197', '#015197', '#015197', '#015197', '#c4272f', '#c4272f'], disc: '#f9cf02', discX: 0.17 } }, // 蒙古
+  { emoji: '🇳🇵', name: '尼泊尔', continent: '亚洲', fact: '尼泊尔拥有世界十大高峰中的八座。', stripes: { dir: 'h', colors: ['#003893', '#dc143c', '#dc143c', '#003893'], star: '#ffffff' } }, // 尼泊尔
   // 非洲（10）
-  { emoji: '🇪🇬', name: '埃及', continent: '非洲', fact: '埃及的吉萨金字塔已矗立超过 4500 年。' },
-  { emoji: '🇳🇬', name: '尼日利亚', continent: '非洲', fact: '尼日利亚是非洲人口最多的国家。' },
-  { emoji: '🇿🇦', name: '南非', continent: '非洲', fact: '南非拥有三个首都，职能各不相同。' },
-  { emoji: '🇰🇪', name: '肯尼亚', continent: '非洲', fact: '肯尼亚的东非大裂谷肉眼可见从太空。' },
-  { emoji: '🇪🇹', name: '埃塞俄比亚', continent: '非洲', fact: '埃塞俄比亚采用自己的历法，现在仍是另一个年份。' },
-  { emoji: '🇲🇦', name: '摩洛哥', continent: '非洲', fact: '摩洛哥的舍夫沙万整座城刷成蓝色。' },
-  { emoji: '🇩🇿', name: '阿尔及利亚', continent: '非洲', fact: '阿尔及利亚是非洲面积最大的国家。' },
-  { emoji: '🇬🇭', name: '加纳', continent: '非洲', fact: '加纳曾是西非黄金贸易的中心。' },
-  { emoji: '🇹🇿', name: '坦桑尼亚', continent: '非洲', fact: '坦桑尼亚的乞力马扎罗是非洲最高峰。' },
-  { emoji: '🇸🇳', name: '塞内加尔', continent: '非洲', fact: '塞内加尔的玫瑰湖因盐藻呈粉红色。' },
+  { emoji: '🇪🇬', name: '埃及', continent: '非洲', fact: '埃及的吉萨金字塔已矗立超过 4500 年。', stripes: { dir: 'h', colors: ['#ce1126', '#ffffff', '#000000'] } }, // 埃及
+  { emoji: '🇳🇬', name: '尼日利亚', continent: '非洲', fact: '尼日利亚是非洲人口最多的国家。', stripes: { dir: 'v', colors: ['#008751', '#ffffff', '#008751'] } }, // 尼日利亚
+  { emoji: '🇿🇦', name: '南非', continent: '非洲', fact: '南非拥有三个首都，职能各不相同。', stripes: { dir: 'h', colors: ['#e03c31', '#ffffff', '#007749', '#ffffff', '#001489'] } }, // 南非
+  { emoji: '🇰🇪', name: '肯尼亚', continent: '非洲', fact: '肯尼亚的东非大裂谷肉眼可见从太空。', stripes: { dir: 'h', colors: ['#000000', '#ffffff', '#922529', '#ffffff', '#006600'] } }, // 肯尼亚
+  { emoji: '🇪🇹', name: '埃塞俄比亚', continent: '非洲', fact: '埃塞俄比亚采用自己的历法，现在仍是另一个年份。', stripes: { dir: 'h', colors: ['#078930', '#fcd116', '#da121a'], disc: '#0f47af' } }, // 埃塞俄比亚
+  { emoji: '🇲🇦', name: '摩洛哥', continent: '非洲', fact: '摩洛哥的舍夫沙万整座城刷成蓝色。', stripes: { dir: 'h', colors: ['#c1272d'], star: '#006233' } }, // 摩洛哥
+  { emoji: '🇩🇿', name: '阿尔及利亚', continent: '非洲', fact: '阿尔及利亚是非洲面积最大的国家。', stripes: { dir: 'v', colors: ['#006233', '#ffffff'], star: '#d21034' } }, // 阿尔及利亚
+  { emoji: '🇬🇭', name: '加纳', continent: '非洲', fact: '加纳曾是西非黄金贸易的中心。', stripes: { dir: 'h', colors: ['#ce1126', '#fcd116', '#006b3f'], star: '#000000' } }, // 加纳
+  { emoji: '🇹🇿', name: '坦桑尼亚', continent: '非洲', fact: '坦桑尼亚的乞力马扎罗是非洲最高峰。', stripes: { dir: 'h', colors: ['#1eb53a', '#fcd116', '#00a3dd'] } }, // 坦桑尼亚
+  { emoji: '🇸🇳', name: '塞内加尔', continent: '非洲', fact: '塞内加尔的玫瑰湖因盐藻呈粉红色。', stripes: { dir: 'v', colors: ['#00853f', '#fdef42', '#e31b23'], star: '#00853f' } }, // 塞内加尔
   // 美洲（10）
-  { emoji: '🇺🇸', name: '美国', continent: '美洲', fact: '美国拥有世界上最大的经济体量。' },
-  { emoji: '🇨🇦', name: '加拿大', continent: '美洲', fact: '加拿大拥有全球最长的海岸线。' },
-  { emoji: '🇲🇽', name: '墨西哥', continent: '美洲', fact: '墨西哥是巧克力和辣椒的发源地。' },
-  { emoji: '🇧🇷', name: '巴西', continent: '美洲', fact: '巴西的亚马孙雨林占全球雨林一半以上。' },
-  { emoji: '🇦🇷', name: '阿根廷', continent: '美洲', fact: '阿根廷以探戈和足球双料闻名于世。' },
-  { emoji: '🇨🇱', name: '智利', continent: '美洲', fact: '智利南北绵延 4300 公里，是世界上最狭长国家。' },
-  { emoji: '🇵🇪', name: '秘鲁', continent: '美洲', fact: '秘鲁的马丘比丘建在 2400 米山脊上。' },
-  { emoji: '🇨🇴', name: '哥伦比亚', continent: '美洲', fact: '哥伦比亚的鸟类种类数世界第一。' },
-  { emoji: '🇨🇺', name: '古巴', continent: '美洲', fact: '古巴的加勒比蜥蜴是特有物种。' },
-  { emoji: '🇧🇴', name: '玻利维亚', continent: '美洲', fact: '玻利维亚的乌尤尼盐沼是世界最大镜子。' },
+  { emoji: '🇺🇸', name: '美国', continent: '美洲', fact: '美国拥有世界上最大的经济体量。', stripes: { dir: 'h', colors: ['#b22234', '#ffffff', '#b22234', '#ffffff', '#b22234', '#ffffff', '#b22234', '#ffffff', '#b22234', '#ffffff', '#b22234', '#ffffff', '#b22234'], canton: '#3c3b6e' } }, // 美国
+  { emoji: '🇨🇦', name: '加拿大', continent: '美洲', fact: '加拿大拥有全球最长的海岸线。', stripes: { dir: 'v', colors: ['#d80621', '#ffffff', '#d80621'], disc: '#d80621' } }, // 加拿大
+  { emoji: '🇲🇽', name: '墨西哥', continent: '美洲', fact: '墨西哥是巧克力和辣椒的发源地。', stripes: { dir: 'v', colors: ['#006847', '#ffffff', '#ce1126'] } }, // 墨西哥
+  { emoji: '🇧🇷', name: '巴西', continent: '美洲', fact: '巴西的亚马孙雨林占全球雨林一半以上。', stripes: { dir: 'h', colors: ['#009c3b'], disc: '#ffdf00', inner: '#002776' } }, // 巴西
+  { emoji: '🇦🇷', name: '阿根廷', continent: '美洲', fact: '阿根廷以探戈和足球双料闻名于世。', stripes: { dir: 'h', colors: ['#74acdf', '#ffffff', '#74acdf'], disc: '#f6b40e' } }, // 阿根廷
+  { emoji: '🇨🇱', name: '智利', continent: '美洲', fact: '智利南北绵延 4300 公里，是世界上最狭长国家。', stripes: { dir: 'h', colors: ['#ffffff', '#d52b1e'], canton: '#0039a6', star: '#ffffff' } }, // 智利
+  { emoji: '🇵🇪', name: '秘鲁', continent: '美洲', fact: '秘鲁的马丘比丘建在 2400 米山脊上。', stripes: { dir: 'v', colors: ['#d91023', '#ffffff', '#d91023'] } }, // 秘鲁
+  { emoji: '🇨🇴', name: '哥伦比亚', continent: '美洲', fact: '哥伦比亚的鸟类种类数世界第一。', stripes: { dir: 'h', colors: ['#fcd116', '#fcd116', '#003893', '#ce1126'] } }, // 哥伦比亚
+  { emoji: '🇨🇺', name: '古巴', continent: '美洲', fact: '古巴的加勒比蜥蜴是特有物种。', stripes: { dir: 'h', colors: ['#002a8f', '#ffffff', '#002a8f', '#ffffff', '#002a8f'], wedge: '#cf142b', star: '#ffffff' } }, // 古巴
+  { emoji: '🇧🇴', name: '玻利维亚', continent: '美洲', fact: '玻利维亚的乌尤尼盐沼是世界最大镜子。', stripes: { dir: 'h', colors: ['#d52b1e', '#f9e300', '#007934'] } }, // 玻利维亚
   // 大洋洲（4）
-  { emoji: '🇦🇺', name: '澳大利亚', continent: '大洋洲', fact: '澳大利亚的有袋类动物大多为他处没有。' },
-  { emoji: '🇳🇿', name: '新西兰', continent: '大洋洲', fact: '新西兰是最晚有人类定居的大陆级土地。' },
-  { emoji: '🇫🇯', name: '斐济', continent: '大洋洲', fact: '斐济由 333 个热带岛屿组成。' },
-  { emoji: '🇵🇬', name: '巴布亚新几内亚', continent: '大洋洲', fact: '巴布亚新几内亚使用超过 800 种语言。' },
+  { emoji: '🇦🇺', name: '澳大利亚', continent: '大洋洲', fact: '澳大利亚的有袋类动物大多为他处没有。', stripes: { dir: 'h', colors: ['#012169'], canton: '#012169', saltire: '#ffffff', cross: '#ffffff', cross2: '#c8102e', disc: '#ffffff', discX: 0.25, discY: 0.72 } }, // 澳大利亚
+  { emoji: '🇳🇿', name: '新西兰', continent: '大洋洲', fact: '新西兰是最晚有人类定居的大陆级土地。', stripes: { dir: 'h', colors: ['#012169'], canton: '#012169', saltire: '#ffffff', cross: '#ffffff', cross2: '#c8102e', disc: '#cc142b', discX: 0.62, discY: 0.66 } }, // 新西兰
+  { emoji: '🇫🇯', name: '斐济', continent: '大洋洲', fact: '斐济由 333 个热带岛屿组成。', stripes: { dir: 'h', colors: ['#68bfe5'], canton: '#012169', saltire: '#ffffff', cross: '#ffffff', cross2: '#c8102e', disc: '#ffd500', discX: 0.3, discY: 0.7 } }, // 斐济
+  { emoji: '🇵🇬', name: '巴布亚新几内亚', continent: '大洋洲', fact: '巴布亚新几内亚使用超过 800 种语言。', stripes: { dir: 'h', colors: ['#ce1126', '#000000'], star: '#ffffff' } }, // 巴布亚新几内亚
 ]
+
 
 /** 题型：看旗选国名 / 看国名选旗。 */
 export type QuestionKind = 'flag-to-name' | 'name-to-flag'
