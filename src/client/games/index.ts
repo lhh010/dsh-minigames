@@ -174,6 +174,10 @@ import { robocodeGame } from './robocode/index.ts'
 import { tronGame } from './tron/index.ts'
 import { artilleryGame } from './artillery/index.ts'
 import { plinkoGame } from './plinko/index.ts'
+import { qixGame } from './qix/index.ts'
+import { firefighterGame } from './firefighter/index.ts'
+import { sheepdogGame } from './sheepdog/index.ts'
+import { flagsGame } from './flags/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -242,6 +246,7 @@ export function registerBuiltinGames(): void {
     rubikGame, battleshipGame, darkmazeGame, deepdiveGame,
     backgammonGame, crazy8Game, clawGame, nbackGame,
     robocodeGame, tronGame, artilleryGame, plinkoGame,
+    qixGame, firefighterGame, sheepdogGame, flagsGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }

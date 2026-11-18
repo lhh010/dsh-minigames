@@ -47,7 +47,7 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   dodger: 'arcade', stack: 'arcade', jumper: 'arcade', avalanche: 'arcade',
   suika: 'arcade', tanks: 'arcade', td: 'arcade', slither: 'arcade',
   jungle: 'arcade', fruitslash: 'arcade', gravflip: 'arcade', copter: 'arcade',
-  whack: 'arcade', piano: 'arcade', rhythm: 'arcade', elevator: 'arcade', sorter: 'arcade', ringtoss: 'arcade', dig: 'arcade', claw: 'arcade', plinko: 'arcade', burger: 'arcade', missile: 'arcade',
+  whack: 'arcade', piano: 'arcade', rhythm: 'arcade', elevator: 'arcade', sorter: 'arcade', ringtoss: 'arcade', dig: 'arcade', claw: 'arcade', plinko: 'arcade', firefighter: 'arcade', burger: 'arcade', missile: 'arcade',
   // 反应
   aimtrack: 'reflex', simon: 'reflex', schulte: 'reflex', stroop: 'reflex', morse: 'reflex', lockpick: 'reflex', plates: 'reflex', rps: 'reflex', nback: 'reflex',
   reaction: 'reflex', typing: 'reflex', juggle: 'reflex', steadyhand: 'reflex',
@@ -58,7 +58,7 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   papertoss: 'physics', knifering: 'physics', hoopshot: 'physics', movinghoop: 'physics',
   ski: 'physics', racing: 'physics', hole: 'physics', tiltmaze: 'physics', darts: 'physics', magnet: 'physics', bridgebuilder: 'physics', curling: 'physics',
   // 休闲
-  bubblewrap: 'casual', fishing: 'casual', eggcatcher: 'casual', coinpusher: 'casual', farm: 'casual', petpal: 'casual', caravan: 'casual', deepdive: 'casual', bonsai: 'casual', fishpond: 'casual', balloon: 'casual', tide: 'casual',
+  bubblewrap: 'casual', fishing: 'casual', eggcatcher: 'casual', coinpusher: 'casual', farm: 'casual', petpal: 'casual', caravan: 'casual', deepdive: 'casual', flags: 'casual', bonsai: 'casual', fishpond: 'casual', balloon: 'casual', tide: 'casual',
 }
 
 /** 查游戏分类；未登记回落休闲（全覆盖测试把遗漏顶出来）。 */
