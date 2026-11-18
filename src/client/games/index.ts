@@ -182,6 +182,10 @@ import { goldmineGame } from './goldmine/index.ts'
 import { photohuntGame } from './photohunt/index.ts'
 import { conductorGame } from './conductor/index.ts'
 import { wordchainGame } from './wordchain/index.ts'
+import { craneGame } from './crane/index.ts'
+import { recipeGame } from './recipe/index.ts'
+import { tangram2Game } from './tangram2/index.ts'
+import { wordgridGame } from './wordgrid/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -252,6 +256,7 @@ export function registerBuiltinGames(): void {
     robocodeGame, tronGame, artilleryGame, plinkoGame,
     qixGame, firefighterGame, sheepdogGame, flagsGame,
     goldmineGame, photohuntGame, conductorGame, wordchainGame,
+    craneGame, recipeGame, tangram2Game, wordgridGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }

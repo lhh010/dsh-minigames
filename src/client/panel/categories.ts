@@ -33,7 +33,7 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   mastermind: 'puzzle', circlemath: 'puzzle', game24: 'puzzle', tangram: 'puzzle',
   spotdiff: 'puzzle', memory: 'puzzle', match3: 'puzzle', iceslide: 'puzzle', link: 'puzzle', rivercross: 'puzzle', balance: 'puzzle',
   bridge: 'puzzle', jugs: 'puzzle', knightour: 'puzzle', nimgame: 'puzzle',
-  queens8: 'puzzle', kenken: 'puzzle', futoshiki: 'puzzle', ricochet: 'puzzle', onestroke: 'puzzle', jenga: 'puzzle', portal: 'puzzle', akari: 'puzzle', rainwater: 'puzzle', cakecut: 'puzzle', rubik: 'puzzle', robocode: 'puzzle', photohunt: 'puzzle', wordchain: 'puzzle', gears: 'puzzle', colormix: 'puzzle', dicemaze: 'puzzle', idiomchain: 'puzzle', defuse: 'puzzle', jigsaw: 'puzzle', lightpath: 'puzzle', logigrid: 'puzzle', starbattle: 'puzzle',
+  queens8: 'puzzle', kenken: 'puzzle', futoshiki: 'puzzle', ricochet: 'puzzle', onestroke: 'puzzle', jenga: 'puzzle', portal: 'puzzle', akari: 'puzzle', rainwater: 'puzzle', cakecut: 'puzzle', rubik: 'puzzle', robocode: 'puzzle', photohunt: 'puzzle', wordchain: 'puzzle', tangram2: 'puzzle', wordgrid: 'puzzle', gears: 'puzzle', colormix: 'puzzle', dicemaze: 'puzzle', idiomchain: 'puzzle', defuse: 'puzzle', jigsaw: 'puzzle', lightpath: 'puzzle', logigrid: 'puzzle', starbattle: 'puzzle',
   alchemy: 'puzzle', watersort: 'puzzle', molecule: 'puzzle', orbit: 'puzzle',
   // 棋牌
   chess: 'board', xiangqi: 'board', gomoku: 'board', othello: 'board',
@@ -58,7 +58,7 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   papertoss: 'physics', knifering: 'physics', hoopshot: 'physics', movinghoop: 'physics',
   ski: 'physics', racing: 'physics', hole: 'physics', tiltmaze: 'physics', darts: 'physics', magnet: 'physics', bridgebuilder: 'physics', curling: 'physics',
   // 休闲
-  bubblewrap: 'casual', fishing: 'casual', eggcatcher: 'casual', coinpusher: 'casual', farm: 'casual', petpal: 'casual', caravan: 'casual', deepdive: 'casual', flags: 'casual', bonsai: 'casual', fishpond: 'casual', balloon: 'casual', tide: 'casual',
+  bubblewrap: 'casual', fishing: 'casual', eggcatcher: 'casual', coinpusher: 'casual', farm: 'casual', petpal: 'casual', caravan: 'casual', deepdive: 'casual', flags: 'casual', recipe: 'casual', bonsai: 'casual', fishpond: 'casual', balloon: 'casual', tide: 'casual',
 }
 
 /** 查游戏分类；未登记回落休闲（全覆盖测试把遗漏顶出来）。 */
