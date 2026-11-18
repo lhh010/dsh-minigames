@@ -178,6 +178,10 @@ import { qixGame } from './qix/index.ts'
 import { firefighterGame } from './firefighter/index.ts'
 import { sheepdogGame } from './sheepdog/index.ts'
 import { flagsGame } from './flags/index.ts'
+import { goldmineGame } from './goldmine/index.ts'
+import { photohuntGame } from './photohunt/index.ts'
+import { conductorGame } from './conductor/index.ts'
+import { wordchainGame } from './wordchain/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -247,6 +251,7 @@ export function registerBuiltinGames(): void {
     backgammonGame, crazy8Game, clawGame, nbackGame,
     robocodeGame, tronGame, artilleryGame, plinkoGame,
     qixGame, firefighterGame, sheepdogGame, flagsGame,
+    goldmineGame, photohuntGame, conductorGame, wordchainGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
