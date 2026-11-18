@@ -407,8 +407,21 @@ function substep(st: SheepdogState, input: SheepdogInput): void {
     const s = st.sheep[i]!
     if (s.penned) continue
     const force = sheepForces(st, i)
-    s.vx += force.ax * dt
-    s.vy += force.ay * dt
+    // 贴墙避让：离场边越近，指向场内的转向力越强（叠加在 boids 力上）。
+    // 原实现只钳制位置+反弹 ×0.4——犬从内侧逼近时逃离力持续把羊压在墙上
+    // 卡死（玩家无法再赶离边缘）。避让力让羊沿墙滑走而非钉死。
+    const WALL_AVOID_R = 70
+    const wallF = 260
+    const minX = f.x + SHEEP_R + WALL_AVOID_R, maxX = f.x + f.w - SHEEP_R - WALL_AVOID_R
+    const minY = f.y + SHEEP_R + WALL_AVOID_R, maxY = f.y + f.h - SHEEP_R - WALL_AVOID_R
+    let wax = 0
+    let way = 0
+    if (s.x < minX) wax += (minX - s.x) / WALL_AVOID_R
+    if (s.x > maxX) wax -= (s.x - maxX) / WALL_AVOID_R
+    if (s.y < minY) way += (minY - s.y) / WALL_AVOID_R
+    if (s.y > maxY) way -= (s.y - maxY) / WALL_AVOID_R
+    s.vx += (force.ax + wax * wallF) * dt
+    s.vy += (force.ay + way * wallF) * dt
     s.vx *= DRAG_PER_SUBSTEP
     s.vy *= DRAG_PER_SUBSTEP
     const maxV = level.sheepMaxSpeed * (1 + s.panic * (PANIC_SPEED_FACTOR - 1))

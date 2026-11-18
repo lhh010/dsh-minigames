@@ -30,8 +30,10 @@ export const CATCH_BUILDING = 0.18
 export const WIND_ALIGNED = 1.8
 export const WIND_OPPOSED = 0.45
 /** 每格燃值（火强度上限）：建筑高燃值难扑灭，草低燃值速燃速尽。 */
-export const FUEL_BUILDING = 6
-export const FUEL_GRASS = 3
+export const FUEL_BUILDING = 16
+// 燃值上调：原草 3/建筑 6 在 0.85s/tick 下 2.5-5 秒就自熄，蔓延常来不及
+// 发生（玩家体感「火自动熄灭」）。草 8/建筑 16 让火持续 7-14 秒。
+export const FUEL_GRASS = 8
 /** 单次喷水对准格火强度的削减量。 */
 export const WATER_DMG = 3
 /** 水柱射程（格）。 */

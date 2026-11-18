@@ -140,9 +140,9 @@ describe('firefighter logic', () => {
     const s = createState(9, 1)
     sandbox(s)
     s.grid[2]![2]!.kind = 'building'
-    s.grid[2]![2]!.fire = 5
+    s.grid[2]![2]!.fire = 15 // FUEL_BUILDING=16：再 1 tick 燃尽。
     s.grid[2]![4]!.kind = 'grass'
-    s.grid[2]![4]!.fire = 2
+    s.grid[2]![4]!.fire = 7 // FUEL_GRASS=8：再 1 tick 燃尽。
     // rng 极大值：蔓延恒不触发，隔离增长/燃尽路径。
     s.rng = () => 0.999
     fireTick(s)
@@ -273,9 +273,9 @@ describe('firefighter logic', () => {
     const before = s.scoreAtLevelStart
     sandbox(s)
     s.grid[2]![2]!.kind = 'building'
-    s.grid[2]![2]!.fire = 5
+    s.grid[2]![2]!.fire = 15
     s.grid[2]![4]!.kind = 'grass'
-    s.grid[2]![4]!.fire = 2
+    s.grid[2]![4]!.fire = 7
     s.rng = () => 0.999
     fireTick(s) // 建筑烧毁 +1 损失
     s.px = 2

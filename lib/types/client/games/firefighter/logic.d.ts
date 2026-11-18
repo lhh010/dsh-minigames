@@ -18,8 +18,8 @@ export declare const CATCH_BUILDING = 0.18;
 export declare const WIND_ALIGNED = 1.8;
 export declare const WIND_OPPOSED = 0.45;
 /** 每格燃值（火强度上限）：建筑高燃值难扑灭，草低燃值速燃速尽。 */
-export declare const FUEL_BUILDING = 6;
-export declare const FUEL_GRASS = 3;
+export declare const FUEL_BUILDING = 16;
+export declare const FUEL_GRASS = 8;
 /** 单次喷水对准格火强度的削减量。 */
 export declare const WATER_DMG = 3;
 /** 水柱射程（格）。 */

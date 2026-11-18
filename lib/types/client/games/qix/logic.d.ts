@@ -137,7 +137,9 @@ export declare function setHeld(state: QixState, dir: Dir, down: boolean): void;
  * @returns 本次新占的内部格数（含笔迹格）。
  */
 export declare function closeAndFill(state: QixState): number;
-/** 笔迹或玩家与墨怪的碰撞：任一墨怪落在笔迹格上或与其四邻接即命中。 */
+/** 笔迹或玩家与墨怪的碰撞：墨怪（浮点坐标）进入任一笔迹格（切比雪夫
+ * 距离 <0.85，即确实踩在该格内）才命中。原实现用曼哈顿 ≤1——墨怪在
+ * 对角/相邻格 1.0 单位外就判死，视觉上根本没碰到笔迹线。 */
 export declare function trailHit(state: QixState): boolean;
 /**
  * 玩家走一格：沿边模式在已占格滑行、朝空格切入转 draw；拖笔迹模式

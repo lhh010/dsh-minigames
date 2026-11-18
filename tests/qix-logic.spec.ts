@@ -199,7 +199,8 @@ describe('qix logic', () => {
     setHeld(state, 'down', true)
     stepPlayer(state) // 笔迹 (20,0)(20,1)，玩家 (20,1)。
     expect(state.trail).toHaveLength(2)
-    stepQix(state) // 墨怪被迫走到 (21,*)，与笔迹相邻 → 命中。
+    stepQix(state) // (21,*)
+    stepQix(state) // 再一步踏上笔迹格 (20,*) → 真实接触命中（新判定：须踩进格内）。
     expect(state.lives).toBe(2)
     expect(state.trail).toHaveLength(0)
     expect(state.mode).toBe('edge')
@@ -218,6 +219,7 @@ describe('qix logic', () => {
     }
     setHeld(state, 'down', true)
     stepPlayer(state)
+    stepQix(state)
     stepQix(state)
     expect(state.lives).toBe(0)
     expect(state.status).toBe('gameover')
