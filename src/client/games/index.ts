@@ -189,6 +189,10 @@ import { wordgridGame } from './wordgrid/index.ts'
 import { harvestGame } from './harvest/index.ts'
 import { sudokuXGame } from './sudokuX/index.ts'
 import { chessendGame } from './chessend/index.ts'
+import { icehockeyGame } from './icehockey/index.ts'
+import { nonospinGame } from './nonospin/index.ts'
+import { marblerunGame } from './marblerun/index.ts'
+import { yinyangGame } from './yinyang/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -261,6 +265,7 @@ export function registerBuiltinGames(): void {
     goldmineGame, photohuntGame, conductorGame, wordchainGame,
     craneGame, recipeGame, tangram2Game, wordgridGame,
     harvestGame, sudokuXGame, chessendGame,
+    icehockeyGame, nonospinGame, marblerunGame, yinyangGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
