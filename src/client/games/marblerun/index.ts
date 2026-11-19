@@ -97,8 +97,11 @@ function createMarbleRunGame(host: HTMLElement, options?: MiniGameMountOptions):
     mode = 'build'
     outcome = null
     score = null
-    buildLoop.markDirty()
     runLoop.pause()
+    // 关键：释放滚珠时 buildLoop 被 pause——若在失败态（滚珠飞出/停滞/碎裂）
+    // 按 R，markDirty 打在已暂停的循环上永远不渲染（游戏看起来卡死）。
+    buildLoop.start()
+    buildLoop.markDirty()
   }
 
   /** 释放滚珠：进入测试期。 */
