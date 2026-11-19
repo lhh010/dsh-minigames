@@ -30,7 +30,7 @@ export declare function buttonAt(x: number, y: number): number | null;
  * @param ctx - 画布上下文（fitCanvas 已变换）。
  * @param state - 一局状态。
  */
-export declare function renderHarvest(ctx: CanvasRenderingContext2D, state: HarvestState): void;
+export declare function renderHarvest(ctx: CanvasRenderingContext2D, state: HarvestState, currentAction?: number): void;
 /**
  * 田格中心逻辑坐标（收获粒子定位用）。
  * @param index - 田格下标（0..35）。

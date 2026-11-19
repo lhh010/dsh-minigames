@@ -35,7 +35,7 @@ export const LAND_TOL = 46
 export const SWING_MID = 320
 export const SWING_AMP = 238
 /** 基准摆动周期（ms；实际周期 = SWEEP_MS / 关卡速度）。 */
-export const SWEEP_MS = 2600
+export const SWEEP_MS = 4200
 /** 抛物线重力加速度（px/s²）。 */
 export const G = 1500
 /** 抛出水平初速 = 摆速 × 该系数（物理感：摆得越快甩得越远）。 */

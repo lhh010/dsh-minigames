@@ -10,7 +10,7 @@ import type {
   MiniGameMountOptions,
 } from '../types.ts'
 import {
-  createHarvestState, fallowTile, harvestTile, nextSeason, nextWeek,
+  CROP_POOL, createHarvestState, fallowTile, harvestTile, nextSeason, nextWeek,
   plantCrop, totalAssets, waterTile, type HarvestState,
 } from './logic.ts'
 import {
@@ -20,7 +20,7 @@ import {
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { createFrameLoop } from '../frame-scheduler.ts'
-import { createParticles } from '../theme.ts'
+import { createParticles, glow, noGlow, THEME } from '../theme.ts'
 
 function createHarvestGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -52,21 +52,34 @@ function createHarvestGame(host: HTMLElement, options?: MiniGameMountOptions): M
     loop.markDirty()
   }
 
-  /** 对田格执行当前选中动作；收获成功时在格心放粒子。 */
+  /** 对田格执行当前选中动作；失败给出可见原因（原实现静默 return，
+   * 玩家点按无任何反应，误以为按键/点击失效）。 */
   const actOnTile = (index: number): void => {
     if (state.phase !== 'playing' || paused) return
+    if (state.actionsLeft <= 0) {
+      show('本周动作已用完——按空格进入下一周')
+      return
+    }
+    const tile = state.tiles[index]
     let ok = false
     if (currentAction === 0) {
-      ok = plantCrop(state, index)
+      if (tile !== undefined && tile.crop !== null) show('这格已经有作物了')
+      else {
+        const spec = CROP_POOL[state.cardPool[state.selectedCard]!]!
+        if (state.money < spec.seedCost) show('资金不足：' + spec.name + '种子需 ' + spec.seedCost + '（当前 ' + state.money + '）')
+        else ok = plantCrop(state, index)
+      }
     } else if (currentAction === 1) {
-      ok = waterTile(state, index)
+      if (tile !== undefined && tile.crop === null) show('空格不能浇水——先播种')
+      else ok = waterTile(state, index)
     } else if (currentAction === 2) {
       const value = harvestTile(state, index)
       if (value !== null) {
         ok = true
         const [cx, cy] = tileCenter(index)
         particles.burst(cx, cy, '#e0af68', 10, 120)
-      }
+      } else if (tile !== undefined && tile.crop === null) show('这格没有作物可收获')
+      else show('还没成熟——看格子上的生长阶段')
     } else {
       ok = fallowTile(state, index)
     }
@@ -74,6 +87,16 @@ function createHarvestGame(host: HTMLElement, options?: MiniGameMountOptions): M
       reportScore()
       loop.markDirty()
     }
+  }
+
+  /** 失败原因短暂提示（渲染层画在事件行位置）。 */
+  let feedback = ''
+  let feedbackUntil = 0
+  const show = (msg: string): void => {
+    feedback = msg
+    feedbackUntil = performance.now() + 2200
+    loop.markDirty()
+    window.setTimeout(() => loop.markDirty(), 2300)
   }
 
   const advance = (): void => {
@@ -100,9 +123,17 @@ function createHarvestGame(host: HTMLElement, options?: MiniGameMountOptions): M
 
   const loop = createFrameLoop((f) => {
     if (f.render) {
-      renderHarvest(ctx, state)
+      renderHarvest(ctx, state, currentAction)
       particles.tick(ctx, f.dt * 1000)
       if (particles.size() > 0) loop.markDirty()
+      if (feedback !== '' && performance.now() < feedbackUntil) {
+        ctx.font = '600 14px system-ui, sans-serif'
+        ctx.textAlign = 'center'
+        glow(ctx, THEME.bad, 6)
+        ctx.fillStyle = THEME.bad
+        ctx.fillText(feedback, LOGICAL_W / 2, LOGICAL_H - 18)
+        noGlow(ctx)
+      }
       renderHarvestOverlay(ctx, state, paused)
     }
   }, { mode: 'dirty' })

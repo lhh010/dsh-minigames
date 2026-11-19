@@ -7,6 +7,7 @@
 import { THEME, accent, drawBackground, drawOverlay, glow, hudPair, noGlow, roundRectPath, spaced } from '../theme.ts'
 import {
   CROP_POOL, GRID, SEASONS, WEATHER_NAME, WEEKS_PER_SEASON, isMature,
+  ACTIONS_PER_WEEK,
   type CropFamily, type HarvestState, type HarvestTile, type Weather,
 } from './logic.ts'
 
@@ -215,7 +216,7 @@ function drawCard(ctx: CanvasRenderingContext2D, state: HarvestState, i: number)
  * @param ctx - 画布上下文（fitCanvas 已变换）。
  * @param state - 一局状态。
  */
-export function renderHarvest(ctx: CanvasRenderingContext2D, state: HarvestState): void {
+export function renderHarvest(ctx: CanvasRenderingContext2D, state: HarvestState, currentAction = 0): void {
   const w = LOGICAL_W
   const h = LOGICAL_H
   drawBackground(ctx, w, h)
@@ -225,6 +226,17 @@ export function renderHarvest(ctx: CanvasRenderingContext2D, state: HarvestState
   hudPair(ctx, 160, 34, '周', state.week + '/' + WEEKS_PER_SEASON)
   hudPair(ctx, 260, 34, '资金', String(state.money), 'left', THEME.gold)
   hudPair(ctx, 360, 34, '库存', String(state.inventoryValue), 'left', THEME.good)
+
+  // 常驻教学横幅：一句话玩法 + 当前可用动作数（新手不知道点哪/为何没反应）。
+  ctx.textAlign = 'left'
+  ctx.font = '600 12px system-ui, sans-serif'
+  ctx.fillStyle = THEME.textMuted
+  ctx.fillText('① 点作物卡选种 ② 按 1-4 或点按钮选动作 ③ 点田格执行 · 空格=下一周', 24, 88)
+  glow(ctx, state.actionsLeft > 0 ? THEME.good : THEME.bad, 5)
+  ctx.fillStyle = state.actionsLeft > 0 ? THEME.good : THEME.bad
+  ctx.textAlign = 'right'
+  ctx.fillText('本周剩余动作 ' + state.actionsLeft + '/' + ACTIONS_PER_WEEK, 936, 88)
+  noGlow(ctx)
   hudPair(ctx, 470, 34, '目标', String(SEASONS[state.seasonIndex]!.target))
   hudPair(ctx, w - 24, 34, '动作', state.actionsLeft + '/' + 2, 'right', state.actionsLeft > 0 ? THEME.text : THEME.bad)
   // 天气横幅
