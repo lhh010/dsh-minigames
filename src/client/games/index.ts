@@ -89,7 +89,6 @@ import { avalancheGame } from './avalanche/index.ts'
 import { puyoGame } from './puyo/index.ts'
 import { mahjongGame } from './mahjong/index.ts'
 import { minigolfGame } from './minigolf/index.ts'
-import { jungleGame } from './jungle/index.ts'
 import { grappleGame } from './grapple/index.ts'
 import { qwopGame } from './qwop/index.ts'
 import { copterGame } from './copter/index.ts'
@@ -203,6 +202,10 @@ import { treasureGame } from './treasure/index.ts'
 import { fourcolorGame } from './fourcolor/index.ts'
 import { anttrailGame } from './anttrail/index.ts'
 import { quoridorGame } from './quoridor/index.ts'
+import { jungleGame } from './jungle/index.ts'
+import { checkershopGame } from './checkershop/index.ts'
+import { towercardGame } from './towercard/index.ts'
+import { factoryGame } from './factory/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -247,7 +250,7 @@ export function registerBuiltinGames(): void {
     taijiGame, jumperGame, eggcatcherGame,
     xiangqiGame, slitherGame, danmakuGame, suguruGame,
     avalancheGame,
-    puyoGame, mahjongGame, minigolfGame, jungleGame,
+    puyoGame, mahjongGame, minigolfGame,
     masyuGame, blackjackGame, flooditGame, coinpusherGame,
     slingshotGame, holeGame, steadyhandGame,
     grappleGame, qwopGame, copterGame, gravflipGame,
@@ -279,6 +282,7 @@ export function registerBuiltinGames(): void {
     musicboxGame, circuitbulbGame,
     mancalaGame, scalesGame, cryptarGame, setgameGame,
     treasureGame, fourcolorGame, anttrailGame, quoridorGame,
+    jungleGame, checkershopGame, towercardGame, factoryGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }

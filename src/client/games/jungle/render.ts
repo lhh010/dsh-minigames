@@ -1,8 +1,9 @@
 /**
- * 斗兽棋渲染器：绘制 7x9 棋盘（草地、两块河流、双方陷阱与兽穴）、
- * 带等级角标的动物棋子、选中高亮与可走提示点、上一步标记、兽穴告急
- * 红色脉冲、HUD（回合/难度/思考中）与胜负/暂停 overlay。全部为纯
- * canvas 绘制（../theme.ts 共享视觉件），不含 DOM 状态。
+ * 斗兽棋渲染器：绘制 7x9 丛林棋盘（草地格、两块蓝色河流、双方陷阱
+ * 凹纹与金光兽穴）、带等级角标的兽子、选中/可达高亮、上一步标记、
+ * 兽穴告急描边、局分 HUD（含一行常驻玩法速览）与单局/整场胜负
+ * overlay。全部为纯 canvas 绘制（../theme.ts 共享视觉件），不含 DOM
+ * 状态；适配 dirty 按需重绘（无逐帧动画依赖）。
  */
 import {
   COLS, ROWS, idx, rowOf, colOf, isWater, BLACK_DEN, RED_DEN,
@@ -13,10 +14,15 @@ import {
   THEME, drawBackground, glow, noGlow, roundRectPath, hudPair, drawOverlay,
 } from '../theme.ts'
 
+/** 棋盘四周留白（水平与底部；顶部另加 HUD 高度）。 */
 const MARGIN = 20
+/** 顶部 HUD 两行文本的高度。 */
 const HUD_H = 44
+/** 单格边长。 */
 const CELL = 50
+/** 逻辑画布宽：20 + 7*50 + 20 = 390。 */
 export const LOGICAL_W = MARGIN * 2 + CELL * COLS
+/** 逻辑画布高：44 + 20 + 9*50 + 20 = 534。 */
 export const LOGICAL_H = HUD_H + MARGIN * 2 + CELL * ROWS
 
 /** 棋子显示名（八兽汉字，双方同字不同色）。 */
@@ -25,7 +31,7 @@ const NAME: Record<Piece, string> = {
   e: '象', l: '狮', t: '虎', p: '豹', w: '狼', d: '狗', c: '猫', m: '鼠',
 }
 
-/** 一次渲染所需的全部视图状态（index.ts 每帧组装）。 */
+/** 一次渲染所需的全部视图状态（index.ts 状态变化时组装并标脏）。 */
 export interface JungleView {
   /** 当前局面。 */
   pos: Position
@@ -33,17 +39,19 @@ export interface JungleView {
   selected: number
   /** 选中棋子的合法着法（可走提示点）。 */
   hints: readonly Move[]
-  /** 最近一步着法（高亮环）。 */
+  /** 最近一步着法（高亮环）；开局为 null。 */
   lastMove: Move | null
   /** 兽穴告急的一方（该方兽穴邻格有敌子）；null 为无。 */
   denThreat: 'r' | 'b' | null
-  /** AI 是否正在思考（HUD 动画）。 */
-  thinking: boolean
-  /** 难度档（1-3）。 */
-  level: number
-  /** 动画时钟（performance.now()）。 */
-  timeMs: number
-  /** 终局/暂停态。 */
+  /** 当前局数（1-3，难度随局升）。 */
+  gameNo: number
+  /** 玩家（红）已胜局数。 */
+  playerWins: number
+  /** AI（黑）已胜局数。 */
+  aiWins: number
+  /** 整场（3 局 2 胜）是否已结束。 */
+  matchOver: boolean
+  /** 单局结果 / 暂停态。 */
   result: 'playing' | 'win' | 'lose' | 'paused'
 }
 
@@ -57,7 +65,12 @@ export function centerY(row: number): number {
   return HUD_H + MARGIN + row * CELL + CELL / 2
 }
 
-/** 命中测试：逻辑坐标 → 格索引；棋盘外返回 -1。 */
+/**
+ * 命中测试：逻辑坐标转格索引。
+ * @param x - 逻辑横坐标。
+ * @param y - 逻辑纵坐标。
+ * @returns 格索引；棋盘外返回 -1。
+ */
 export function cellAt(x: number, y: number): number {
   const col = Math.floor((x - MARGIN) / CELL)
   const row = Math.floor((y - HUD_H - MARGIN) / CELL)
@@ -65,12 +78,16 @@ export function cellAt(x: number, y: number): number {
   return idx(row, col)
 }
 
-/** 格索引中心坐标（吃子粒子出生点）。 */
+/**
+ * 格索引中心坐标（吃子粒子出生点）。
+ * @param i - 格索引。
+ * @returns [x, y] 中心坐标。
+ */
 export function centerOfIndex(i: number): [number, number] {
   return [centerX(colOf(i)), centerY(rowOf(i))]
 }
 
-/** 单格地形底色与纹样。 */
+/** 单格地形：草地 / 河流波纹 / 陷阱凹纹（交叉线）/ 兽穴金光。 */
 function drawTerrain(ctx: CanvasRenderingContext2D, i: number): void {
   const row = rowOf(i)
   const col = colOf(i)
@@ -94,17 +111,17 @@ function drawTerrain(ctx: CanvasRenderingContext2D, i: number): void {
   ctx.fillRect(x, y, CELL, CELL)
   if (i === RED_DEN || i === BLACK_DEN) {
     const side = i === RED_DEN ? '#f7768e' : '#7dcfff'
-    glow(ctx, side, 12)
+    glow(ctx, '#e0af68', 12)
     ctx.fillStyle = 'rgba(0,0,0,0.35)'
     ctx.fillRect(x, y, CELL, CELL)
     noGlow(ctx)
-    ctx.strokeStyle = side
+    ctx.strokeStyle = '#e0af68'
     ctx.lineWidth = 2
     ctx.strokeRect(x + 2, y + 2, CELL - 4, CELL - 4)
     ctx.font = 'bold ' + (CELL / 2.4) + 'px system-ui, sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillStyle = side
+    ctx.fillStyle = '#e0af68'
     ctx.fillText('穴', x + CELL / 2, y + CELL / 2 + 1)
     return
   }
@@ -128,7 +145,7 @@ function drawTerrain(ctx: CanvasRenderingContext2D, i: number): void {
   ctx.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1)
 }
 
-/** 一枚动物棋子：圆片 + 兽名 + 右上等级角标。 */
+/** 一枚兽子：圆片 + 兽名 + 右上等级角标（红方粉环、黑方蓝环）。 */
 function drawPiece(ctx: CanvasRenderingContext2D, p: Piece, i: number, selected: boolean): void {
   const cx = centerX(colOf(i))
   const cy = centerY(rowOf(i))
@@ -160,7 +177,11 @@ function drawPiece(ctx: CanvasRenderingContext2D, p: Piece, i: number, selected:
   ctx.fillText(String(RANK[p]), bx, by + 0.5)
 }
 
-/** 主渲染入口：整帧绘制棋盘、棋子、提示与 HUD/overlay。 */
+/**
+ * 主渲染入口：整帧绘制棋盘、兽子、提示与 HUD/overlay。
+ * @param ctx - 画布上下文（逻辑坐标系）。
+ * @param view - 视图状态。
+ */
 export function renderJungle(ctx: CanvasRenderingContext2D, view: JungleView): void {
   drawBackground(ctx, LOGICAL_W, LOGICAL_H)
 
@@ -174,18 +195,17 @@ export function renderJungle(ctx: CanvasRenderingContext2D, view: JungleView): v
 
   for (let i = 0; i < ROWS * COLS; i += 1) drawTerrain(ctx, i)
 
-  // 兽穴告急脉冲。
+  // 兽穴告急静态描边（dirty 模式下不做逐帧脉冲）。
   if (view.denThreat !== null && view.result === 'playing') {
     const den = view.denThreat === 'r' ? RED_DEN : BLACK_DEN
     const x = MARGIN + colOf(den) * CELL
     const y = HUD_H + MARGIN + rowOf(den) * CELL
-    const alpha = 0.45 + 0.4 * Math.sin(view.timeMs / 160)
-    ctx.strokeStyle = 'rgba(247,118,142,' + alpha.toFixed(3) + ')'
+    ctx.strokeStyle = 'rgba(247,118,142,0.85)'
     ctx.lineWidth = 4
     ctx.strokeRect(x + 1, y + 1, CELL - 2, CELL - 2)
   }
 
-  // 选中棋子的可走提示点（吃子目标为红点，空格为亮点）。
+  // 选中棋子的可走提示点（吃子目标为大红点，空格为小亮点）。
   for (const m of view.hints) {
     const t = view.pos.board[idx(m[2], m[3])]
     const cx = centerX(m[3])
@@ -198,7 +218,7 @@ export function renderJungle(ctx: CanvasRenderingContext2D, view: JungleView): v
     noGlow(ctx)
   }
 
-  // 棋子（选中的最后画，压住提示）。
+  // 兽子（选中的最后画，压住提示点）。
   for (let i = 0; i < ROWS * COLS; i += 1) {
     const p = view.pos.board[i] as Piece | ''
     if (p !== '') drawPiece(ctx, p, i, i === view.selected)
@@ -206,28 +226,49 @@ export function renderJungle(ctx: CanvasRenderingContext2D, view: JungleView): v
 
   // 上一步标记环。
   if (view.lastMove !== null) {
-    const [, , tr, tc] = view.lastMove
-    const cx = centerX(tc)
-    const cy = centerY(tr)
+    const tr = view.lastMove[2]
+    const tc = view.lastMove[3]
     ctx.beginPath()
-    ctx.arc(cx, cy, CELL * 0.46, 0, Math.PI * 2)
+    ctx.arc(centerX(tc), centerY(tr), CELL * 0.46, 0, Math.PI * 2)
     ctx.strokeStyle = THEME.gold
     ctx.lineWidth = 2
     ctx.stroke()
   }
 
-  // HUD：回合 / 难度 / 思考中。
+  // HUD 第一行（基线 y=20）：回合（左，左锚）｜局分（中，居中）｜操作
+  // 提示（右，右锚）。三段实测宽度 118 / 151-239 / 286-370，互不相交。
   const turnLabel = view.pos.turn === 'r' ? '红方（你）' : '黑方（AI）'
-  hudPair(ctx, MARGIN, 24, '回合', turnLabel)
-  hudPair(ctx, LOGICAL_W / 2, 24, '难度', 'L' + view.level, 'left', THEME.gold)
-  if (view.thinking && view.result === 'playing') {
-    const dots = '.'.repeat(1 + Math.floor(view.timeMs / 350) % 3)
-    hudPair(ctx, LOGICAL_W - MARGIN, 24, 'AI', '思考中' + dots, 'right', '#7dcfff')
+  hudPair(ctx, MARGIN, 20, '回合', turnLabel)
+  ctx.font = '600 13px system-ui, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillStyle = THEME.gold
+  ctx.fillText('局分 你 ' + view.playerWins + ' : ' + view.aiWins + ' AI', LOGICAL_W / 2, 20)
+  if (view.result === 'playing') {
+    hudPair(ctx, LOGICAL_W - MARGIN, 20, '操作', '点击走子', 'right')
+  } else if (view.matchOver) {
+    hudPair(ctx, LOGICAL_W - MARGIN, 20, '整场', 'R 重开', 'right', THEME.gold)
   } else {
-    hudPair(ctx, LOGICAL_W - MARGIN, 24, '操作', '点击走子', 'right')
+    hudPair(ctx, LOGICAL_W - MARGIN, 20, '下一局', 'R 开始', 'right', THEME.gold)
   }
 
-  if (view.result === 'win') drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '兽穴告破！', '你赢了 · U 悔棋 · R 重开', THEME.good)
-  else if (view.result === 'lose') drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '兽穴失守', '你输了 · U 悔棋 · R 重开', THEME.bad)
-  else if (view.result === 'paused') drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '按 P 继续 · R 重开', THEME.text)
+  // HUD 第二行（基线 y=38）：常驻玩法速览（24 个全角字符 + 间隔符，
+  // 12px 字号实测约 328px，介于 20-370 之间不越界、不与第一行相交）。
+  ctx.textAlign = 'left'
+  ctx.font = '600 12px system-ui, sans-serif'
+  ctx.fillStyle = THEME.textMuted
+  ctx.fillText('速览 大吃小·鼠吃象·仅鼠入河·狮虎跳河·陷阱废等级·入穴即胜', MARGIN, 38)
+
+  if (view.result === 'win') {
+    const sub = view.matchOver
+      ? '整场 ' + view.playerWins + ' : ' + view.aiWins + ' · R 重开新场'
+      : '按 R 进入第 ' + (view.gameNo + 1) + ' 局（AI 更强）'
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '本局告捷', sub, THEME.good)
+  } else if (view.result === 'lose') {
+    const sub = view.matchOver
+      ? '整场 ' + view.playerWins + ' : ' + view.aiWins + ' · R 重开新场'
+      : '按 R 进入第 ' + (view.gameNo + 1) + ' 局（AI 更强）'
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '本局失利', sub, THEME.bad)
+  } else if (view.result === 'paused') {
+    drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', '按 P 继续 · R 重开本局', THEME.text)
+  }
 }

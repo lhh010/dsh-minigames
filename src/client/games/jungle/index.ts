@@ -1,22 +1,26 @@
 /**
- * 斗兽棋游戏定义：把纯规则引擎与分帧 AI 组装成 {@link MiniGameInstance}。
- * 玩家执红（下方），AI 执黑；点击选子/走子，AI 通过 createSearch
- * 每帧一步分帧搜索不卡画面。U 悔棋、D 切换难度、R 重开、P 暂停。
+ * 斗兽棋游戏定义：把纯规则引擎（logic.ts）与一层贪心 AI（ai.ts）组装
+ * 成 {@link MiniGameInstance}。玩家执红（棋盘下方，向上进攻），AI 执黑；
+ * 3 局 2 胜，AI 难度随局数上升（噪声递减、第三局加算对手应手）。点击
+ * 选子/走子，AI 同步应手（一层贪心耗时微秒级，无需分帧）；U 悔棋、
+ * R 重开（局间为下一局/新场）、P 暂停。onScore 在每局与整场结束时上报
+ * 累计分（每胜一局 +10，整场获胜 +20，零封 +10）。帧循环为 dirty 按需
+ * 重绘（粒子活跃时持续标脏）。
  */
 import type { MiniGameDefinition, MiniGameInstance, MiniGameMountOptions } from '../types.ts'
 import {
   createStartPosition, legalMoves, applyMove, status, denInDanger,
   idx, colorOf, type Move, type Piece, type Position,
 } from './logic.ts'
-import { createSearch, chooseMove, LEVEL_DEPTH, NODE_BUDGET, type SearchStepper } from './ai.ts'
+import { chooseMove } from './ai.ts'
 import { renderJungle, LOGICAL_W, LOGICAL_H, cellAt, centerOfIndex, type JungleView } from './render.ts'
 import { fitCanvas } from '../canvas-fit.ts'
 import { focusGameHost, gameHasFocus } from '../focus.ts'
 import { createParticles } from '../theme.ts'
 import { createFrameLoop, type FrameInfo } from '../frame-scheduler.ts'
 
-/** 每个难度档的战绩分基数差异由搜索深度体现。 */
-const WIN_BASE = 10
+/** 整场获胜所需的局数（3 局 2 胜）。 */
+const MATCH_WINS = 2
 
 function createJungleGame(host: HTMLElement, options?: MiniGameMountOptions): MiniGameInstance {
   const canvas = document.createElement('canvas')
@@ -26,43 +30,57 @@ function createJungleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   if (fit === null) throw new Error('dsh-minigames: jungle needs a 2d canvas context')
   const ctx = fit.ctx
 
-  let level = 0
+  let gameNo = 1
+  let pWins = 0
+  let aWins = 0
+  let matchOver = false
   let pos: Position = createStartPosition()
   let history: Position[] = []
   let selected = -1
   let hints: Move[] = []
   let lastMove: Move | null = null
-  let search: SearchStepper | null = null
   let paused = false
   let result: 'playing' | 'win' | 'lose' | 'paused' = 'playing'
   let lastScore = -1
   const particles = createParticles()
 
-  const depth = (): number => LEVEL_DEPTH[Math.min(level, LEVEL_DEPTH.length - 1)]!
-  const thinking = (): boolean => search !== null || pos.turn === 'b'
-
+  /** 累计分：每胜一局 +10，整场获胜 +20，零封对手 +10；仅在变化时上报。 */
   const reportScore = (): void => {
-    if (result === 'playing') return
-    const score = result === 'win' ? WIN_BASE * depth() + WIN_BASE : 1
+    let score = pWins * 10
+    if (matchOver && pWins > aWins) score += 20
+    if (matchOver && aWins === 0) score += 10
     if (score === lastScore) return
     lastScore = score
     options?.onScore?.(score)
   }
 
-  /** 走完一步后的终局检查与告急重算。 */
+  /** 走完一步后的终局结算：记局分、判整场归属。 */
   const settle = (): void => {
     const st = status(pos)
     if (st.kind === 'playing') return
+    if (st.winner === 'r') pWins += 1
+    else aWins += 1
+    matchOver = pWins >= MATCH_WINS || aWins >= MATCH_WINS || gameNo >= 3
     result = st.winner === 'r' ? 'win' : 'lose'
     reportScore()
   }
 
-  const playerMove = (m: Move): void => {
-    const captured = pos.board[idx(m[2], m[3])] as Piece | '' as Piece | ''
-    if (captured !== '') {
-      const [cx, cy] = centerOfIndex(idx(m[2], m[3]))
-      particles.burst(cx, cy, colorOf(captured) === 'r' ? '#f7768e' : '#7dcfff', 16, 160)
-    }
+  /** 按当前局数取难度（1-3）。 */
+  const difficulty = (): number => Math.min(gameNo, 3)
+
+  /** AI 种子随局数与步数推进，同一对局序列内完全确定。 */
+  const aiSeed = (): number => (0x9e3779b9 + gameNo * 2654435761 + history.length * 40503) >>> 0
+
+  const burstAt = (target: number, piece: Piece): void => {
+    const cxY = centerOfIndex(target)
+    particles.burst(cxY[0], cxY[1], colorOf(piece) === 'r' ? '#f7768e' : '#7dcfff', 16, 160)
+  }
+
+  /** 走一子（玩家或 AI 通用）：吃子粒子、推进历史、结算、标脏。 */
+  const playMove = (m: Move): void => {
+    const target = idx(m[2], m[3])
+    const captured = pos.board[target] as Piece | ''
+    if (captured !== '') burstAt(target, captured)
     history.push(pos)
     pos = applyMove(pos, m)
     lastMove = m
@@ -72,51 +90,52 @@ function createJungleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     loop.markDirty()
   }
 
-  const startAi = (): void => {
-    // 种子随步数推进，同一局面序列内完全确定。
-    const seed = 0x9e3779b9 + history.length * 2654435761
-    search = createSearch(pos, depth(), NODE_BUDGET, seed)
-  }
-
-  const finishAi = (m: Move | null): void => {
-    search = null
+  /** AI 同步应手（一层贪心，含第三局应手层）。 */
+  const aiReply = (): void => {
+    const m = chooseMove(pos, difficulty(), aiSeed())
     if (m === null) {
       settle()
       return
     }
-    const captured = pos.board[idx(m[2], m[3])] as Piece | '' as Piece | ''
-    if (captured !== '') {
-      const [cx, cy] = centerOfIndex(idx(m[2], m[3]))
-      particles.burst(cx, cy, '#f7768e', 16, 160)
-    }
-    pos = applyMove(pos, m)
-    lastMove = m
-    settle()
-    loop.markDirty()
+    playMove(m)
   }
 
-  const restart = (): void => {
+  const newGame = (): void => {
     pos = createStartPosition()
     history = []
     selected = -1
     hints = []
     lastMove = null
-    search = null
     paused = false
     result = 'playing'
-    lastScore = -1
     loop.markDirty()
   }
 
+  /** R：局间进入下一局 / 整场结束后开新场 / 对局中重开本局。 */
+  const onRestartKey = (): void => {
+    if (result !== 'playing') {
+      if (matchOver) {
+        gameNo = 1
+        pWins = 0
+        aWins = 0
+        matchOver = false
+        lastScore = -1
+      } else {
+        gameNo += 1
+      }
+    }
+    newGame()
+    reportScore()
+  }
+
+  /** U：悔到玩家上一次行动前（弹出一整对玩家+AI 着法）。 */
   const undo = (): void => {
-    if (history.length === 0) return
+    if (result !== 'playing' || history.length === 0) return
     pos = history.pop()!
-    search = null
+    if (pos.turn === 'b' && history.length > 0) pos = history.pop()!
     selected = -1
     hints = []
     lastMove = null
-    if (result !== 'playing') result = 'playing'
-    lastScore = -1
     loop.markDirty()
   }
 
@@ -133,6 +152,9 @@ function createJungleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
     return cellAt(x, y)
   }
 
+  /** 是否轮到 AI 行棋（独立函数避免属性窄化误报）。 */
+  const needsAi = (): boolean => pos.turn === 'b'
+
   const onMouseDown = (event: MouseEvent): void => {
     if (paused || result !== 'playing' || pos.turn !== 'r') return
     const i = hit(event)
@@ -146,7 +168,8 @@ function createJungleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       }
       const m = hints.find(mm => idx(mm[2], mm[3]) === i)
       if (m !== undefined) {
-        playerMove(m)
+        playMove(m)
+        if (result === 'playing' && needsAi()) aiReply()
         return
       }
     }
@@ -159,31 +182,14 @@ function createJungleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!gameHasFocus(host)) return
-    if (event.code === 'KeyR') { event.preventDefault(); restart(); return }
+    if (event.code === 'KeyR') { event.preventDefault(); onRestartKey(); return }
     if (event.code === 'KeyP') { event.preventDefault(); togglePause(); return }
     if (event.code === 'KeyU') { event.preventDefault(); undo(); return }
-    if (event.code === 'KeyD') {
-      event.preventDefault()
-      level = (level + 1) % LEVEL_DEPTH.length
-      loop.markDirty()
-    }
   }
 
   const frame = (f: FrameInfo): void => {
-    const now = performance.now()
-    if (!paused && result === 'playing') {
-      // AI 分帧：每帧评估一个根着法。
-      if (search !== null) {
-        const r = search.step()
-        if (r.done) finishAi(r.result.move)
-        loop.markDirty()
-      } else if (pos.turn === 'b') {
-        startAi()
-        loop.markDirty()
-      }
-      // 思考指示或兽穴告急脉冲需要连续帧。
-      if (thinking() || denInDanger(pos, 'r') || denInDanger(pos, 'b')) loop.markDirty()
-    }
+    // 粒子未结束则持续标脏，保证爆裂动画播完。
+    if (particles.size() > 0) loop.markDirty()
     if (!f.render && particles.size() === 0) return
     const view: JungleView = {
       pos,
@@ -191,9 +197,10 @@ function createJungleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
       hints,
       lastMove,
       denThreat: denInDanger(pos, 'r') ? 'r' : denInDanger(pos, 'b') ? 'b' : null,
-      thinking: thinking(),
-      level: level + 1,
-      timeMs: now,
+      gameNo,
+      playerWins: pWins,
+      aiWins: aWins,
+      matchOver,
       result: paused ? 'paused' : result,
     }
     renderJungle(ctx, view)
@@ -206,9 +213,6 @@ function createJungleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
   window.addEventListener('keydown', onKeyDown)
   focusGameHost(host)
   loop.start()
-
-  // chooseMove 仅作离线同步参考，保持导入清单与逻辑文件对齐。
-  void chooseMove
 
   return {
     start: () => { loop.start() },
@@ -225,9 +229,15 @@ function createJungleGame(host: HTMLElement, options?: MiniGameMountOptions): Mi
 
 export const jungleGame: MiniGameDefinition = {
   id: 'jungle',
-  title: '斗兽棋',
-  icon: '🌴',
-  description: '八兽等级吃子：鼠可欺象、狮虎跳河、陷阱废武功，攻入对方兽穴即胜；AI 分帧搜索不卡顿。',
-  controls: ['点击选子 / 点击目标走子', 'U：悔棋 · D：难度 · R：重开 · P：暂停'],
+  title: '斗兽棋 Jungle',
+  icon: '🦁',
+  description: '象狮虎豹狼狗猫鼠八兽争穴——大吃小、鼠吃象，河流里只有鼠能游。',
+  controls: [
+    '点击己方兽子选中，再点目标格走子（正交一格）；你执红在下方、向上进攻，目标是上方黑方兽穴',
+    '等级数字 ≥ 对方即可吃（同级互吃）；唯一例外：鼠(1)可吃象(8)，象不可吃鼠',
+    '仅鼠可入河游泳；狮虎可沿直线跳过整条河（河中任一格有鼠则跳被挡）；河中鼠与岸上子互相不能吃',
+    '敌子落入你的陷阱时等级归零、任何己子可吃（己方陷阱对己子无效）；攻入对方兽穴、全歼或令对方无子可动即胜',
+    '3 局 2 胜，AI 随局数变强；R 重开/下一局 · P 暂停 · U 悔棋',
+  ],
   create: createJungleGame,
 }
