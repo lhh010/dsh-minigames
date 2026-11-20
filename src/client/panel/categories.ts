@@ -36,7 +36,7 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   queens8: 'puzzle', kenken: 'puzzle', futoshiki: 'puzzle', ricochet: 'puzzle', onestroke: 'puzzle', jenga: 'puzzle', portal: 'puzzle', akari: 'puzzle', rainwater: 'puzzle', cakecut: 'puzzle', rubik: 'puzzle', robocode: 'puzzle', photohunt: 'puzzle', wordchain: 'puzzle', tangram2: 'puzzle', wordgrid: 'puzzle', gears: 'puzzle', colormix: 'puzzle', dicemaze: 'puzzle', idiomchain: 'puzzle', defuse: 'puzzle', jigsaw: 'puzzle', lightpath: 'puzzle', logigrid: 'puzzle', starbattle: 'puzzle', sudokuX: 'puzzle', nonospin: 'puzzle', yinyang: 'puzzle', circuitbulb: 'puzzle',
   alchemy: 'puzzle', watersort: 'puzzle', molecule: 'puzzle', orbit: 'puzzle',
   // 棋牌
-  chess: 'board', xiangqi: 'board', gomoku: 'board', othello: 'board', chessend: 'board', mancala: 'board',
+  chess: 'board', xiangqi: 'board', gomoku: 'board', othello: 'board', chessend: 'board', mancala: 'board', quoridor: 'board',
   connect4: 'board', minigo: 'board', blackjack: 'board', yahtzee: 'board',
   solitaire: 'board', mahjong: 'board', shutbox: 'board',
   // 街机

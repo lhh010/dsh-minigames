@@ -199,6 +199,10 @@ import { mancalaGame } from './mancala/index.ts'
 import { scalesGame } from './scales/index.ts'
 import { cryptarGame } from './cryptar/index.ts'
 import { setgameGame } from './setgame/index.ts'
+import { treasureGame } from './treasure/index.ts'
+import { fourcolorGame } from './fourcolor/index.ts'
+import { anttrailGame } from './anttrail/index.ts'
+import { quoridorGame } from './quoridor/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -274,6 +278,7 @@ export function registerBuiltinGames(): void {
     icehockeyGame, nonospinGame, marblerunGame, yinyangGame,
     musicboxGame, circuitbulbGame,
     mancalaGame, scalesGame, cryptarGame, setgameGame,
+    treasureGame, fourcolorGame, anttrailGame, quoridorGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
