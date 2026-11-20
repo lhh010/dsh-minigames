@@ -201,7 +201,8 @@ function drawScale(ctx: CanvasRenderingContext2D, state: ScalesState, view: Scal
   if (state.history.length === 0) {
     ctx.fillStyle = THEME.textMuted
     ctx.font = '600 12px system-ui, sans-serif'
-    ctx.fillText('选币入盘后按 空格 或点「称量」', PIVOT_X, PIVOT_Y + STRING_LEN + 64)
+    // 提示行移到按钮区（248-320）与硬币区（374+）之间的空带——原 y=252 正压在称量按钮上。
+  ctx.fillText('选币入盘后按 空格 或点「称量」', PIVOT_X, 340)
   }
 }
 
