@@ -189,6 +189,11 @@ export function renderMancala(ctx: CanvasRenderingContext2D, view: MancalaView):
   noGlow(ctx)
   hudPair(ctx, LOGICAL_W - MARGIN, 22, '积分 ' + view.points[0] + ':' + view.points[1], '第 ' + view.round + '/' + view.totalRounds + ' 局', 'right', THEME.gold)
 
+  // 常驻规则速览：新手第一局往往不知道为何能连走/怎么吃子。
+  ctx.font = '500 12px system-ui, sans-serif'
+  ctx.fillStyle = THEME.textMuted
+  ctx.fillText('末籽入自己粮仓=再走一次 · 末籽落自己空坑=连对面一起吃 · 六坑全空收局子多者胜', MARGIN, 40)
+
   if (view.overlay === 'paused') {
     drawOverlay(ctx, LOGICAL_W, LOGICAL_H, '已暂停', 'P 继续 · R 重开')
   } else if (view.overlay === 'win') {
