@@ -194,7 +194,6 @@ import { nonospinGame } from './nonospin/index.ts'
 import { marblerunGame } from './marblerun/index.ts'
 import { yinyangGame } from './yinyang/index.ts'
 import { musicboxGame } from './musicbox/index.ts'
-import { pipelinkGame } from './pipelink/index.ts'
 import { circuitbulbGame } from './circuitbulb/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
@@ -269,7 +268,7 @@ export function registerBuiltinGames(): void {
     craneGame, recipeGame, tangram2Game, wordgridGame,
     harvestGame, sudokuXGame, chessendGame,
     icehockeyGame, nonospinGame, marblerunGame, yinyangGame,
-    musicboxGame, pipelinkGame, circuitbulbGame,
+    musicboxGame, circuitbulbGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
