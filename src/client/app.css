@@ -316,6 +316,14 @@
   white-space: nowrap;
 }
 
+/* 长说明行（≥22 字符）：原 nowrap 会把 40-60 字的玩法说明渲染成
+   不可折行标签溢出面板被截断——改为可折行并限宽。 */
+.dmg-control-tag-long {
+  white-space: normal;
+  max-width: 360px;
+  text-align: left;
+}
+
 .dmg-control-muted {
   color: #7a7a8a;
   border-style: dashed;

@@ -572,7 +572,7 @@ const GameArea = memo(function GameArea({ game, onScore }: GameAreaProps): React
               <div className="dmg-announce-desc">{game.description}</div>
               <div className="dmg-announce-controls">
                 {game.controls.map(control => (
-                  <span key={control} className="dmg-control-tag">{control}</span>
+                  <span key={control} className={control.length >= 22 ? 'dmg-control-tag dmg-control-tag-long' : 'dmg-control-tag'}>{control}</span>
                 ))}
               </div>
               <div className="dmg-announce-hint">点击此处或按任意键开始</div>
@@ -582,7 +582,7 @@ const GameArea = memo(function GameArea({ game, onScore }: GameAreaProps): React
       </div>
       <div className="dmg-game-controls">
         {game.controls.map(control => (
-          <span key={control} className="dmg-control-tag">{control}</span>
+          <span key={control} className={control.length >= 22 ? 'dmg-control-tag dmg-control-tag-long' : 'dmg-control-tag'}>{control}</span>
         ))}
         <span className="dmg-control-tag dmg-control-muted">点击游戏区域获取键盘焦点</span>
       </div>

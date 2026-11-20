@@ -166,10 +166,11 @@ function drawChevron(ctx: CanvasRenderingContext2D, cx: number, cy: number, dir:
   ctx.strokeStyle = color
   ctx.lineWidth = 2
   ctx.lineJoin = 'round'
+  // ∧ 形（局部朝上）：canvas y 向下，原 ∨ 形恰与 dir=0(上) 反向——所有朝向都标反。
   ctx.beginPath()
-  ctx.moveTo(-size, -size * 0.6)
-  ctx.lineTo(0, size * 0.4)
-  ctx.lineTo(size, -size * 0.6)
+  ctx.moveTo(-size, size * 0.6)
+  ctx.lineTo(0, -size * 0.4)
+  ctx.lineTo(size, size * 0.6)
   ctx.stroke()
   ctx.restore()
 }
