@@ -288,6 +288,11 @@ export function renderTreasure(ctx: CanvasRenderingContext2D, state: TreasureSta
   hudPair(ctx, LOGICAL_W - SIDEBAR_W - 24, 22, '助手', state.helperOn ? 'A 开' : 'A 关', 'right', state.helperOn ? accent(6) : THEME.textMuted)
   hudPair(ctx, LOGICAL_W - 10, 22, '提示', state.hintUsed ? '已用' : 'H 可用', 'right', state.hintUsed ? THEME.textMuted : THEME.text)
 
+  // 常驻规则速览：🔥更热=比上次探测点近 · 🧊更冷=更远 · ➖同温=等距；比较对象是「上一次探测点」这一点最容易误解。
+  ctx.font = '500 12px system-ui, sans-serif'
+  ctx.fillStyle = THEME.textMuted
+  ctx.fillText('🔥更热=比上次探测点更近 · 🧊更冷=更远 · ➖同温=等距 —— 两次探测夹出范围，次数用尽后点击指认', 10, 42)
+
   // 指认阶段脉冲提示框。
   if (state.phase === 'identify') {
     const pulse = 0.5 + 0.5 * Math.sin(t * 5)
