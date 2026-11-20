@@ -48,7 +48,8 @@ const BOARD_RIGHT = 500
 const BOARD_TOP = 96
 const POOL_Y = 452
 const POOL_CELL = 52
-const HINT_BOX = { x: 560, y: POOL_Y - 4, w: 120, h: 44 }
+// 提示按钮下移到数字池（y430-474）下方的空带——原 y=POOL_Y-4 与第 9 格数字池（x568-620）重叠，把「9」挡住。
+const HINT_BOX = { x: 560, y: POOL_Y + 40, w: 120, h: 40 }
 
 /**
  * 计算某题的静态布局（字母格、数字池、提示按钮）。
