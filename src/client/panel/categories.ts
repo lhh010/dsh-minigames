@@ -58,7 +58,7 @@ const CATEGORY_OF: Readonly<Record<string, string>> = {
   papertoss: 'physics', knifering: 'physics', hoopshot: 'physics', movinghoop: 'physics',
   ski: 'physics', racing: 'physics', hole: 'physics', tiltmaze: 'physics', darts: 'physics', magnet: 'physics', bridgebuilder: 'physics', curling: 'physics',
   // 休闲
-  bubblewrap: 'casual', fishing: 'casual', eggcatcher: 'casual', coinpusher: 'casual', farm: 'casual', petpal: 'casual', caravan: 'casual', deepdive: 'casual', flags: 'casual', recipe: 'casual', harvest: 'casual', balloonbank: 'casual', bonsai: 'casual', fishpond: 'casual', balloon: 'casual', tide: 'casual',
+  bubblewrap: 'casual', fishing: 'casual', eggcatcher: 'casual', coinpusher: 'casual', farm: 'casual', petpal: 'casual', caravan: 'casual', deepdive: 'casual', flags: 'casual', recipe: 'casual', harvest: 'casual', balloonbank: 'casual', idlecraft: 'casual', bonsai: 'casual', fishpond: 'casual', balloon: 'casual', tide: 'casual',
 }
 
 /** 查游戏分类；未登记回落休闲（全覆盖测试把遗漏顶出来）。 */
