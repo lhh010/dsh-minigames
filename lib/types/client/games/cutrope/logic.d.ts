@@ -18,7 +18,10 @@ export declare const H = 440;
 export declare const GROUND_Y = 400;
 export declare const GRAVITY = 1400;
 /** 气泡浮力（向上的加速度，略小于重力的一半，先沉后缓升）。 */
-export declare const BUOY = 700;
+export declare const BUOY = 220;
+/** 气泡中糖果的最大上升速度（px/s）：Verlet 会累积速度，无上限时
+ * 浮力即使不大也会逐渐加速成「窜升」——封顶保证缓慢匀速上浮。 */
+export declare const BUOY_MAX_V = 85;
 /** 固定物理子步频率。 */
 export declare const SUBSTEP_HZ = 120;
 /** 每子步绳约束迭代次数。 */

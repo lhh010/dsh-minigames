@@ -19,7 +19,10 @@ export const H = 440
 export const GROUND_Y = 400
 export const GRAVITY = 1400
 /** 气泡浮力（向上的加速度，略小于重力的一半，先沉后缓升）。 */
-export const BUOY = 700
+export const BUOY = 220
+/** 气泡中糖果的最大上升速度（px/s）：Verlet 会累积速度，无上限时
+ * 浮力即使不大也会逐渐加速成「窜升」——封顶保证缓慢匀速上浮。 */
+export const BUOY_MAX_V = 85
 /** 固定物理子步频率。 */
 export const SUBSTEP_HZ = 120
 /** 每子步绳约束迭代次数。 */
@@ -278,6 +281,11 @@ function substep(state: CutRopeState, dt: number): void {
   const accel = bubbled ? -BUOY : GRAVITY
   c.x += cvx
   c.y += cvy + accel * dt2
+  // 气泡上升限速：新位置反推速度，超过上限就钳回（缓慢匀速上浮）。
+  if (bubbled) {
+    const vyNow = (c.y - c.py) * SUBSTEP_HZ
+    if (vyNow < -BUOY_MAX_V) c.y = c.py - BUOY_MAX_V / SUBSTEP_HZ
+  }
 
   // 3. 约束迭代：未剪的绳锚点固定、末端连糖果（糖果重，权重小）；
   // 剪断的绳只保留内部约束，自由垂落。

@@ -131,8 +131,8 @@ describe('cutrope logic', () => {
 
   it('关卡 4：气泡接糖上浮，掐时机戳破落进高台怪物', () => {
     const st = simulate(12345, 4, [
-      { f: 40, kind: 'cut', rope: 0 },
-      { f: 95, kind: 'pop', rope: 0 },
+      { f: 45, kind: 'cut', rope: 0 },
+      { f: 242, kind: 'pop', rope: 0 },
     ])
     expect(st.events.some(e => e.type === 'bubble')).toBe(true)
     expect(st.events.some(e => e.type === 'pop')).toBe(true)
@@ -141,7 +141,7 @@ describe('cutrope logic', () => {
   })
 
   it('关卡 4：不戳气泡 → 糖果被带出顶部判负', () => {
-    const st = simulate(12345, 4, [{ f: 40, kind: 'cut', rope: 0 }])
+    const st = simulate(12345, 4, [{ f: 5, kind: 'cut', rope: 0 }])
     expect(st.phase).toBe('lost')
     expect(st.events.find(e => e.type === 'fail')).toEqual({ type: 'fail', reason: 'flew' })
   })
@@ -149,9 +149,9 @@ describe('cutrope logic', () => {
   it('关卡 5：三绳 + 气泡长程飞行可解', () => {
     const st = simulate(12345, 5, [
       { f: 0, kind: 'cut', rope: 0 },
-      { f: 80, kind: 'cut', rope: 0 },
-      { f: 80, kind: 'cut', rope: 0 },
-      { f: 140, kind: 'pop', rope: 0 },
+      { f: 85, kind: 'cut', rope: 0 },
+      { f: 85, kind: 'cut', rope: 0 },
+      { f: 218, kind: 'pop', rope: 0 },
     ])
     expect(st.phase).toBe('won')
     expect(st.cutsLeft).toBe(0)
