@@ -206,6 +206,10 @@ import { jungleGame } from './jungle/index.ts'
 import { checkershopGame } from './checkershop/index.ts'
 import { towercardGame } from './towercard/index.ts'
 import { factoryGame } from './factory/index.ts'
+import { chainrxnGame } from './chainrxn/index.ts'
+import { vacuumGame } from './vacuum/index.ts'
+import { stealthGame } from './stealth/index.ts'
+import { balloonbankGame } from './balloonbank/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -283,6 +287,7 @@ export function registerBuiltinGames(): void {
     mancalaGame, scalesGame, cryptarGame, setgameGame,
     treasureGame, fourcolorGame, anttrailGame, quoridorGame,
     jungleGame, checkershopGame, towercardGame, factoryGame,
+    chainrxnGame, vacuumGame, stealthGame, balloonbankGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
