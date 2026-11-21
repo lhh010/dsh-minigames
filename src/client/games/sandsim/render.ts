@@ -149,12 +149,31 @@ function drawBoard(ctx: CanvasRenderingContext2D, s: SandSimState, t: number): v
       }
     }
   }
-  // 桶口标记：小箭头提示收集区。
-  ctx.fillStyle = accent(4)
-  ctx.font = 'bold 11px system-ui, sans-serif'
-  ctx.textAlign = 'center'
+  // 桶口标记（强化版）：醒目发光箭头 + 「收集桶」文字标签——原 ▼▼
+  // 小箭头太隐蔽，玩家看不到目标在哪。
   const startC = Math.floor(s.cols / 2) - 2
-  ctx.fillText('\u25BC\u25BC', bx + (startC + 2.5) * CELL, by - 10)
+  const bucketCx = bx + (startC + 2.5) * CELL
+  glow(ctx, accent(4), 10)
+  ctx.fillStyle = accent(4)
+  ctx.font = 'bold 16px system-ui, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillText('\u25BC \u6536\u96C6\u6876 \u25BC', bucketCx, by - 12)
+  noGlow(ctx)
+  // 桶体描边：围绕桶格画梯形轮廓高亮。
+  ctx.strokeStyle = accent(4)
+  ctx.lineWidth = 2
+  const bLeft = bx + startC * CELL - 2
+  const bRight = bx + (startC + 5) * CELL + 2
+  const bTop = by + (s.rows - 1) * CELL
+  const bBot = by + s.rows * CELL
+  ctx.beginPath()
+  ctx.moveTo(bLeft, bTop)
+  ctx.lineTo(bRight, bTop)
+  ctx.lineTo(bRight - 4, bBot)
+  ctx.lineTo(bLeft + 4, bBot)
+  ctx.closePath()
+  ctx.stroke()
+  ctx.lineWidth = 1
 }
 
 /** 顶栏 HUD：金砂进度 | 用量 | 关卡 | 时间（右锚）。 */
