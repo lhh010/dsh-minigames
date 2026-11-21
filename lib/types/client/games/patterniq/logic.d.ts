@@ -12,8 +12,10 @@ export declare function mulberry32(seed: number): () => number;
 export declare const QUESTIONS_PER_SECTION = 10;
 /** 总节数。 */
 export declare const SECTIONS = 5;
-/** 答错一次扣除的时间（毫秒）。 */
-export declare const WRONG_PENALTY_MS = 5000;
+/** 答错扣时表（毫秒）：等比递增 ×2——第 1/2/3 次错扣 4s/8s/16s。
+ * 原固定 5s 有漏洞：20s 时限内 5s 依次点完 4 个选项必过（穷举免罚）。
+ * 等比后三次错共扣 28s > 20s，穷举必死。 */
+export declare const WRONG_PENALTY_SCHEDULE_MS: readonly number[];
 /** 答对基础分。 */
 export declare const SCORE_BASE = 40;
 /** 答对按剩余时间线性追加的最高分。 */
@@ -89,7 +91,8 @@ export interface PatterniqState {
     /** 最近一次结算结果。 */
     lastOutcome: 'correct' | 'wrong' | 'timeout' | null;
     /** 本题是否已答错过（结算时入错题本用）。 */
-    wrongAttempted: boolean;
+    /** 本题已答错次数（驱动等比扣时与错题记录）。 */
+    wrongCount: number;
     wrongText: string;
     /** 本节错题。 */
     sectionWrong: readonly WrongEntry[];

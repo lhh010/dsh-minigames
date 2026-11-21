@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   LEVEL_KINDS, QUESTIONS_PER_SECTION, SCORE_BASE, SCORE_TIME_BONUS, SECTIONS,
-  WRONG_PENALTY_MS, answer, computeTerm, createPatterniqState, explanationOf,
+  WRONG_PENALTY_SCHEDULE_MS, answer, computeTerm, createPatterniqState, explanationOf,
   generateQuestion, makeNumberOptions, mulberry32, nextQuestion, optionText,
   scoreFor, sectionLevel, sectionTimeLimit, tick,
   type PatternOption, type PatterniqState,
@@ -139,7 +139,7 @@ describe('patterniq logic', () => {
     expect(state.sectionWrong).toHaveLength(0)
   })
 
-  it('答错：扣 5 秒、留在本题可重试，第一次错误文本记入错题本', () => {
+  it('答错：等比递增扣时（4s/8s/16s）、留在本题可重试，第一次错误文本记入错题本', () => {
     const state = createPatterniqState(21)
     const limit = state.timeLimitMs
     const right = state.question.options.indexOf(state.question.answer)
@@ -147,8 +147,12 @@ describe('patterniq logic', () => {
     const wrongText = optionText(state.question.options[wrongIdx] as PatternOption)
     expect(answer(state, wrongIdx)).toBe('wrong')
     expect(state.phase).toBe('question')
-    expect(state.remainingMs).toBe(limit - WRONG_PENALTY_MS)
-    expect(state.wrongAttempted).toBe(true)
+    expect(state.remainingMs).toBe(limit - WRONG_PENALTY_SCHEDULE_MS[0]!)
+    expect(state.wrongCount).toBe(1)
+    // 第二次错扣 8s（等比 ×2）——三选项穷举共扣 28s 必超时。
+    expect(answer(state, (right + 2) % 4)).toBe('wrong')
+    expect(state.remainingMs).toBe(limit - WRONG_PENALTY_SCHEDULE_MS[0]! - WRONG_PENALTY_SCHEDULE_MS[1]!)
+    expect(state.wrongCount).toBe(2)
     expect(state.wrongText).toBe(wrongText)
     // 重试答对：仍计分但题目入错题本（错过一次）。
     expect(answer(state, right)).toBe('correct')

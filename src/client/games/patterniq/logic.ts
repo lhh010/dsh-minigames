@@ -23,8 +23,10 @@ export function mulberry32(seed: number): () => number {
 export const QUESTIONS_PER_SECTION = 10
 /** 总节数。 */
 export const SECTIONS = 5
-/** 答错一次扣除的时间（毫秒）。 */
-export const WRONG_PENALTY_MS = 5000
+/** 答错扣时表（毫秒）：等比递增 ×2——第 1/2/3 次错扣 4s/8s/16s。
+ * 原固定 5s 有漏洞：20s 时限内 5s 依次点完 4 个选项必过（穷举免罚）。
+ * 等比后三次错共扣 28s > 20s，穷举必死。 */
+export const WRONG_PENALTY_SCHEDULE_MS: readonly number[] = [4000, 8000, 16000]
 /** 答对基础分。 */
 export const SCORE_BASE = 40
 /** 答对按剩余时间线性追加的最高分。 */
@@ -106,7 +108,8 @@ export interface PatterniqState {
   /** 最近一次结算结果。 */
   lastOutcome: 'correct' | 'wrong' | 'timeout' | null
   /** 本题是否已答错过（结算时入错题本用）。 */
-  wrongAttempted: boolean
+  /** 本题已答错次数（驱动等比扣时与错题记录）。 */
+  wrongCount: number
   wrongText: string
   /** 本节错题。 */
   sectionWrong: readonly WrongEntry[]
@@ -445,7 +448,7 @@ export function createPatterniqState(seed: number): PatterniqState {
     score: 0,
     chosenIndex: -1,
     lastOutcome: null,
-    wrongAttempted: false,
+    wrongCount: 0,
     wrongText: '',
     sectionWrong: [],
     totalCorrect: 0,
@@ -464,7 +467,7 @@ function settle(state: PatterniqState, outcome: 'correct' | 'timeout'): void {
   } else {
     state.chosenIndex = -1
   }
-  if (outcome === 'timeout' || state.wrongAttempted) {
+  if (outcome === 'timeout' || state.wrongCount > 0) {
     state.sectionWrong = [...state.sectionWrong, { question: state.question, wrongText: state.wrongText }]
   }
   state.questionsAsked += 1
@@ -481,7 +484,7 @@ export function tick(state: PatterniqState, dtMs: number): void {
   state.remainingMs -= dtMs
   if (state.remainingMs <= 0) {
     state.remainingMs = 0
-    if (!state.wrongAttempted) state.wrongText = '超时'
+    if (state.wrongCount === 0) state.wrongText = '超时'
     settle(state, 'timeout')
   }
 }
@@ -505,9 +508,11 @@ export function answer(state: PatterniqState, optionIndex: number): 'correct' | 
     settle(state, 'correct')
     return 'correct'
   }
-  if (!state.wrongAttempted) state.wrongText = optionText(picked)
-  state.wrongAttempted = true
-  state.remainingMs = Math.max(0, state.remainingMs - WRONG_PENALTY_MS)
+  if (state.wrongCount === 0) state.wrongText = optionText(picked)
+  // 等比递增扣时：第 n 次错扣 SCHEDULE[n-1]（越界取末位）。
+  const penalty = WRONG_PENALTY_SCHEDULE_MS[Math.min(state.wrongCount, WRONG_PENALTY_SCHEDULE_MS.length - 1)]!
+  state.wrongCount += 1
+  state.remainingMs = Math.max(0, state.remainingMs - penalty)
   if (state.remainingMs <= 0) {
     settle(state, 'timeout')
     return 'wrong'
@@ -549,7 +554,7 @@ function startQuestion(state: PatterniqState): void {
   state.remainingMs = state.timeLimitMs
   state.chosenIndex = -1
   state.lastOutcome = null
-  state.wrongAttempted = false
+  state.wrongCount = 0
   state.wrongText = ''
   state.phase = 'question'
 }
