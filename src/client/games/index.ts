@@ -213,7 +213,6 @@ import { balloonbankGame } from './balloonbank/index.ts'
 import { cutropeGame } from './cutrope/index.ts'
 import { patterniqGame } from './patterniq/index.ts'
 import { idlecraftGame } from './idlecraft/index.ts'
-import { sandsimGame } from './sandsim/index.ts'
 import { masyuGame } from './masyu/index.ts'
 import { blackjackGame } from './blackjack/index.ts'
 import { flooditGame } from './floodit/index.ts'
@@ -292,7 +291,7 @@ export function registerBuiltinGames(): void {
     treasureGame, fourcolorGame, anttrailGame, quoridorGame,
     jungleGame, checkershopGame, towercardGame, factoryGame,
     chainrxnGame, vacuumGame, stealthGame, balloonbankGame,
-    cutropeGame, patterniqGame, idlecraftGame, sandsimGame,
+    cutropeGame, patterniqGame, idlecraftGame,
   ]) {
     if (getGame(game.id) === undefined) registerGame(game)
   }
